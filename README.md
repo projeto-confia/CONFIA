@@ -1,3 +1,3 @@
 # Projeto CONFIA
 
-*Detectando e interceptando Fake News em Redes Sociais.*
+*Detectando e Interceptando Fake News em Redes Sociais.*
