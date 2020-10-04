@@ -21,10 +21,9 @@ def exemploStreaming():
 
     api = tweepy.API(auth)
     streamAccess = tweepy.Stream(auth=api.auth, listener=streamListener)
-    streamAccess.filter(track=["COVID"], languages=["en", "pt"])
+    streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19"], languages=["pt"])
 
 if __name__ == "__main__":
     exemploStreaming()
-    
 
     
