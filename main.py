@@ -8,10 +8,13 @@ def primeiroAcesso():
     auth.set_access_token(tokens["access_token"], tokens["access_token_secret"])
 
     api = tweepy.API(auth)
-    public_tweets = api.home_timeline()
+    followers = api.followers()
+    api.send_direct_message(recipient_id=3243420285, text="Isso é um teste!")
 
-    for tweet in public_tweets:
-        print(tweet.text)
+    for f in followers:
+        print(f.screen_name+ " - " + f.name + " - " + str(f.id))
+    # for f in followers:
+    #     print(f.author.name)
 
 def exemploStreaming():
     tokens = cfg.tokens
@@ -24,6 +27,8 @@ def exemploStreaming():
     streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19"], languages=["pt"])
 
 if __name__ == "__main__":
-    exemploStreaming()
+    primeiroAcesso()
+    # exemploStreaming()
 
-    
+    # 3243420285
+    # 3243420285
