@@ -5,13 +5,15 @@ from DAO import data_access as data
 class StreamListener(tweepy.StreamListener):
 
     def on_connect(self):
-        self.df_users = data.User()
+        self.users = data.User()
 
     def on_status(self, status):
-        if self.df_users.is_user_in_dataset(status.author.id):
+        if self.users.is_user_in_dataset(status.author.id):
             print("ID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, status.text))
-            self.df_users.count_similar_users += 1
-            print("\nNumber of database users found in streaming: {0}".format(self.df_users.count_similar_users))       
+            self.users.count_similar_users += 1
+
+            print("Number of database users found in streaming: {0}".format(self.users.count_similar_users))  
+            self.users.write_in_csv(status.text, self.users.count_similar_users)     
         
 
 class Streaming:
