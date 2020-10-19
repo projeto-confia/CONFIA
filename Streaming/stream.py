@@ -13,7 +13,7 @@ class StreamListener(tweepy.StreamListener):
             self.users.count_similar_users += 1
 
             print("Number of database users found in streaming: {0}".format(self.users.count_similar_users))  
-            self.users.write_in_csv(status.text, self.users.count_similar_users)     
+            self.users.write_in_csv(status.text, status.author.id, self.users.count_similar_users)     
         
 
 class Streaming:
