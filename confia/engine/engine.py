@@ -1,6 +1,5 @@
 from confia.collector.stream import Streaming
 
-
 class Engine(object):
     """
     docstring
