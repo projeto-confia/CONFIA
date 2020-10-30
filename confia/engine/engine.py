@@ -1,4 +1,4 @@
-from confia.collector.stream import Streaming
+from confia.monitor.stream import Streaming
 
 class Engine(object):
     """

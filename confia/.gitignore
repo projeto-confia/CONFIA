@@ -139,6 +139,6 @@ cython_debug/
 
 # old
 *config.py
-#__pycache__*
+__pycache__
 # dados
-collector/data
+data/*

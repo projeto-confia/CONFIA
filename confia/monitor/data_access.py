@@ -4,7 +4,7 @@ import numpy as np
 class User:
     def __init__(self):
         self.count_similar_users = 0
-        self.users_df = pd.read_csv("DAO/data/users.csv")
+        self.users_df = pd.read_csv("confia/monitor/users.csv")
         self.users_id_arr = self.users_df["UserId"].to_numpy()
     
     def is_user_in_dataset(self, userID):
@@ -14,7 +14,7 @@ class User:
         import csv, os
         from datetime import datetime
 
-        path = os.path.join("DAO", "data", datetime.today().strftime('%Y-%m-%d') + ".csv")
+        path = os.path.join("confia", "data", datetime.today().strftime('%Y-%m-%d') + ".csv")
 
         with open(path, mode='a') as tweet_file:
             now = datetime.now()
