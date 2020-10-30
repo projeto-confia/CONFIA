@@ -1,6 +1,6 @@
 import tweepy
-import authconfig as cfg
-from DAO import data_access as data
+import confia.monitor.authconfig as cfg
+import confia.monitor.data_access as data
 
 class StreamListener(tweepy.StreamListener):
 
