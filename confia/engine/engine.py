@@ -9,9 +9,9 @@ class Engine(object):
 
     def __init__(self):
         # load json
-        self.engine_frequency = 10
+        self.engine_frequency = 30
         self.engine_status = 'stopped'
-        self.monitor_stream_time = 5
+        self.monitor_stream_time = 10
         self.process_id = 1
 
         # start logger

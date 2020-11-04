@@ -1,4 +1,5 @@
 import time
+from confia.monitor.stream import TwitterStream
 
 class MonitorFacade(object):
     """
@@ -12,7 +13,11 @@ class MonitorFacade(object):
         try:
             print('Executando Monitor...')
             self.status = 'running'
-            time.sleep(interval)
+            twitter_stream = TwitterStream()
+            print("\tTwitter Streaming initialized.")
+            print("\tStreaming for {} seconds...".format(interval))
+            twitter_stream.collect_data(interval=interval)
+            print("\tStreaming finished.")
             if process_id > 2:
                 raise Exception()
         except Exception:
@@ -24,3 +29,5 @@ class MonitorFacade(object):
             status = self.status
             self.status = 'stopped'
             return status
+
+
