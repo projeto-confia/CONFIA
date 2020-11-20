@@ -1,6 +1,7 @@
 import threading
 import time
 from confia.monitor.facade import MonitorFacade
+from confia.detection.facade import DetectorFacade
 
 class Engine(object):
     """
@@ -42,9 +43,9 @@ class Engine(object):
         try:
             print('Executando processo {} ...'.format(self.process_id))
             self.engine_status = 'running'
-            monitor_status = self.monitor()
-            if monitor_status == 'error':
-                raise Exception()
+            # monitor_status = self.monitor()
+            # if monitor_status == 'error':
+            #     raise Exception()
             self.detector()
             time.sleep(5)
             self.interventor()
@@ -72,7 +73,11 @@ class Engine(object):
         """
         docstring
         """
-        print('Executando Detector...')
+        detector = DetectorFacade()
+        detector.run()
+        # status = detector.run(interval=self.monitor_stream_time, process_id=self.process_id)
+        # print('Status retornado pelo detector: {}.'.format(status))
+        # return status
 
 
     def interventor(self):
