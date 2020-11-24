@@ -6,13 +6,19 @@
 
 Abra um terminal Linux e execute os seguintes comandos para a instalação e configuração do projeto:
 
-#### 1.1. Faça o clone do repositório
+#### 1.1. Instale os pacotes necessários para o build
+
+```
+sudo apt install build-essential python3-dev libpq-dev
+```
+
+#### 1.2. Faça o clone do repositório
 
 ```
 git clone https://github.com/projeto-confia/CONFIA
 ```
 
-#### 1.2. Configure o banco de dados (docker e docker-compose devem estar instalados)
+#### 1.3. Configure o banco de dados (docker e docker-compose devem estar instalados)
 
 Edite o arquivo `docker.env.example`, inserindo seu e-mail e uma senha definida por você. Estas serão as credenciais para acessar o pgAdmin. Após a edição, renomeie o arquivo para `docker.env`.
 
@@ -37,21 +43,22 @@ Usarname: admin
 Password: postgres
 ```
 
-#### 1.3. Instale o [venv](https://docs.python.org/3/library/venv.html):
+#### 1.4. Instale o [venv](https://docs.python.org/3/library/venv.html):
 
 ```
 sudo apt install python3-venv
 ```
 
-#### 1.4. Instale as demais dependências:
-
-```
-sudo pip3 install -r requirements.txt
-```
 #### 1.5. Ative o ambiente
 
 ```
 source confia/bin/activate
+```
+
+#### 1.6. Instale as demais dependências:
+
+```
+sudo pip3 install -r requirements.txt
 ```
 
 *Caso seja necessário, digite `deactivate` no terminal para desativar o ambiente.* 
