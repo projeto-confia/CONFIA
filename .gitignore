@@ -3,3 +3,6 @@ pg_data
 
 # docker env file
 docker.env
+
+# vscode settings
+.vscode/*
