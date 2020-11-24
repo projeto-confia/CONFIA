@@ -48,8 +48,10 @@ class Engine(object):
             #     raise Exception()
             self.detector()
             time.sleep(5)
+
             self.interventor()
             time.sleep(5)
+            
             print('Processo {} finalizado.\n'.format(self.process_id))
             self.process_id += 1
         except:
