@@ -16,10 +16,10 @@ class Detector:
     def __init__(self, users_file="confia/data/users_paulo.csv", news_file = "confia/data/news.csv", 
         news_users_file="confia/data/news_users.csv", laplace_smoothing=0.01):
 
-        self.__users =      pd.read_csv(users_file, sep=';')
-        self.__news =       pd.read_csv(news_file, sep=';')
-        self.__news_users = pd.read_csv(news_users_file, sep=';')
-        self.__suavizacao = laplace_smoothing
+        self.__users      =    pd.read_csv(users_file, sep=';')
+        self.__news       =    pd.read_csv(news_file, sep=';')
+        self.__news_users =    pd.read_csv(news_users_file, sep=';')
+        self.__smoothing  =    laplace_smoothing
 
         # atribui uma label para cada notícia. A primeira metade é not fake (0) e a segunda metade é fake (1)
         self.__news["news_label"] = np.array([0, 1])[np.linspace(0,2,len(self.__news), endpoint=False).astype(int)]
@@ -49,15 +49,24 @@ class Detector:
         for userId in userIds:
             # obtém os labels das notícias compartilhadas por cada usuário.
             newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
-            
             user = User(userId, newsSharedByUser)
-            user.opinion_matrix[0,0] = newsSharedByUser.count(0)
-            user.opinion_matrix[0,1] = newsSharedByUser.count(1)
-            user.opinion_matrix[1,0] = math.ceil((1 - (user.opinion_matrix[0,0] / user.opinion_matrix[0,1])) * self.__num_F)
-            user.opinion_matrix[1,1] = math.ceil((user.opinion_matrix[0,0] / user.opinion_matrix[0,1]) * self.__num_F)
+            
+            # calcula a matriz de opinião para cada usuário.
+            totUserR    = newsSharedByUser.count(0)
+            totUserF    = newsSharedByUser.count(1)
+            alphaN      = totUserR + self.__smoothing
+            umBetaN     = totUserF + self.__smoothing
+            umAlfaN     = ((totUserF + self.__smoothing) / (self.__num_F + self.__smoothing)) * (self.__num_not_F + self.__smoothing)
+            betaN       = (umAlfaN * (totUserR + self.__smoothing)) / (totUserF + self.__smoothing)
+
+            user.opinion_matrix[0,0] = alphaN
+            user.opinion_matrix[0,1] = umBetaN
+            user.opinion_matrix[1,0] = umAlfaN
+            user.opinion_matrix[1,1] = betaN
 
             list_users.append(user)
             # print("News shared by user {0}: ".format(userId), newsSharedByUser.values)
+            print("Opinion matrix of user {0}:\n".format(userId), user.opinion_matrix)
 
 
 
