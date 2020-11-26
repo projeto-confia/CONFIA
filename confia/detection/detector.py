@@ -64,9 +64,21 @@ class Detector:
             user.opinion_matrix[1,0] = umAlfaN
             user.opinion_matrix[1,1] = betaN
 
+            # calcula a matriz de probabilidades para cada usuário.
+            user.probability_matrix[0,0] = alphaN / (alphaN + umAlfaN)
+            user.probability_matrix[0,1] = 1 - user.probability_matrix[0,0]
+            user.probability_matrix[1,1] = betaN / (betaN + umBetaN)
+            user.probability_matrix[1,0] = 1 - user.probability_matrix[1,1]
+
+            # usersGeral$probAlfaN <- ((usersGeral$alfaN) / (usersGeral$alfaN + usersGeral$umAlfaN))
+            # usersGeral$probumAlfaN <- (1 - usersGeral$probAlfaN)
+            # usersGeral$probBetaN <- ((usersGeral$betaN) / (usersGeral$betaN + usersGeral$umBetaN))
+            # usersGeral$probumBetaN <- (1 - usersGeral$probBetaN)
+
             list_users.append(user)
             # print("News shared by user {0}: ".format(userId), newsSharedByUser.values)
-            print("Opinion matrix of user {0}:\n".format(userId), user.opinion_matrix)
+            # print("Opinion matrix of user {0}:\n".format(userId), user.opinion_matrix)
+            print("Probability matrix of user {0}:\n".format(userId), user.probability_matrix)
 
 
 
