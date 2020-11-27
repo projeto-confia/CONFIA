@@ -3,10 +3,11 @@ import pandas as pd
 import numpy as np
 import math
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, accuracy_score
 
 class User:
     def __init__(self, idUser, sharedNews):
-        self.user = idUser
+        self.id = idUser
         self.sharedNews = sharedNews
         self.opinion_matrix = np.zeros(shape=(2,2), dtype=int)
         self.probability_matrix = np.zeros(shape=(2,2), dtype=float)
@@ -14,12 +15,13 @@ class User:
 class Detector:
     # A leitura dos arquivos csv é apenas um teste preliminar. Em versões futuras, os dados serão obtidos a partir do BD relacional.
     def __init__(self, users_file="confia/data/users_paulo.csv", news_file = "confia/data/news.csv", 
-        news_users_file="confia/data/news_users.csv", laplace_smoothing=0.01):
+        news_users_file="confia/data/news_users.csv", laplace_smoothing=0.01, omega=0.5):
 
         self.__users      =    pd.read_csv(users_file, sep=';')
         self.__news       =    pd.read_csv(news_file, sep=';')
         self.__news_users =    pd.read_csv(news_users_file, sep=';')
         self.__smoothing  =    laplace_smoothing
+        self.__omega      =    omega
 
         # atribui uma label para cada notícia. A primeira metade é not fake (0) e a segunda metade é fake (1)
         self.__news["news_label"] = np.array([0, 1])[np.linspace(0,2,len(self.__news), endpoint=False).astype(int)]
@@ -30,21 +32,22 @@ class Detector:
             self.__news, labels, test_size=0.3, stratify=labels)
 
         # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
-        self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, on="newsId")
+        self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="newsId", right_on="newsId")
         # armazena em 'self.__test_news_users' as notícias compartilhadas por cada usuário.
-        self.__test_news_users = pd.merge(self.__X_test_news, self.__news_users, on="newsId")
+        self.__test_news_users = pd.merge(self.__X_test_news, self.__news_users, left_on="newsId", right_on="newsId")
 
         # pega o número total de nóticias 'fake' e 'not fake' em 'self.__train_news_users'.
         self.__num_not_F = self.__train_news_users["news_label"].loc[self.__train_news_users["news_label"] == 0].value_counts()[0]
         self.__num_F = self.__train_news_users["news_label"].loc[self.__train_news_users["news_label"] == 1].value_counts()[1]
         
-        # ordena os usuários em ordem crescente.
+        # ordena os usuários dos conjuntos de treino e teste em ordem crescente.
         self.__train_news_users.sort_values(by=['userId', 'newsId'], inplace=True)
+        self.__test_news_users.sort_values(by=['userId', 'newsId'], inplace=True)
 
         # ================================================================================================================
         # calcula as métricas para cada usuário.
         userIds = self.__train_news_users["userId"].unique()
-        list_users = []
+        dict_users  = {}
 
         for userId in userIds:
             # obtém os labels das notícias compartilhadas por cada usuário.
@@ -70,13 +73,45 @@ class Detector:
             user.probability_matrix[1,1] = betaN / (betaN + umBetaN)
             user.probability_matrix[1,0] = 1 - user.probability_matrix[1,1]
 
-            list_users.append(user)
+            dict_users[user.id] = user
             # print("News shared by user {0}: ".format(userId), newsSharedByUser.values)
             # print("Opinion matrix of user {0}:\n".format(userId), user.opinion_matrix)
-            print("Probability matrix of user {0}:\n".format(userId), user.probability_matrix)
+            # print("Probability matrix of user {0}:\n".format(userId), user.probability_matrix)
 
+        # ================================================================================================================
+        # avaliando as notícias de teste
+        self.__test_news_users["predicted_label"] = -1
+        i = 0
 
+        for _, news in self.__test_news_users.iterrows():
+            productAlfaN = 1
+            productUmAlfaN = 1
+            productBetaN = 1
+            productUmBetaN = 1
 
+            # só pega os usuários contidos na base de treinamento.
+            try:
+                user = dict_users[news["userId"]]
+            except:
+                continue
 
-        
-        
+            productAlfaN    = productAlfaN   * user.probability_matrix[0,0]
+            productUmBetaN  = productUmBetaN * user.probability_matrix[0,1]
+
+            # inferência bayesiana
+            reputation_news_vn = (self.__omega * productAlfaN * productUmAlfaN) * 100
+            reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
+            
+            if reputation_news_vn >= reputation_news_fn:
+                self.__test_news_users._set_value(i, "predicted_label", 0)
+            else:
+                self.__test_news_users._set_value(i, "predicted_label", 1)
+            
+            i = i + 1
+
+        # deleta do dataframe os id's dos usuários que não foram encontrados no conjunto de treino. 
+        self.__test_news_users.drop(self.__test_news_users.loc[self.__test_news_users["predicted_label"] == -1].index, inplace=True)                
+
+        # mostra os resultados da matriz de confusão e acurácia.
+        print(confusion_matrix(self.__test_news_users["news_label"], self.__test_news_users["predicted_label"]))
+        print(accuracy_score(self.__test_news_users["news_label"], self.__test_news_users["predicted_label"]))
