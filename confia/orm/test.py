@@ -1,11 +1,13 @@
 # teste inicial
 import psycopg2
+import db_config as dbc
+
 try:
-    connection = psycopg2.connect(user = "admin",
-                                  password = "postgres",
-                                  host = "localhost",
-                                  port = "15432",
-                                  database = "confia")
+    connection = psycopg2.connect(user = dbc.DATABASE_CONFIG['user'],
+                                  password = dbc.DATABASE_CONFIG['password'],
+                                  host = dbc.DATABASE_CONFIG['host'],
+                                  port = dbc.DATABASE_CONFIG['port'],
+                                  database = dbc.DATABASE_CONFIG['database'])
 
     cursor = connection.cursor()
     # Print PostgreSQL Connection properties
