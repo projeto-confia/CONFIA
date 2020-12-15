@@ -141,5 +141,5 @@ cython_debug/
 *config.py
 __pycache__
 # dados
-data/*
-!data/.gitkeep
+# data/*
+# !data/.gitkeep

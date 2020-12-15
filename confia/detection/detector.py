@@ -9,12 +9,12 @@ class User:
     def __init__(self, idUser, sharedNews):
         self.id = idUser
         self.sharedNews = sharedNews
-        self.opinion_matrix = np.zeros(shape=(2,2), dtype=int)
+        self.opinion_matrix = np.zeros(shape=(2,2), dtype=float)
         self.probability_matrix = np.zeros(shape=(2,2), dtype=float)
 
 class Detector:
     # A leitura dos arquivos csv é apenas um teste preliminar. Em versões futuras, os dados serão obtidos a partir do BD relacional.
-    def __init__(self, users_file="confia/data/users_paulo.csv", news_file = "confia/data/news.csv", 
+    def __init__(self, users_file="confia/data/users.csv", news_file = "confia/data/news.csv", 
         news_users_file="confia/data/news_users.csv", laplace_smoothing=0.01, omega=0.5):
 
         self.__users      =    pd.read_csv(users_file, sep=';')
