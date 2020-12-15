@@ -69,9 +69,9 @@ class Detector:
 
             # calcula a matriz de probabilidades para cada usuário.
             user.probability_matrix[0,0] = alphaN / (alphaN + umAlfaN)
-            user.probability_matrix[0,1] = 1 - user.probability_matrix[0,0]
+            user.probability_matrix[0,1] = 1 - user.probability_matrix[1,1]
+            user.probability_matrix[1,0] = 1 - user.probability_matrix[0,0]
             user.probability_matrix[1,1] = betaN / (betaN + umBetaN)
-            user.probability_matrix[1,0] = 1 - user.probability_matrix[1,1]
 
             dict_users[user.id] = user
             # print("News shared by user {0}: ".format(userId), newsSharedByUser.values)
@@ -93,7 +93,27 @@ class Detector:
             try:
                 user = dict_users[news["userId"]]
             except:
-                continue
+                 # obtém os labels das notícias compartilhadas por cada usuário.
+                user = User(news["userId"], [])
+                
+                # calcula a matriz de opinião para cada usuário.
+                totUserR    = 0
+                totUserF    = 0
+                alphaN      = totUserR + self.__smoothing
+                umBetaN     = totUserF + self.__smoothing
+                umAlfaN     = ((totUserF + self.__smoothing) / (self.__num_F + self.__smoothing)) * (self.__num_not_F + self.__smoothing)
+                betaN       = (umAlfaN * (totUserR + self.__smoothing)) / (totUserF + self.__smoothing)
+
+                user.opinion_matrix[0,0] = alphaN
+                user.opinion_matrix[0,1] = umBetaN
+                user.opinion_matrix[1,0] = umAlfaN
+                user.opinion_matrix[1,1] = betaN
+
+                # calcula a matriz de probabilidades para cada usuário.
+                user.probability_matrix[0,0] = alphaN / (alphaN + umAlfaN)
+                user.probability_matrix[0,1] = 1 - user.probability_matrix[1,1]
+                user.probability_matrix[1,0] = 1 - user.probability_matrix[0,0]
+                user.probability_matrix[1,1] = betaN / (betaN + umBetaN)
 
             productAlfaN    = productAlfaN   * user.probability_matrix[0,0]
             productUmBetaN  = productUmBetaN * user.probability_matrix[0,1]
