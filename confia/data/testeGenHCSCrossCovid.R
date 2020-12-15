@@ -1,9 +1,9 @@
 
 #####Pegar dataset completo#########
 
-pnewsuserTot <- read.csv(file.choose(), sep=";", header = T)
-pnewsTot <- read.csv(file.choose(), sep=";", header = T)
-usersGeral <- read.csv(file.choose(), sep=";", header = T)
+pnewsuserTot <- read.csv("dataset/news_users.csv", sep=";", header = T)
+pnewsTot <- read.csv("dataset/news.csv", sep=";", header = T)
+usersGeral <- read.csv("dataset/users.csv", sep=";", header = T)
 
 View(pnewsTot)
 View(usersGeral)
@@ -16,167 +16,167 @@ library(dplyr)
 
 #####Carregando os 10 conjuntos de treino e teste#########
 
-pnewsTreino1 <- read.csv(file="treinoGen1.csv", sep=";", header = T)
-pnewsTeste1 <- read.csv(file="testeGen1.csv", sep=";", header = T)
-pnewsTreino2 <- read.csv(file="treinoGen2.csv", sep=";", header = T)
-pnewsTeste2 <- read.csv(file="testeGen2.csv", sep=";", header = T)
-pnewsTreino3 <- read.csv(file="treinoGen3.csv", sep=";", header = T)
-pnewsTeste3 <- read.csv(file="testeGen3.csv", sep=";", header = T)
-pnewsTreino4 <- read.csv(file="treinoGen4.csv", sep=";", header = T)
-pnewsTeste4 <- read.csv(file="testeGen4.csv", sep=";", header = T)
-pnewsTreino5 <- read.csv(file="treinoGen5.csv", sep=";", header = T)
-pnewsTeste5 <- read.csv(file="testeGen5.csv", sep=";", header = T)
-pnewsTreino6 <- read.csv(file="treinoGen6.csv", sep=";", header = T)
-pnewsTeste6 <- read.csv(file="testeGen6.csv", sep=";", header = T)
-pnewsTreino7 <- read.csv(file="treinoGen7.csv", sep=";", header = T)
-pnewsTeste7 <- read.csv(file="testeGen7.csv", sep=";", header = T)
-pnewsTreino8 <- read.csv(file="treinoGen8.csv", sep=";", header = T)
-pnewsTeste8 <- read.csv(file="testeGen8.csv", sep=";", header = T)
-pnewsTreino9 <- read.csv(file="treinoGen9.csv", sep=";", header = T)
-pnewsTeste9 <- read.csv(file="testeGen9.csv", sep=";", header = T)
-pnewsTreino10 <- read.csv(file="treinoGen10.csv", sep=";", header = T)
-pnewsTeste10 <- read.csv(file="testeGen10.csv", sep=";", header = T)
+pnewsTreino1 <- read.csv(file="dataset/treinoGen1.csv", sep=";", header = T)
+pnewsTeste1 <- read.csv(file="dataset/testeGen1.csv", sep=";", header = T)
+pnewsTreino2 <- read.csv(file="dataset/treinoGen2.csv", sep=";", header = T)
+pnewsTeste2 <- read.csv(file="dataset/testeGen2.csv", sep=";", header = T)
+pnewsTreino3 <- read.csv(file="dataset/treinoGen3.csv", sep=";", header = T)
+pnewsTeste3 <- read.csv(file="dataset/testeGen3.csv", sep=";", header = T)
+pnewsTreino4 <- read.csv(file="dataset/treinoGen4.csv", sep=";", header = T)
+pnewsTeste4 <- read.csv(file="dataset/testeGen4.csv", sep=";", header = T)
+pnewsTreino5 <- read.csv(file="dataset/treinoGen5.csv", sep=";", header = T)
+pnewsTeste5 <- read.csv(file="dataset/testeGen5.csv", sep=";", header = T)
+pnewsTreino6 <- read.csv(file="dataset/treinoGen6.csv", sep=";", header = T)
+pnewsTeste6 <- read.csv(file="dataset/testeGen6.csv", sep=";", header = T)
+pnewsTreino7 <- read.csv(file="dataset/treinoGen7.csv", sep=";", header = T)
+pnewsTeste7 <- read.csv(file="dataset/testeGen7.csv", sep=";", header = T)
+pnewsTreino8 <- read.csv(file="dataset/treinoGen8.csv", sep=";", header = T)
+pnewsTeste8 <- read.csv(file="dataset/testeGen8.csv", sep=";", header = T)
+pnewsTreino9 <- read.csv(file="dataset/treinoGen9.csv", sep=";", header = T)
+pnewsTeste9 <- read.csv(file="dataset/testeGen9.csv", sep=";", header = T)
+pnewsTreino10 <- read.csv(file="dataset/treinoGen10.csv", sep=";", header = T)
+pnewsTeste10 <- read.csv(file="dataset/testeGen10.csv", sep=";", header = T)
 
 nrow(pnewsTeste10)
 
 ##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq1)
-pnewsTotMaq1 <- read.csv(file="ResulttesteGenMaq1.csv", sep=";", header = T)
+# pnewsTotMaq1 <- read.csv(file="dataset/ResulttesteGenMaq1.csv", sep=";", header = T)
 
-pnewsTreino1Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino1$id,]
-pnewsTeste1Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste1$id,]
-pnewsTreino2Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino2$id,]
-pnewsTeste2Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste2$id,]
-pnewsTreino3Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino3$id,]
-pnewsTeste3Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste3$id,]
-pnewsTreino4Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino4$id,]
-pnewsTeste4Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste4$id,]
-pnewsTreino5Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino5$id,]
-pnewsTeste5Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste5$id,]
-pnewsTreino6Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino6$id,]
-pnewsTeste6Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste6$id,]
-pnewsTreino7Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino7$id,]
-pnewsTeste7Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste7$id,]
-pnewsTreino8Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino8$id,]
-pnewsTeste8Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste8$id,]
-pnewsTreino9Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino9$id,]
-pnewsTeste9Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste9$id,]
-pnewsTreino10Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino10$id,]
-pnewsTeste10Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste10$id,]
+# pnewsTreino1Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino1$id,]
+# pnewsTeste1Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste1$id,]
+# pnewsTreino2Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino2$id,]
+# pnewsTeste2Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste2$id,]
+# pnewsTreino3Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino3$id,]
+# pnewsTeste3Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste3$id,]
+# pnewsTreino4Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino4$id,]
+# pnewsTeste4Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste4$id,]
+# pnewsTreino5Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino5$id,]
+# pnewsTeste5Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste5$id,]
+# pnewsTreino6Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino6$id,]
+# pnewsTeste6Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste6$id,]
+# pnewsTreino7Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino7$id,]
+# pnewsTeste7Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste7$id,]
+# pnewsTreino8Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino8$id,]
+# pnewsTeste8Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste8$id,]
+# pnewsTreino9Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino9$id,]
+# pnewsTeste9Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste9$id,]
+# pnewsTreino10Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTreino10$id,]
+# pnewsTeste10Maq1 <- pnewsTotMaq1[pnewsTotMaq1$id %in% pnewsTeste10$id,]
 
-nrow(pnewsTeste10Maq1)
-###############################################
-
-
-##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq2)
-pnewsTotMaq2 <- read.csv(file="ResulttesteGenMaq2.csv", sep=";", header = T)
-
-pnewsTreino1Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino1$id,]
-pnewsTeste1Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste1$id,]
-pnewsTreino2Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino2$id,]
-pnewsTeste2Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste2$id,]
-pnewsTreino3Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino3$id,]
-pnewsTeste3Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste3$id,]
-pnewsTreino4Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino4$id,]
-pnewsTeste4Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste4$id,]
-pnewsTreino5Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino5$id,]
-pnewsTeste5Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste5$id,]
-pnewsTreino6Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino6$id,]
-pnewsTeste6Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste6$id,]
-pnewsTreino7Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino7$id,]
-pnewsTeste7Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste7$id,]
-pnewsTreino8Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino8$id,]
-pnewsTeste8Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste8$id,]
-pnewsTreino9Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino9$id,]
-pnewsTeste9Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste9$id,]
-pnewsTreino10Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino10$id,]
-pnewsTeste10Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste10$id,]
-
-nrow(pnewsTeste10Maq2)
-###############################################
+# nrow(pnewsTeste10Maq1)
+# ###############################################
 
 
-##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq3)
-pnewsTotMaq3 <- read.csv(file="ResulttesteGenMaq3.csv", sep=";", header = T)
+# ##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq2)
+# pnewsTotMaq2 <- read.csv(file="ResulttesteGenMaq2.csv", sep=";", header = T)
 
-pnewsTreino1Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino1$id,]
-pnewsTeste1Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste1$id,]
-pnewsTreino2Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino2$id,]
-pnewsTeste2Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste2$id,]
-pnewsTreino3Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino3$id,]
-pnewsTeste3Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste3$id,]
-pnewsTreino4Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino4$id,]
-pnewsTeste4Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste4$id,]
-pnewsTreino5Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino5$id,]
-pnewsTeste5Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste5$id,]
-pnewsTreino6Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino6$id,]
-pnewsTeste6Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste6$id,]
-pnewsTreino7Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino7$id,]
-pnewsTeste7Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste7$id,]
-pnewsTreino8Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino8$id,]
-pnewsTeste8Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste8$id,]
-pnewsTreino9Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino9$id,]
-pnewsTeste9Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste9$id,]
-pnewsTreino10Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino10$id,]
-pnewsTeste10Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste10$id,]
+# pnewsTreino1Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino1$id,]
+# pnewsTeste1Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste1$id,]
+# pnewsTreino2Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino2$id,]
+# pnewsTeste2Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste2$id,]
+# pnewsTreino3Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino3$id,]
+# pnewsTeste3Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste3$id,]
+# pnewsTreino4Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino4$id,]
+# pnewsTeste4Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste4$id,]
+# pnewsTreino5Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino5$id,]
+# pnewsTeste5Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste5$id,]
+# pnewsTreino6Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino6$id,]
+# pnewsTeste6Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste6$id,]
+# pnewsTreino7Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino7$id,]
+# pnewsTeste7Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste7$id,]
+# pnewsTreino8Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino8$id,]
+# pnewsTeste8Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste8$id,]
+# pnewsTreino9Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino9$id,]
+# pnewsTeste9Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste9$id,]
+# pnewsTreino10Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTreino10$id,]
+# pnewsTeste10Maq2 <- pnewsTotMaq2[pnewsTotMaq2$id %in% pnewsTeste10$id,]
 
-nrow(pnewsTeste10Maq3)
-###############################################
+# nrow(pnewsTeste10Maq2)
+# ###############################################
 
-##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq4)
-pnewsTotMaq4 <- read.csv(file="ResulttesteGenMaq4-FNE.csv", sep=";", header = T)
 
-pnewsTreino1Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino1$id,]
-pnewsTeste1Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste1$id,]
-pnewsTreino2Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino2$id,]
-pnewsTeste2Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste2$id,]
-pnewsTreino3Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino3$id,]
-pnewsTeste3Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste3$id,]
-pnewsTreino4Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino4$id,]
-pnewsTeste4Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste4$id,]
-pnewsTreino5Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino5$id,]
-pnewsTeste5Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste5$id,]
-pnewsTreino6Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino6$id,]
-pnewsTeste6Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste6$id,]
-pnewsTreino7Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino7$id,]
-pnewsTeste7Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste7$id,]
-pnewsTreino8Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino8$id,]
-pnewsTeste8Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste8$id,]
-pnewsTreino9Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino9$id,]
-pnewsTeste9Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste9$id,]
-pnewsTreino10Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino10$id,]
-pnewsTeste10Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste10$id,]
+# ##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq3)
+# pnewsTotMaq3 <- read.csv(file="ResulttesteGenMaq3.csv", sep=";", header = T)
 
-nrow(pnewsTeste10Maq4)
+# pnewsTreino1Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino1$id,]
+# pnewsTeste1Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste1$id,]
+# pnewsTreino2Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino2$id,]
+# pnewsTeste2Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste2$id,]
+# pnewsTreino3Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino3$id,]
+# pnewsTeste3Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste3$id,]
+# pnewsTreino4Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino4$id,]
+# pnewsTeste4Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste4$id,]
+# pnewsTreino5Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino5$id,]
+# pnewsTeste5Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste5$id,]
+# pnewsTreino6Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino6$id,]
+# pnewsTeste6Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste6$id,]
+# pnewsTreino7Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino7$id,]
+# pnewsTeste7Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste7$id,]
+# pnewsTreino8Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino8$id,]
+# pnewsTeste8Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste8$id,]
+# pnewsTreino9Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino9$id,]
+# pnewsTeste9Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste9$id,]
+# pnewsTreino10Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTreino10$id,]
+# pnewsTeste10Maq3 <- pnewsTotMaq3[pnewsTotMaq3$id %in% pnewsTeste10$id,]
 
-###############################################
+# nrow(pnewsTeste10Maq3)
+# ###############################################
 
-###############################################
+# ##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq4)
+# pnewsTotMaq4 <- read.csv(file="ResulttesteGenMaq4-FNE.csv", sep=";", header = T)
 
-##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq5)
-pnewsTotMaq5 <- read.csv(file="ResulttesteGenMaq5-JON.csv", sep=";", header = T)
+# pnewsTreino1Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino1$id,]
+# pnewsTeste1Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste1$id,]
+# pnewsTreino2Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino2$id,]
+# pnewsTeste2Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste2$id,]
+# pnewsTreino3Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino3$id,]
+# pnewsTeste3Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste3$id,]
+# pnewsTreino4Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino4$id,]
+# pnewsTeste4Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste4$id,]
+# pnewsTreino5Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino5$id,]
+# pnewsTeste5Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste5$id,]
+# pnewsTreino6Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino6$id,]
+# pnewsTeste6Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste6$id,]
+# pnewsTreino7Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino7$id,]
+# pnewsTeste7Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste7$id,]
+# pnewsTreino8Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino8$id,]
+# pnewsTeste8Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste8$id,]
+# pnewsTreino9Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino9$id,]
+# pnewsTeste9Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste9$id,]
+# pnewsTreino10Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTreino10$id,]
+# pnewsTeste10Maq4 <- pnewsTotMaq4[pnewsTotMaq4$id %in% pnewsTeste10$id,]
 
-pnewsTreino1Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino1$id,]
-pnewsTeste1Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste1$id,]
-pnewsTreino2Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino2$id,]
-pnewsTeste2Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste2$id,]
-pnewsTreino3Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino3$id,]
-pnewsTeste3Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste3$id,]
-pnewsTreino4Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino4$id,]
-pnewsTeste4Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste4$id,]
-pnewsTreino5Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino5$id,]
-pnewsTeste5Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste5$id,]
-pnewsTreino6Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino6$id,]
-pnewsTeste6Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste6$id,]
-pnewsTreino7Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino7$id,]
-pnewsTeste7Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste7$id,]
-pnewsTreino8Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino8$id,]
-pnewsTeste8Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste8$id,]
-pnewsTreino9Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino9$id,]
-pnewsTeste9Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste9$id,]
-pnewsTreino10Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino10$id,]
-pnewsTeste10Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste10$id,]
+# nrow(pnewsTeste10Maq4)
 
-nrow(pnewsTeste10Maq5)
+# ###############################################
+
+# ###############################################
+
+# ##### Caso as maquinas devolvam um arquivo unico com as opinioes (Maq5)
+# pnewsTotMaq5 <- read.csv(file="ResulttesteGenMaq5-JON.csv", sep=";", header = T)
+
+# pnewsTreino1Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino1$id,]
+# pnewsTeste1Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste1$id,]
+# pnewsTreino2Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino2$id,]
+# pnewsTeste2Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste2$id,]
+# pnewsTreino3Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino3$id,]
+# pnewsTeste3Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste3$id,]
+# pnewsTreino4Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino4$id,]
+# pnewsTeste4Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste4$id,]
+# pnewsTreino5Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino5$id,]
+# pnewsTeste5Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste5$id,]
+# pnewsTreino6Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino6$id,]
+# pnewsTeste6Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste6$id,]
+# pnewsTreino7Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino7$id,]
+# pnewsTeste7Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste7$id,]
+# pnewsTreino8Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino8$id,]
+# pnewsTeste8Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste8$id,]
+# pnewsTreino9Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino9$id,]
+# pnewsTeste9Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste9$id,]
+# pnewsTreino10Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTreino10$id,]
+# pnewsTeste10Maq5 <- pnewsTotMaq5[pnewsTotMaq5$id %in% pnewsTeste10$id,]
+
+# nrow(pnewsTeste10Maq5)
 
 ###############################################
 
@@ -393,7 +393,7 @@ while (contconj <= 10)  {
     pnewsuser <- pnewsuserTeste 
     pnews <- pnewsTeste
 
-    ### Calculo dos parâmetros do usuário
+    ### Calculo dos parametros do usuario
 
     contnews = 1
     contnewstot = nrow(pnewsuserTreino)
@@ -456,10 +456,10 @@ while (contconj <= 10)  {
     
 
     
-    ### Calculo dos parâmetros das maquinas
+    ### Calculo dos parametros das maquinas
     
     
-    ### Calculo dos parâmetros da Maq1
+    ### Calculo dos parametros da Maq1
     
     # contnews = 1
     # contnewstot = nrow(pnewsTreinoMaq1)
@@ -501,7 +501,7 @@ while (contconj <= 10)  {
     # probumBetaNMaq1 <- (1 - probBetaNMaq1)
     # 
     # 
-    # ### Calculo dos parâmetros da Maq2
+    # ### Calculo dos parametros da Maq2
     # 
     # contnews = 1
     # contnewstot = nrow(pnewsTreinoMaq2)
@@ -543,7 +543,7 @@ while (contconj <= 10)  {
     # probumBetaNMaq2 <- (1 - probBetaNMaq2)
     # 
     # 
-    # ### Calculo dos parâmetros da Maq3
+    # ### Calculo dos parametros da Maq3
     # 
     # contnews = 1
     # contnewstot = nrow(pnewsTreinoMaq3)
@@ -585,7 +585,7 @@ while (contconj <= 10)  {
     # probumBetaNMaq3 <- (1 - probBetaNMaq3)
     # 
     # 
-    # ### Calculo dos parâmetros da Maq4
+    # ### Calculo dos parametros da Maq4
     #  
     # contnews = 1
     # contnewstot = nrow(pnewsTreinoMaq4)
@@ -628,7 +628,7 @@ while (contconj <= 10)  {
     # 
     # 
     # 
-    # ### Calculo dos parâmetros da Maq5
+    # ### Calculo dos parametros da Maq5
     # 
     # contnews = 1
     # contnewstot = nrow(pnewsTreinoMaq5)
@@ -713,7 +713,7 @@ while (contconj <= 10)  {
       ### Opiniao das maquinas
       
         
-      #   ### Caso não tenha usuarios ###
+      #   ### Caso nao tenha usuarios ###
       #      # produtorioAlfaN = 1
       #      # produtorioumAlfaN = 1
       #      # produtorioBetaN = 1
