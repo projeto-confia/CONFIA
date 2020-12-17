@@ -55,10 +55,32 @@ class Detector:
         self.__users["alphaN"]      = totR + self.__smoothing
         self.__users["betaN"]       = ((totF + self.__smoothing) / (qtd_F + self.__smoothing)) * (qtd_V + self.__smoothing)
         self.__users["umAlphaN"]    = (self.__users["betaN"] * (totR + self.__smoothing)) / (totF + self.__smoothing)
-        self.__users["umBetaN"]      = totF + self.__smoothing
+        self.__users["umBetaN"]     = totF + self.__smoothing
 
         print(self.__users)
         print(self.__news["news_label"].value_counts())
+
+        for userId in self.__train_news_users["userId"].unique():
+            # obtém os labels das notícias compartilhadas por cada usuário.
+            newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
+            
+            # calcula a matriz de opinião para cada usuário.
+            totR    = newsSharedByUser.count(0)
+            totF    = newsSharedByUser.count(1)
+            row = self.__users.loc[self.__users['userId'] == userId]
+            
+            row["alphaN"]      = totR + self.__smoothing
+            row["betaN"]       = ((totF + self.__smoothing) / (qtd_F + self.__smoothing)) * (qtd_V + self.__smoothing)
+            row["umAlphaN"]    = (row["betaN"] * (totR + self.__smoothing)) / (totF + self.__smoothing)
+            row["umBetaN"]     = totF + self.__smoothing
+
+            # # calcula a matriz de probabilidades para cada usuário.
+            # user.probability_matrix[0,0] = alphaN / (alphaN + umAlfaN)          # probAlfaN
+            # user.probability_matrix[1,0] = 1 - user.probability_matrix[0,0]     # probUmAlfaN
+            # user.probability_matrix[1,1] = betaN / (betaN + umBetaN)            # probBetaN
+            # user.probability_matrix[0,1] = 1 - user.probability_matrix[1,1]     # probUmBetaN
+
+        print(self.__users)
 
 
 
