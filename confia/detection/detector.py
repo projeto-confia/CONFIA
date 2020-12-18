@@ -61,10 +61,11 @@ class Detector:
         self.__users["probBetaN"]     = 0
         self.__users["probUmBetaN"]   = 0
 
-        print(self.__users)
-        print(self.__news["news_label"].value_counts())
-
-        for userId in self.__train_news_users["userId"].unique():
+        ###############################################################################################
+        # etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.
+        ###############################################################################################
+        
+        for userId in self.__train_news_users["userId"].unique():            
             # obtém os labels das notícias compartilhadas por cada usuário.
             newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
             
@@ -90,17 +91,14 @@ class Detector:
             self.__users.loc[self.__users['userId'] == userId, "probUmAlphaN"] = probUmAlphaN
             self.__users.loc[self.__users['userId'] == userId, "probUmBetaN"]  = probUmBetaN
 
-        print(self.__users)
-
-
-
-            # # calcula a matriz de probabilidades para cada usuário.
-            # user.probability_matrix[0,0] = alphaN / (alphaN + umAlfaN)          # probAlfaN
-            # user.probability_matrix[1,0] = 1 - user.probability_matrix[0,0]     # probUmAlfaN
-            # user.probability_matrix[1,1] = betaN / (betaN + umBetaN)            # probBetaN
-            # user.probability_matrix[0,1] = 1 - user.probability_matrix[1,1]     # probUmBetaN
-
-        print(self.__users)
+        ###############################################################################################################
+        # etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
+        ###############################################################################################################
+       
+        for newsId in self.__test_news_users["newsId"].unique():
+            usersWhichSharedTheNews = list(self.__news_users["userId"].loc[self.__news_users["newsId"] == newsId])
+            print(usersWhichSharedTheNews)
+        
 
 
 
