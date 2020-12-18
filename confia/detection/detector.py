@@ -52,10 +52,14 @@ class Detector:
         # inicializa os parâmetros dos usuários.
         totR = 0
         totF = 0
-        self.__users["alphaN"]      = totR + self.__smoothing
-        self.__users["betaN"]       = ((totF + self.__smoothing) / (qtd_F + self.__smoothing)) * (qtd_V + self.__smoothing)
-        self.__users["umAlphaN"]    = (self.__users["betaN"] * (totR + self.__smoothing)) / (totF + self.__smoothing)
-        self.__users["umBetaN"]     = totF + self.__smoothing
+        self.__users["alphaN"]        = totR + self.__smoothing
+        self.__users["betaN"]         = ((totF + self.__smoothing) / (qtd_F + self.__smoothing)) * (qtd_V + self.__smoothing)
+        self.__users["umAlphaN"]      = (self.__users["betaN"] * (totR + self.__smoothing)) / (totF + self.__smoothing)
+        self.__users["umBetaN"]       = totF + self.__smoothing
+        self.__users["probAlphaN"]    = 0
+        self.__users["probUmAlphaN"]  = 0
+        self.__users["probBetaN"]     = 0
+        self.__users["probUmBetaN"]   = 0
 
         print(self.__users)
         print(self.__news["news_label"].value_counts())
@@ -65,14 +69,30 @@ class Detector:
             newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
             
             # calcula a matriz de opinião para cada usuário.
-            totR    = newsSharedByUser.count(0)
-            totF    = newsSharedByUser.count(1)
-            row = self.__users.loc[self.__users['userId'] == userId]
-            
-            row["alphaN"]      = totR + self.__smoothing
-            row["betaN"]       = ((totF + self.__smoothing) / (qtd_F + self.__smoothing)) * (qtd_V + self.__smoothing)
-            row["umAlphaN"]    = (row["betaN"] * (totR + self.__smoothing)) / (totF + self.__smoothing)
-            row["umBetaN"]     = totF + self.__smoothing
+            totR        = newsSharedByUser.count(0)
+            totF        = newsSharedByUser.count(1)
+            alphaN      = totR + self.__smoothing
+            betaN       = ((totF + self.__smoothing) / (qtd_F + self.__smoothing)) * (qtd_V + self.__smoothing)
+            umAlphaN    = (betaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
+            umBetaN     = totF + self.__smoothing
+            self.__users.loc[self.__users['userId'] == userId, "alphaN"]   = alphaN
+            self.__users.loc[self.__users['userId'] == userId, "betaN"]    = betaN
+            self.__users.loc[self.__users['userId'] == userId, "umAlphaN"] = umAlphaN
+            self.__users.loc[self.__users['userId'] == userId, "umBetaN"]  = umBetaN
+
+            # calcula as probabilidades para cada usuário.
+            probAlphaN      = alphaN / (alphaN + umAlphaN)
+            probUmAlphaN    = 1 - probAlphaN
+            probBetaN       = betaN / (betaN + umBetaN)
+            probUmBetaN     = 1 - probBetaN
+            self.__users.loc[self.__users['userId'] == userId, "probAlphaN"]   = probAlphaN
+            self.__users.loc[self.__users['userId'] == userId, "probBetaN"]    = probBetaN
+            self.__users.loc[self.__users['userId'] == userId, "probUmAlphaN"] = probUmAlphaN
+            self.__users.loc[self.__users['userId'] == userId, "probUmBetaN"]  = probUmBetaN
+
+        print(self.__users)
+
+
 
             # # calcula a matriz de probabilidades para cada usuário.
             # user.probability_matrix[0,0] = alphaN / (alphaN + umAlfaN)          # probAlfaN
