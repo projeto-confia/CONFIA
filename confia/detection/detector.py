@@ -96,6 +96,7 @@ class Detector:
         ###############################################################################################################
        
         for newsId in self.__test_news_users["newsId"].unique():
+            # recupera os ids de usuário que compartilharam a notícia representada por 'newsId'.
             usersWhichSharedTheNews = list(self.__news_users["userId"].loc[self.__news_users["newsId"] == newsId])
             print(usersWhichSharedTheNews)
         
