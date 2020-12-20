@@ -26,11 +26,6 @@ class Detector:
         # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
         self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="newsId", right_on="newsId")
         self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="newsId", right_on="newsId")
-        # self.__train_news_users = pd.merge(self.__news, self.__news_users, left_on="newsId", right_on="newsId")
-
-        # self.__test_news = pd.read_csv("confia/data/testeGen2.csv", sep=';')
-        # self.__test_news_users = pd.merge(self.__test_news, self.__news_users, left_on="newsId", right_on="newsId")
-        # print(self.__test_news_users)
 
         # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
         qtd_V = self.__news["news_label"].value_counts()[0]
@@ -38,7 +33,6 @@ class Detector:
 
         # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
         self.__train_news_users = self.__train_news_users[self.__train_news_users["userId"].isin(self.__test_news_users["userId"])]
-        # print(self.__train_news_users)
 
         # inicializa os parâmetros dos usuários.
         totR            = 0
@@ -85,8 +79,8 @@ class Detector:
         ###############################################################################################################
         # etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
         ###############################################################################################################
-        self.__X_test_news.loc[:, "news_label"]      = [0 if newsId <= 300 else 1 for newsId in self.__X_test_news["newsId"]]
-        self.__X_test_news.loc[:, "predicted_label"] = -1
+        news_labels      = [0 if newsId <= 300 else 1 for newsId in self.__X_test_news["newsId"]]
+        predicted_labels = []
 
         for newsId in self.__test_news_users["newsId"].unique():
             # recupera os ids de usuário que compartilharam a notícia representada por 'newsId'.
@@ -109,11 +103,10 @@ class Detector:
             reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
             
             if reputation_news_tn >= reputation_news_fn:
-                self.__X_test_news.loc[self.__X_test_news['newsId'] == newsId, "predicted_label"] = 0
+                predicted_labels.append(0)
             else:
-                self.__X_test_news.loc[self.__X_test_news['newsId'] == newsId, "predicted_label"] = 1
+                predicted_labels.append(1)
 
         # mostra os resultados da matriz de confusão e acurácia.
-        print(self.__X_test_news)
-        print(confusion_matrix(self.__X_test_news["news_label"], self.__X_test_news["predicted_label"]))
-        print(accuracy_score(self.__X_test_news["news_label"], self.__X_test_news["predicted_label"]))
+        print(confusion_matrix(news_labels, predicted_labels))
+        print(accuracy_score(news_labels, predicted_labels))
