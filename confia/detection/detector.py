@@ -7,7 +7,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 
 class Detector:
     # A leitura dos arquivos csv é apenas um teste preliminar. Em versões futuras, os dados serão obtidos a partir do BD relacional.
-    def __init__(self, users_file="confia/data/users.csv", news_file = "confia/data/treinoGen2.csv", 
+    def __init__(self, users_file="confia/data/users.csv", news_file = "confia/data/news.csv", 
         news_users_file="confia/data/news_users.csv", laplace_smoothing=0.01, omega=0.5):
 
         self.__users      =    pd.read_csv(users_file, sep=';')
@@ -21,17 +21,15 @@ class Detector:
        
         # divide 'self.__news_users' em treino e teste.
         labels = self.__news["news_label"]
-
-        # self.__X_train_news, self.__X_test_news, self.__Y_train_news, self.__Y_test_news = train_test_split(
-        #     self.__news, labels, test_size=0.3, stratify=labels)
+        self.__X_train_news, self.__X_test_news, _, _ = train_test_split(self.__news, labels, test_size=0.3, stratify=labels)
 
         # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
-        # self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="newsId", right_on="newsId")
-        self.__train_news_users = pd.merge(self.__news, self.__news_users, left_on="newsId", right_on="newsId")
-        # print(self.__train_news_users)
+        self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="newsId", right_on="newsId")
+        self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="newsId", right_on="newsId")
+        # self.__train_news_users = pd.merge(self.__news, self.__news_users, left_on="newsId", right_on="newsId")
 
-        self.__test_news = pd.read_csv("confia/data/testeGen2.csv", sep=';')
-        self.__test_news_users = pd.merge(self.__test_news, self.__news_users, left_on="newsId", right_on="newsId")
+        # self.__test_news = pd.read_csv("confia/data/testeGen2.csv", sep=';')
+        # self.__test_news_users = pd.merge(self.__test_news, self.__news_users, left_on="newsId", right_on="newsId")
         # print(self.__test_news_users)
 
         # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
@@ -87,8 +85,8 @@ class Detector:
         ###############################################################################################################
         # etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
         ###############################################################################################################
-        self.__test_news["news_label"]      = [0 if newsId <= 300 else 1 for newsId in self.__test_news["newsId"]]
-        self.__test_news["predicted_label"] = -1
+        self.__X_test_news.loc[:, "news_label"]      = [0 if newsId <= 300 else 1 for newsId in self.__X_test_news["newsId"]]
+        self.__X_test_news.loc[:, "predicted_label"] = -1
 
         for newsId in self.__test_news_users["newsId"].unique():
             # recupera os ids de usuário que compartilharam a notícia representada por 'newsId'.
@@ -111,10 +109,11 @@ class Detector:
             reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
             
             if reputation_news_tn >= reputation_news_fn:
-                self.__test_news.loc[self.__test_news['newsId'] == newsId, "predicted_label"] = 0
+                self.__X_test_news.loc[self.__X_test_news['newsId'] == newsId, "predicted_label"] = 0
             else:
-                self.__test_news.loc[self.__test_news['newsId'] == newsId, "predicted_label"] = 1
+                self.__X_test_news.loc[self.__X_test_news['newsId'] == newsId, "predicted_label"] = 1
 
         # mostra os resultados da matriz de confusão e acurácia.
-        print(confusion_matrix(self.__test_news["news_label"], self.__test_news["predicted_label"]))
-        print(accuracy_score(self.__test_news["news_label"], self.__test_news["predicted_label"]))
+        print(self.__X_test_news)
+        print(confusion_matrix(self.__X_test_news["news_label"], self.__X_test_news["predicted_label"]))
+        print(accuracy_score(self.__X_test_news["news_label"], self.__X_test_news["predicted_label"]))
