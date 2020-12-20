@@ -79,7 +79,6 @@ class Detector:
         ###############################################################################################################
         # etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
         ###############################################################################################################
-        news_labels      = [0 if newsId <= 300 else 1 for newsId in self.__X_test_news["newsId"]]
         predicted_labels = []
 
         for newsId in self.__test_news_users["newsId"].unique():
@@ -108,5 +107,5 @@ class Detector:
                 predicted_labels.append(1)
 
         # mostra os resultados da matriz de confusão e acurácia.
-        print(confusion_matrix(news_labels, predicted_labels))
-        print(accuracy_score(news_labels, predicted_labels))
+        print(confusion_matrix(self.__X_test_news["news_label"], predicted_labels))
+        print(accuracy_score(self.__X_test_news["news_label"], predicted_labels))
