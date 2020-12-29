@@ -1,6 +1,6 @@
 # teste inicial
 import psycopg2
-import db_config as dbc
+from confia.orm import db_config as dbc
 
 try:
     connection = psycopg2.connect(user = dbc.DATABASE_CONFIG['user'],

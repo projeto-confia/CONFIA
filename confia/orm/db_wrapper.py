@@ -1,5 +1,5 @@
 import psycopg2
-import db_config as dbc
+from confia.orm import db_config as dbc
 
 
 class DatabaseWrapper:
@@ -12,7 +12,7 @@ class DatabaseWrapper:
                                           port = dbc.DATABASE_CONFIG['port'],
                                           database = dbc.DATABASE_CONFIG['database'])
 
-            self._cursor = self._conn.cursor()
+            self._csr = self._conn.cursor()
 
         except (Exception, psycopg2.Error) as error :
             print ("Error while connecting to PostgreSQL", error)
@@ -29,7 +29,7 @@ class DatabaseWrapper:
 
     @property
     def cursor(self):
-        return self._cursor
+        return self._csr
 
     def commit(self):
         self.connection.commit()
@@ -52,16 +52,5 @@ class DatabaseWrapper:
         self.cursor.execute(sql, params or ())
         return self.fetchall()
 
-
-if __name__ == "__main__":
-
-    # usar o DatabaseWrapper em um contexto "with ... as" garante o commit ao final da execução do contexto
-    with DatabaseWrapper() as db:
-
-        # alguns exemplos
-        # db.execute('CREATE TABLE comments(pkey INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR, comment_body VARCHAR, date_posted TIMESTAMP)')
-        # db.execute('INSERT INTO comments (username, comment_body, date_posted) VALUES (?, ?, current_date)', ('tom', 'this is a comment'))
-        
-        # testando
-        users = db.query('SELECT * FROM user_account')
-        print(users)
+    def row_count(self):
+        return self.cursor.rowcount
