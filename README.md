@@ -43,6 +43,19 @@ Usarname: admin
 Password: postgres
 ```
 
+Para encerrar os serviços `postgreSQL` e `pgAdmin`, abra um terminal, acesse o diretório que contém o arquivo `docker-compose.yml` e execute:
+
+```
+docker-compose stop
+```
+
+Se tudo correr bem, você verá as seguintes mensagens no terminal
+
+```
+Stopping pgadmin  ... done
+Stopping postgres ... done
+```
+
 #### 1.4. Instale o [venv](https://docs.python.org/3/library/venv.html):
 
 ```
