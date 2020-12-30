@@ -35,6 +35,24 @@ Starting postgres ... done
 Starting pgadmin  ... done
 ```
 
+Para criar o banco de dados, execute o seguinte comando no terminal:
+
+```
+./pg_create.sh
+```
+
+Os backups são armazenados na pasta `pg_backup`. Para fazer backup do banco de dados, execute o seguinte comando no terminal:
+
+```
+./pg_backup.sh
+```
+
+Para restaurar um backup, execute o seguinte comando no terminal, substituindo `dump.sql.gz` pelo nome do arquivo de backup que deseja restaurar:
+
+```
+./pg_restore.sh pg_backup/dump.sql.gz
+```
+
 Se quiser utilizar o `pgAdmin`, acesse o serviço pelo browser (localhost:16543) e faça o login com as credencias que você configurou no arquivo `docker.env`. Após o login, clique em `Add New Server` e além do nome do server (escolhido por você), na aba `Connection` insira os seguintes dados:
 
 ```
