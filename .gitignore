@@ -1,5 +1,7 @@
 # database
 pg_data
+pg_backup/*
+!pg_backup/.gitkeep
 
 # docker env file
 docker.env
