@@ -16,20 +16,21 @@ class Detector:
         self.__smoothing  =    laplace_smoothing
         self.__omega      =    omega
 
-        # atribui uma label para cada notícia. A primeira metade é not fake (0) e a segunda metade é fake (1)
+    def __init_params(self, test_size = 0.3):
+        # atribui uma label para cada notícia. A primeira metade é not fake (0) e a segunda metade é fake (1). No futuro, as labels serão obtidas a partir do BD relacional.
         self.__news["news_label"] = [0 if newsId <= 300 else 1 for newsId in self.__news["newsId"]]
        
         # divide 'self.__news_users' em treino e teste.
         labels = self.__news["news_label"]
-        self.__X_train_news, self.__X_test_news, _, _ = train_test_split(self.__news, labels, test_size=0.3, stratify=labels)
+        self.__X_train_news, self.__X_test_news, _, _ = train_test_split(self.__news, labels, test_size=test_size, stratify=labels)
 
         # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
         self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="newsId", right_on="newsId")
         self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="newsId", right_on="newsId")
 
         # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
-        qtd_V = self.__news["news_label"].value_counts()[0]
-        qtd_F = self.__news["news_label"].value_counts()[1]
+        self.__qtd_V = self.__news["news_label"].value_counts()[0]
+        self.__qtd_F = self.__news["news_label"].value_counts()[1]
 
         # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
         self.__train_news_users = self.__train_news_users[self.__train_news_users["userId"].isin(self.__test_news_users["userId"])]
@@ -38,7 +39,7 @@ class Detector:
         totR            = 0
         totF            = 0
         alphaN          = totR + self.__smoothing
-        umAlphaN        = ((totF + self.__smoothing) / (qtd_F + self.__smoothing)) * (qtd_V + self.__smoothing)
+        umAlphaN        = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
         betaN           = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
         umBetaN         = totF + self.__smoothing
         probAlphaN      = alphaN / (alphaN + umAlphaN)
@@ -50,35 +51,10 @@ class Detector:
         self.__users["probBetaN"]     = probBetaN
         self.__users["probUmBetaN"]   = probUmBetaN
 
-        ###############################################################################################
-        # etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.
-        ###############################################################################################
-        
-        for userId in self.__train_news_users["userId"].unique():            
-            # obtém os labels das notícias compartilhadas por cada usuário.
-            newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
-            
-            # calcula a matriz de opinião para cada usuário.
-            totR        = newsSharedByUser.count(0)
-            totF        = newsSharedByUser.count(1)
-            alphaN      = totR + self.__smoothing
-            umAlphaN    = ((totF + self.__smoothing) / (qtd_F + self.__smoothing)) * (qtd_V + self.__smoothing)
-            betaN       = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
-            umBetaN     = totF + self.__smoothing
-
-            # calcula as probabilidades para cada usuário.
-            probAlphaN      = alphaN / (alphaN + umAlphaN)
-            probUmAlphaN    = 1 - probAlphaN
-            probBetaN       = betaN / (betaN + umBetaN)
-            probUmBetaN     = 1 - probBetaN
-            self.__users.loc[self.__users['userId'] == userId, "probAlphaN"]   = probAlphaN
-            self.__users.loc[self.__users['userId'] == userId, "probBetaN"]    = probBetaN
-            self.__users.loc[self.__users['userId'] == userId, "probUmAlphaN"] = probUmAlphaN
-            self.__users.loc[self.__users['userId'] == userId, "probUmBetaN"]  = probUmBetaN
-
-        ###############################################################################################################
-        # etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
-        ###############################################################################################################
+    def __test_ics(self):
+        """
+        etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
+        """
         predicted_labels = []
 
         for newsId in self.__test_news_users["newsId"].unique():
@@ -109,3 +85,35 @@ class Detector:
         # mostra os resultados da matriz de confusão e acurácia.
         print(confusion_matrix(self.__X_test_news["news_label"], predicted_labels))
         print(accuracy_score(self.__X_test_news["news_label"], predicted_labels))
+
+    
+    def train_ics(self, test_size = 0.3):
+        self.__init_params(test_size)
+
+        # Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.
+        
+        for userId in self.__train_news_users["userId"].unique():            
+            # obtém os labels das notícias compartilhadas por cada usuário.
+            newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
+            
+            # calcula a matriz de opinião para cada usuário.
+            totR        = newsSharedByUser.count(0)
+            totF        = newsSharedByUser.count(1)
+            alphaN      = totR + self.__smoothing
+            umAlphaN    = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
+            betaN       = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
+            umBetaN     = totF + self.__smoothing
+
+            # calcula as probabilidades para cada usuário.
+            probAlphaN      = alphaN / (alphaN + umAlphaN)
+            probUmAlphaN    = 1 - probAlphaN
+            probBetaN       = betaN / (betaN + umBetaN)
+            probUmBetaN     = 1 - probBetaN
+            self.__users.loc[self.__users['userId'] == userId, "probAlphaN"]   = probAlphaN
+            self.__users.loc[self.__users['userId'] == userId, "probBetaN"]    = probBetaN
+            self.__users.loc[self.__users['userId'] == userId, "probUmAlphaN"] = probUmAlphaN
+            self.__users.loc[self.__users['userId'] == userId, "probUmBetaN"]  = probUmBetaN
+
+        self.__test_ics()
+
+        

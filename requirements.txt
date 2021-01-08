@@ -10,7 +10,6 @@ matplotlib==3.3.2
 mccabe==0.6.1
 numpy==1.19.2
 oauthlib==3.1.0
-pandas==1.1.4
 Pillow==8.0.1
 psycopg2==2.8.6
 pylint==2.6.0
