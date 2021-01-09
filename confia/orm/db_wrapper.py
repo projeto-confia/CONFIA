@@ -1,7 +1,6 @@
 import psycopg2
 from confia.orm import db_config as dbc
 
-
 class DatabaseWrapper:
 
     def __init__(self):
