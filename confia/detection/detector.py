@@ -4,6 +4,7 @@ import numpy as np
 import math
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
+from confia.orm.db_wrapper import DatabaseWrapper
 
 class Detector:
     # A leitura dos arquivos csv é apenas um teste preliminar. Em versões futuras, os dados serão obtidos a partir do BD relacional.
@@ -115,5 +116,18 @@ class Detector:
             self.__users.loc[self.__users['userId'] == userId, "probUmBetaN"]  = probUmBetaN
 
         self.__test_ics()
+
+        # salva os parâmetros dos usuários no banco de dados. 
+        with DatabaseWrapper() as db:
+            
+            for _, row in self.__users.iterrows():
+                id_account      = str(row["idOriginal"].astype(int))
+                probAlphaN      = str(row["probAlphaN"])
+                probUmAlphaN    = str(row["probUmAlphaN"])
+                probBetaN       = str(row["probBetaN"])
+                probUmBetaN     = str(row["probUmBetaN"])
+                
+                args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
+                db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
 
         
