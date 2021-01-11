@@ -49,10 +49,11 @@ alter table detectenv.news alter column datetime_publication drop not null;
 
 alter table detectenv.post
 alter column id_post type bigint,
+alter column id_social_media_account type bigint,
 alter column id_news type bigint,
 alter column parent_id_post type bigint,
-alter column parent_id_post drop not null
-alter column num_likes drop not null
+alter column parent_id_post drop not null,
+alter column num_likes drop not null,
 alter column num_shares drop not null
 
 INSERT INTO detectenv.social_media_account(id_social_media, id_owner, screen_name, date_creation, blue_badge, probalphan, probbetan, probumalphan, probumbetan) values (123, NULL, NULL, NULL, NULL, 0.3, 0.22335, 0.001, 0.33325); 
