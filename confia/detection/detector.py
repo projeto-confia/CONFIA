@@ -23,9 +23,9 @@ class Detector:
         """
         self.__init_params(test_size)
         
-        for userId in self.__train_news_users["id_user"].unique():            
+        for userId in self.__train_news_users["id_social_media_account"].unique():            
             # obtém os labels das notícias compartilhadas por cada usuário.
-            newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_user"] == userId])
+            newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_social_media_account"] == userId])
             
             # calcula a matriz de opinião para cada usuário.
             totR        = newsSharedByUser.count(0)
@@ -40,10 +40,10 @@ class Detector:
             probUmAlphaN    = 1 - probAlphaN
             probBetaN       = betaN / (betaN + umBetaN)
             probUmBetaN     = 1 - probBetaN
-            self.__users.loc[self.__users["id_user"] == userId, "probAlphaN"]   = probAlphaN
-            self.__users.loc[self.__users["id_user"] == userId, "probBetaN"]    = probBetaN
-            self.__users.loc[self.__users["id_user"] == userId, "probUmAlphaN"] = probUmAlphaN
-            self.__users.loc[self.__users["id_user"] == userId, "probUmBetaN"]  = probUmBetaN
+            self.__users.loc[self.__users["id_social_media_account"] == userId, "probAlphaN"]   = probAlphaN
+            self.__users.loc[self.__users["id_social_media_account"] == userId, "probBetaN"]    = probBetaN
+            self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmAlphaN"] = probUmAlphaN
+            self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
 
         self.__test_ics()
 
@@ -73,7 +73,7 @@ class Detector:
         self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
 
         # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
-        self.__train_news_users = self.__train_news_users[self.__train_news_users["id_user"].isin(self.__test_news_users["id_user"])]
+        self.__train_news_users = self.__train_news_users[self.__train_news_users["id_social_media_account"].isin(self.__test_news_users["id_social_media_account"])]
 
         # inicializa os parâmetros dos usuários.
         totR            = 0
@@ -99,7 +99,7 @@ class Detector:
 
         for newsId in self.__test_news_users["id_news"].unique():
             # recupera os ids de usuário que compartilharam a notícia representada por 'newsId'.
-            usersWhichSharedTheNews = list(self.__news_users["id_user"].loc[self.__news_users["id_news"] == newsId])
+            usersWhichSharedTheNews = list(self.__news_users["id_social_media_account"].loc[self.__news_users["id_news"] == newsId])
 
             productAlphaN    = 1.0
             productUmAlphaN  = 1.0
@@ -107,8 +107,8 @@ class Detector:
             productUmBetaN   = 1.0
             
             for userId in usersWhichSharedTheNews:
-                # print(self.__users.loc[self.__users["id_user"] == userId])
-                i = self.__users.loc[self.__users["id_user"] == userId].index[0]
+                # print(self.__users.loc[self.__users["id_social_media_account"] == userId])
+                i = self.__users.loc[self.__users["id_social_media_account"] == userId].index[0]
 
                 productAlphaN   = productAlphaN  * self.__users.at[i, "probAlphaN"]
                 productUmBetaN  = productUmBetaN * self.__users.at[i, "probUmBetaN"]
@@ -142,12 +142,12 @@ class Detector:
         from datetime import datetime
 
         for _, row in self.__news_users.iterrows():
-            id_user         = int(row["id_user"])
-            id_news         = int(row["id_news"])
-            text_post       = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-            date_time       = str(datetime.now())
+            id_social_media_account = int(row["id_social_media_account"])
+            id_news                 = int(row["id_news"])
+            text_post               = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+            date_time               = str(datetime.now())
 
-            args = (id_user, id_news, None, text_post, 0, 0, date_time)
+            args = (id_social_media_account, id_news, None, text_post, 0, 0, date_time)
             self.__db.execute("INSERT INTO detectenv.post (id_social_media_account, id_news, parent_id_post, text_post, num_likes, num_shares, datetime_post) VALUES (%s, %s, %s, %s, %s, %s, %s);", args)
 
     def read_social_media_account_file(self, users_file="confia/data/users.csv"):
