@@ -8,22 +8,19 @@ from confia.orm.db_wrapper import DatabaseWrapper
 
 class Detector:
     # A leitura dos arquivos csv é apenas um teste preliminar. Em versões futuras, os dados serão obtidos a partir do BD relacional.
-    def __init__(self, users_file="confia/data/users.csv", news_file = "confia/data/news.csv", 
-        news_users_file="confia/data/news_users.csv", laplace_smoothing=0.01, omega=0.5):
+    def __init__(self, laplace_smoothing=0.01, omega=0.5):
 
-        self.__users      =    pd.read_csv(users_file, sep=';')
-        self.__news       =    pd.read_csv(news_file, sep=';')
-        self.__news_users =    pd.read_csv(news_users_file, sep=';')
+        self.__db         =    DatabaseWrapper()
+        self.__users      =    pd.read_sql_query("select * from detectenv.social_media_account;", self.__db.connection)
+        self.__news       =    pd.read_sql_query("select * from detectenv.news;", self.__db.connection)
+        self.__news_users =    pd.read_sql_query("select * from detectenv.post;", self.__db.connection)
         self.__smoothing  =    laplace_smoothing
         self.__omega      =    omega
-
-        # atribui uma label para cada notícia. A primeira metade é not fake (0) e a segunda metade é fake (1). No futuro, as labels serão obtidas a partir do BD relacional.
-        self.__news["news_label"] = [0 if newsId <= 300 else 1 for newsId in self.__news["newsId"]]
 
     def train_ics(self, test_size = 0.3):
         self.__init_params(test_size)
 
-        # Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.
+        # Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
         
         for userId in self.__train_news_users["userId"].unique():            
             # obtém os labels das notícias compartilhadas por cada usuário.
@@ -50,16 +47,15 @@ class Detector:
         self.__test_ics()
 
         # salva os parâmetros dos usuários no banco de dados. 
-        with DatabaseWrapper() as db:
-            for _, row in self.__users.iterrows():
-                id_account      = str(row["idOriginal"].astype(int))
-                probAlphaN      = str(row["probAlphaN"])
-                probUmAlphaN    = str(row["probUmAlphaN"])
-                probBetaN       = str(row["probBetaN"])
-                probUmBetaN     = str(row["probUmBetaN"])
-                
-                args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
-                db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
+        for _, row in self.__users.iterrows():
+            id_account      = str(row["idOriginal"].astype(int))
+            probAlphaN      = str(row["probAlphaN"])
+            probUmAlphaN    = str(row["probUmAlphaN"])
+            probBetaN       = str(row["probBetaN"])
+            probUmBetaN     = str(row["probUmBetaN"])
+            
+            args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
+            self.__db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
 
     def __init_params(self, test_size = 0.3):
 
@@ -130,27 +126,37 @@ class Detector:
         print(accuracy_score(self.__X_test_news["news_label"], predicted_labels))
 
     def insert_news(self):
-        with DatabaseWrapper() as db:
-            from datetime import datetime
-            for _, row in self.__news.iterrows():
-                id_news     = int(row["idOriginal"])
-                text_news   = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-                date_time   = str(datetime.now())
-                gt_label    = bool(row["news_label"])
+        from datetime import datetime
 
-                args = (id_news, text_news, date_time, None, gt_label)
-                db.execute("INSERT INTO detectenv.news (id_news, text_news, datetime_publication, classification_outcome, ground_truth_label) VALUES (%s, %s, %s, %s, %s);", args)
+        for _, row in self.__news.iterrows():
+            id_news     = int(row["idOriginal"])
+            text_news   = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+            date_time   = str(datetime.now())
+            gt_label    = bool(row["news_label"])
+
+            args = (id_news, text_news, date_time, None, gt_label)
+            self.__db.execute("INSERT INTO detectenv.news (id_news, text_news, datetime_publication, classification_outcome, ground_truth_label) VALUES (%s, %s, %s, %s, %s);", args)
 
     def insert_post(self):
-        with DatabaseWrapper() as db:
-            from datetime import datetime
-            for _, row in self.__news_users.iterrows():
-                id_user         = int(row["userId"])
-                id_news         = int(row["newsId"])
-                text_post       = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-                date_time       = str(datetime.now())
+        from datetime import datetime
 
-                args = (id_user, id_news, None, text_post, 0, 0, date_time)
-                db.execute("INSERT INTO detectenv.post (id_social_media_account, id_news, parent_id_post, text_post, num_likes, num_shares, datetime_post) VALUES (%s, %s, %s, %s, %s, %s, %s);", args)
+        for _, row in self.__news_users.iterrows():
+            id_user         = int(row["userId"])
+            id_news         = int(row["newsId"])
+            text_post       = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+            date_time       = str(datetime.now())
+
+            args = (id_user, id_news, None, text_post, 0, 0, date_time)
+            self.__db.execute("INSERT INTO detectenv.post (id_social_media_account, id_news, parent_id_post, text_post, num_likes, num_shares, datetime_post) VALUES (%s, %s, %s, %s, %s, %s, %s);", args)
+
+    def read_social_media_account_file(self, users_file="confia/data/users.csv"):
+        self.__users = pd.read_csv(users_file, sep=';')
         
-    
+        # atribui uma label para cada notícia. A primeira metade é not fake (0) e a segunda metade é fake (1). No futuro, as labels serão obtidas a partir do BD relacional.
+        self.__news["news_label"] = [0 if newsId <= 300 else 1 for newsId in self.__news["newsId"]]
+
+    def read_news_users_from_file(self, news_users_file="confia/data/news_users.csv"):
+        self.__news_users = pd.read_csv(news_users_file, sep=';')
+
+    def read_news_from_file(self, news_file = "confia/data/news.csv"):
+        self.__news = pd.read_csv(news_file, sep=';')
