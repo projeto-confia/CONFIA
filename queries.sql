@@ -56,10 +56,15 @@ alter column parent_id_post drop not null,
 alter column num_likes drop not null,
 alter column num_shares drop not null
 
+alter table detectenv.post drop constraint social_media_account_post_fk;
+alter table detectenv.post drop constraint news_post_fk;
+
 INSERT INTO detectenv.social_media_account(id_social_media, id_owner, screen_name, date_creation, blue_badge, probalphan, probbetan, probumalphan, probumbetan) values (123, NULL, NULL, NULL, NULL, 0.3, 0.22335, 0.001, 0.33325); 
 INSERT INTO detectenv.social_media (name_social_media) values ('Twitter');
--- delete from detectenv.social_media_account;
+-- delete from detectenv.post;
 -- ALTER SEQUENCE detectenv.social_media_account_id_social_media_account_seq RESTART WITH 1
+-- ALTER SEQUENCE detectenv.post_id_post_seq RESTART WITH 1
 
+ALTER TABLE detectenv.post ADD CONSTRAINT social_media_account_post_fk FOREIGN KEY (id_social_media_account) REFERENCES detectenv.social_media_account (id_social_media_account);
 
 explain analyze select * from detectenv.social_media_account where id_account = '117054157';
