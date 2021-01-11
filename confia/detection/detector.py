@@ -7,7 +7,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from confia.orm.db_wrapper import DatabaseWrapper
 
 class Detector:
-    # A leitura dos arquivos csv é apenas um teste preliminar. Em versões futuras, os dados serão obtidos a partir do BD relacional.
+
     def __init__(self, laplace_smoothing=0.01, omega=0.5):
 
         self.__db         =    DatabaseWrapper()
@@ -18,13 +18,14 @@ class Detector:
         self.__omega      =    omega
 
     def train_ics(self, test_size = 0.3):
+        """
+        Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
+        """
         self.__init_params(test_size)
-
-        # Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
         
-        for userId in self.__train_news_users["userId"].unique():            
+        for userId in self.__train_news_users["id_user"].unique():            
             # obtém os labels das notícias compartilhadas por cada usuário.
-            newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
+            newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_user"] == userId])
             
             # calcula a matriz de opinião para cada usuário.
             totR        = newsSharedByUser.count(0)
@@ -39,16 +40,16 @@ class Detector:
             probUmAlphaN    = 1 - probAlphaN
             probBetaN       = betaN / (betaN + umBetaN)
             probUmBetaN     = 1 - probBetaN
-            self.__users.loc[self.__users['userId'] == userId, "probAlphaN"]   = probAlphaN
-            self.__users.loc[self.__users['userId'] == userId, "probBetaN"]    = probBetaN
-            self.__users.loc[self.__users['userId'] == userId, "probUmAlphaN"] = probUmAlphaN
-            self.__users.loc[self.__users['userId'] == userId, "probUmBetaN"]  = probUmBetaN
+            self.__users.loc[self.__users["id_user"] == userId, "probAlphaN"]   = probAlphaN
+            self.__users.loc[self.__users["id_user"] == userId, "probBetaN"]    = probBetaN
+            self.__users.loc[self.__users["id_user"] == userId, "probUmAlphaN"] = probUmAlphaN
+            self.__users.loc[self.__users["id_user"] == userId, "probUmBetaN"]  = probUmBetaN
 
         self.__test_ics()
 
         # salva os parâmetros dos usuários no banco de dados. 
         for _, row in self.__users.iterrows():
-            id_account      = str(row["idOriginal"].astype(int))
+            id_account      = str(row["id_social_media_account"].astype(int))
             probAlphaN      = str(row["probAlphaN"])
             probUmAlphaN    = str(row["probUmAlphaN"])
             probBetaN       = str(row["probBetaN"])
@@ -60,19 +61,19 @@ class Detector:
     def __init_params(self, test_size = 0.3):
 
         # divide 'self.__news_users' em treino e teste.
-        labels = self.__news["news_label"]
+        labels = self.__news["ground_truth_label"]
         self.__X_train_news, self.__X_test_news, _, _ = train_test_split(self.__news, labels, test_size=test_size, stratify=labels)
 
         # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
-        self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="newsId", right_on="newsId")
-        self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="newsId", right_on="newsId")
+        self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
+        self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
 
         # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
-        self.__qtd_V = self.__news["news_label"].value_counts()[0]
-        self.__qtd_F = self.__news["news_label"].value_counts()[1]
+        self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
+        self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
 
         # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
-        self.__train_news_users = self.__train_news_users[self.__train_news_users["userId"].isin(self.__test_news_users["userId"])]
+        self.__train_news_users = self.__train_news_users[self.__train_news_users["id_user"].isin(self.__test_news_users["id_user"])]
 
         # inicializa os parâmetros dos usuários.
         totR            = 0
@@ -96,9 +97,9 @@ class Detector:
         """
         predicted_labels = []
 
-        for newsId in self.__test_news_users["newsId"].unique():
+        for newsId in self.__test_news_users["id_news"].unique():
             # recupera os ids de usuário que compartilharam a notícia representada por 'newsId'.
-            usersWhichSharedTheNews = list(self.__news_users["userId"].loc[self.__news_users["newsId"] == newsId])
+            usersWhichSharedTheNews = list(self.__news_users["id_user"].loc[self.__news_users["id_news"] == newsId])
 
             productAlphaN    = 1.0
             productUmAlphaN  = 1.0
@@ -106,8 +107,8 @@ class Detector:
             productUmBetaN   = 1.0
             
             for userId in usersWhichSharedTheNews:
-                # print(self.__users.loc[self.__users['userId'] == userId])
-                i = self.__users.loc[self.__users['userId'] == userId].index[0]
+                # print(self.__users.loc[self.__users["id_user"] == userId])
+                i = self.__users.loc[self.__users["id_user"] == userId].index[0]
 
                 productAlphaN   = productAlphaN  * self.__users.at[i, "probAlphaN"]
                 productUmBetaN  = productUmBetaN * self.__users.at[i, "probUmBetaN"]
@@ -122,17 +123,17 @@ class Detector:
                 predicted_labels.append(1)
 
         # mostra os resultados da matriz de confusão e acurácia.
-        print(confusion_matrix(self.__X_test_news["news_label"], predicted_labels))
-        print(accuracy_score(self.__X_test_news["news_label"], predicted_labels))
+        print(confusion_matrix(self.__X_test_news["ground_truth_label"], predicted_labels))
+        print(accuracy_score(self.__X_test_news["ground_truth_label"], predicted_labels))
 
     def insert_news(self):
         from datetime import datetime
 
         for _, row in self.__news.iterrows():
-            id_news     = int(row["idOriginal"])
+            id_news     = int(row["id_news"])
             text_news   = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
             date_time   = str(datetime.now())
-            gt_label    = bool(row["news_label"])
+            gt_label    = bool(row["ground_truth_label"])
 
             args = (id_news, text_news, date_time, None, gt_label)
             self.__db.execute("INSERT INTO detectenv.news (id_news, text_news, datetime_publication, classification_outcome, ground_truth_label) VALUES (%s, %s, %s, %s, %s);", args)
@@ -141,8 +142,8 @@ class Detector:
         from datetime import datetime
 
         for _, row in self.__news_users.iterrows():
-            id_user         = int(row["userId"])
-            id_news         = int(row["newsId"])
+            id_user         = int(row["id_user"])
+            id_news         = int(row["id_news"])
             text_post       = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
             date_time       = str(datetime.now())
 
@@ -153,7 +154,7 @@ class Detector:
         self.__users = pd.read_csv(users_file, sep=';')
         
         # atribui uma label para cada notícia. A primeira metade é not fake (0) e a segunda metade é fake (1). No futuro, as labels serão obtidas a partir do BD relacional.
-        self.__news["news_label"] = [0 if newsId <= 300 else 1 for newsId in self.__news["newsId"]]
+        self.__news["ground_truth_label"] = [0 if newsId <= 300 else 1 for newsId in self.__news["id_news"]]
 
     def read_news_users_from_file(self, news_users_file="confia/data/news_users.csv"):
         self.__news_users = pd.read_csv(news_users_file, sep=';')
