@@ -17,10 +17,52 @@ class Detector:
         self.__smoothing  =    laplace_smoothing
         self.__omega      =    omega
 
-    def __init_params(self, test_size = 0.3):
         # atribui uma label para cada notícia. A primeira metade é not fake (0) e a segunda metade é fake (1). No futuro, as labels serão obtidas a partir do BD relacional.
         self.__news["news_label"] = [0 if newsId <= 300 else 1 for newsId in self.__news["newsId"]]
-       
+
+    def train_ics(self, test_size = 0.3):
+        self.__init_params(test_size)
+
+        # Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.
+        
+        for userId in self.__train_news_users["userId"].unique():            
+            # obtém os labels das notícias compartilhadas por cada usuário.
+            newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
+            
+            # calcula a matriz de opinião para cada usuário.
+            totR        = newsSharedByUser.count(0)
+            totF        = newsSharedByUser.count(1)
+            alphaN      = totR + self.__smoothing
+            umAlphaN    = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
+            betaN       = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
+            umBetaN     = totF + self.__smoothing
+
+            # calcula as probabilidades para cada usuário.
+            probAlphaN      = alphaN / (alphaN + umAlphaN)
+            probUmAlphaN    = 1 - probAlphaN
+            probBetaN       = betaN / (betaN + umBetaN)
+            probUmBetaN     = 1 - probBetaN
+            self.__users.loc[self.__users['userId'] == userId, "probAlphaN"]   = probAlphaN
+            self.__users.loc[self.__users['userId'] == userId, "probBetaN"]    = probBetaN
+            self.__users.loc[self.__users['userId'] == userId, "probUmAlphaN"] = probUmAlphaN
+            self.__users.loc[self.__users['userId'] == userId, "probUmBetaN"]  = probUmBetaN
+
+        self.__test_ics()
+
+        # salva os parâmetros dos usuários no banco de dados. 
+        with DatabaseWrapper() as db:
+            for _, row in self.__users.iterrows():
+                id_account      = str(row["idOriginal"].astype(int))
+                probAlphaN      = str(row["probAlphaN"])
+                probUmAlphaN    = str(row["probUmAlphaN"])
+                probBetaN       = str(row["probBetaN"])
+                probUmBetaN     = str(row["probUmBetaN"])
+                
+                args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
+                db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
+
+    def __init_params(self, test_size = 0.3):
+
         # divide 'self.__news_users' em treino e teste.
         labels = self.__news["news_label"]
         self.__X_train_news, self.__X_test_news, _, _ = train_test_split(self.__news, labels, test_size=test_size, stratify=labels)
@@ -87,47 +129,28 @@ class Detector:
         print(confusion_matrix(self.__X_test_news["news_label"], predicted_labels))
         print(accuracy_score(self.__X_test_news["news_label"], predicted_labels))
 
-    
-    def train_ics(self, test_size = 0.3):
-        self.__init_params(test_size)
-
-        # Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.
-        
-        for userId in self.__train_news_users["userId"].unique():            
-            # obtém os labels das notícias compartilhadas por cada usuário.
-            newsSharedByUser = list(self.__train_news_users["news_label"].loc[self.__train_news_users["userId"] == userId])
-            
-            # calcula a matriz de opinião para cada usuário.
-            totR        = newsSharedByUser.count(0)
-            totF        = newsSharedByUser.count(1)
-            alphaN      = totR + self.__smoothing
-            umAlphaN    = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
-            betaN       = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
-            umBetaN     = totF + self.__smoothing
-
-            # calcula as probabilidades para cada usuário.
-            probAlphaN      = alphaN / (alphaN + umAlphaN)
-            probUmAlphaN    = 1 - probAlphaN
-            probBetaN       = betaN / (betaN + umBetaN)
-            probUmBetaN     = 1 - probBetaN
-            self.__users.loc[self.__users['userId'] == userId, "probAlphaN"]   = probAlphaN
-            self.__users.loc[self.__users['userId'] == userId, "probBetaN"]    = probBetaN
-            self.__users.loc[self.__users['userId'] == userId, "probUmAlphaN"] = probUmAlphaN
-            self.__users.loc[self.__users['userId'] == userId, "probUmBetaN"]  = probUmBetaN
-
-        self.__test_ics()
-
-        # salva os parâmetros dos usuários no banco de dados. 
+    def insert_news(self):
         with DatabaseWrapper() as db:
-            
-            for _, row in self.__users.iterrows():
-                id_account      = str(row["idOriginal"].astype(int))
-                probAlphaN      = str(row["probAlphaN"])
-                probUmAlphaN    = str(row["probUmAlphaN"])
-                probBetaN       = str(row["probBetaN"])
-                probUmBetaN     = str(row["probUmBetaN"])
-                
-                args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
-                db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
+            from datetime import datetime
+            for _, row in self.__news.iterrows():
+                id_news     = int(row["idOriginal"])
+                text_news   = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+                date_time   = str(datetime.now())
+                gt_label    = bool(row["news_label"])
 
+                args = (id_news, text_news, date_time, None, gt_label)
+                db.execute("INSERT INTO detectenv.news (id_news, text_news, datetime_publication, classification_outcome, ground_truth_label) VALUES (%s, %s, %s, %s, %s);", args)
+
+    def insert_post(self):
+        with DatabaseWrapper() as db:
+            from datetime import datetime
+            for _, row in self.__news_users.iterrows():
+                id_user         = int(row["userId"])
+                id_news         = int(row["newsId"])
+                text_post       = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+                date_time       = str(datetime.now())
+
+                args = (id_user, id_news, None, text_post, 0, 0, date_time)
+                db.execute("INSERT INTO detectenv.post (id_social_media_account, id_news, parent_id_post, text_post, num_likes, num_shares, datetime_post) VALUES (%s, %s, %s, %s, %s, %s, %s);", args)
         
+    
