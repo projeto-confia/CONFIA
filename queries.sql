@@ -23,20 +23,20 @@ CREATE FUNCTION insert_update_social_media_account(idSocialMediaAccount varchar(
     DECLARE 
     BEGIN 
 		INSERT INTO detectenv.social_media_account(id_account, id_social_media, id_owner, screen_name, date_creation, blue_badge, probalphan, probbetan, probumalphan, probumbetan) values (idSocialMediaAccount, idSocialMedia, idOwner, screenName, dateCreation, blueBadge, prob_AlphaN, prob_BetaN, prob_UmAlphaN, prob_UmBetaN) 
-		ON CONFLICT (id_account) DO UPDATE 
-			SET probalphan = prob_AlphaN, probbetan = prob_BetaN, probumalphan = prob_UmAlphaN, probumbetan = prob_UmBetaN WHERE hash(id_account) = hash(idSocialMediaAccount);
+		ON CONFLICT (id_account) DO 
+		UPDATE SET probalphan = prob_AlphaN, probbetan = prob_BetaN, probumalphan = prob_UmAlphaN, probumbetan = prob_UmBetaN WHERE social_media_account.id_account = idSocialMediaAccount;
     END;
     $$ LANGUAGE 'plpgsql'; 
+	
+DO $$ BEGIN
+    PERFORM insert_update_social_media_account('790680', 2, NULL, NULL, NULL, NULL, 0.355, 0.22335233, 0.00122, 0.33325);
+END $$;
 
-CREATE INDEX idSocialMediaAccount_hash ON detectenv.social_media_account using hash(id_account);
+CREATE UNIQUE INDEX idSocialMediaAccount_hash ON detectenv.social_media_account(id_account);
 drop index detectenv.idSocialMediaAccount_hash;
 
 CREATE INDEX idnews_original_hash_idx ON detectenv.news using hash(id_news_original);
 drop index detectenv.idSocialMediaAccount_hash;
-
-DO $$ BEGIN
-    PERFORM insert_update_social_media_account(123, 2, NULL, NULL, NULL, NULL, 0.355, 0.22335233, 0.00122, 0.33325);
-END $$;
 
 alter table detectenv.social_media_account
 add column id_account varchar(50) not null;
