@@ -4,6 +4,7 @@ class DetectorFacade:
     def run(self):
         try:
             d = Detector()
+            # d.insert_news()
             # d.insert_post()
             d.train_ics()
 
