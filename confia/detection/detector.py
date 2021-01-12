@@ -24,6 +24,7 @@ class Detector:
         self.__init_params(test_size)
         
         for userId in self.__train_news_users["id_social_media_account"].unique():            
+            
             # obtém os labels das notícias compartilhadas por cada usuário.
             newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_social_media_account"] == userId])
             
