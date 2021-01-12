@@ -50,7 +50,7 @@ class Detector:
 
         # salva os parâmetros dos usuários no banco de dados. 
         for _, row in self.__users.iterrows():
-            id_account      = str(row["id_social_media_account"].astype(int))
+            id_account      = str(row["id_social_media_account"])
             probAlphaN      = str(row["probAlphaN"])
             probUmAlphaN    = str(row["probUmAlphaN"])
             probBetaN       = str(row["probBetaN"])
@@ -58,6 +58,7 @@ class Detector:
             
             args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
             self.__db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
+            self.__db.commit()
 
     def __init_params(self, test_size = 0.3):
 
@@ -124,7 +125,6 @@ class Detector:
                 predicted_labels.append(1)
 
         # mostra os resultados da matriz de confusão e acurácia.
-        print(self.__users)
         print(confusion_matrix(self.__X_test_news["ground_truth_label"], predicted_labels))
         print(accuracy_score(self.__X_test_news["ground_truth_label"], predicted_labels))
 
