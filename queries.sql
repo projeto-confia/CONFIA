@@ -18,6 +18,7 @@ ALTER TABLE detectenv.social_media_account ALTER COLUMN date_creation DROP NOT N
 ALTER TABLE detectenv.social_media_account ALTER COLUMN blue_badge DROP NOT NULL;
 
 drop function insert_update_social_media_account;
+drop function get_users_which_shared_the_news;
 
 CREATE FUNCTION insert_update_social_media_account(idSocialMediaAccount varchar(30), idSocialMedia int, idOwner int, screenName varchar(30), dateCreation date, blueBadge boolean, prob_AlphaN double precision, prob_BetaN double precision, prob_UmAlphaN double precision, prob_UmBetaN double precision) RETURNS VOID AS $$ 
     DECLARE 
@@ -27,9 +28,25 @@ CREATE FUNCTION insert_update_social_media_account(idSocialMediaAccount varchar(
 		UPDATE SET probalphan = prob_AlphaN, probbetan = prob_BetaN, probumalphan = prob_UmAlphaN, probumbetan = prob_UmBetaN WHERE social_media_account.id_account = idSocialMediaAccount;
     END;
     $$ LANGUAGE 'plpgsql'; 
-	
+
 DO $$ BEGIN
     PERFORM insert_update_social_media_account('488790680', 2, NULL, NULL, NULL, NULL, 0.5, 0.5, 0.5, 0.5);
+END $$;
+	
+CREATE OR REPLACE FUNCTION get_users_which_shared_the_news(id_searched_news bigint) 
+RETURNS TABLE (id_social_media_account BIGINT, probalphan DOUBLE PRECISION, probbetan DOUBLE PRECISION, probumalphan DOUBLE PRECISION, probumbetan DOUBLE PRECISION) AS 
+$$
+BEGIN
+	RETURN QUERY
+	select detectenv.post.id_social_media_account AS id_social_media_account, detectenv.social_media_account.probalphan, detectenv.social_media_account.probbetan, detectenv.social_media_account.probumalphan, detectenv.social_media_account.probumbetan from detectenv.social_media_account, detectenv.post
+	where detectenv.social_media_account.id_social_media_account = detectenv.post.id_social_media_account and detectenv.post.id_news = id_searched_news;
+END
+$$ LANGUAGE 'plpgsql';
+
+select * from get_users_which_shared_the_news(402);
+	
+DO $$ BEGIN
+    SELECT get_users_which_shared_the_news(479);
 END $$;
 
 select * from detectenv.social_media_account where id_account = '488790680';
@@ -45,8 +62,8 @@ drop index detectenv.idSocialMediaAccount_hash;
 alter table detectenv.social_media_account
 add column id_account varchar(50) not null;
 
-select * from detectenv.social_media_account;
 select * from detectenv.social_media;
+select * from detectenv.social_media_account;
 select * from detectenv.news;
 select * from detectenv.post;
 
