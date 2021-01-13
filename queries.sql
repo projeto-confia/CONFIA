@@ -29,8 +29,12 @@ CREATE FUNCTION insert_update_social_media_account(idSocialMediaAccount varchar(
     $$ LANGUAGE 'plpgsql'; 
 	
 DO $$ BEGIN
-    PERFORM insert_update_social_media_account('790680', 2, NULL, NULL, NULL, NULL, 0.355, 0.22335233, 0.00122, 0.33325);
+    PERFORM insert_update_social_media_account('488790680', 2, NULL, NULL, NULL, NULL, 0.5, 0.5, 0.5, 0.5);
 END $$;
+
+select * from detectenv.social_media_account where id_account = '488790680';
+delete from detectenv.social_media_account where id_account = '488790680';
+explain analyze select * from detectenv.social_media_account where id_account = '488790680';
 
 CREATE UNIQUE INDEX idSocialMediaAccount_hash ON detectenv.social_media_account(id_account);
 drop index detectenv.idSocialMediaAccount_hash;
@@ -71,5 +75,3 @@ INSERT INTO detectenv.social_media (name_social_media) values ('Twitter');
 -- ALTER SEQUENCE detectenv.news_id_news_seq RESTART WITH 1
 
 ALTER TABLE detectenv.post ADD CONSTRAINT social_media_account_post_fk FOREIGN KEY (id_social_media_account) REFERENCES detectenv.social_media_account (id_social_media_account);
-
-explain analyze select * from detectenv.social_media_account where id_account = '117054157';

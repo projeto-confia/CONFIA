@@ -17,7 +17,7 @@ class Detector:
         self.__smoothing  =    laplace_smoothing
         self.__omega      =    omega
 
-    def train_ics(self, test_size = 0.3):
+    def train_ics(self, test_size = 0.3, insert_update_db=False):
         """
         Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
         """
@@ -47,18 +47,9 @@ class Detector:
             self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
 
         self.__test_ics()
-
-        # salva os parâmetros dos usuários no banco de dados. 
-        for _, row in self.__users.iterrows():
-            id_account      = str(row["id_social_media_account"])
-            probAlphaN      = str(row["probAlphaN"])
-            probUmAlphaN    = str(row["probUmAlphaN"])
-            probBetaN       = str(row["probBetaN"])
-            probUmBetaN     = str(row["probUmBetaN"])
-            
-            args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
-            self.__db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
-            self.__db.commit()
+        
+        if insert_update_db == True:
+            self.insert_update_accounts_db()
 
     def __init_params(self, test_size = 0.3):
 
@@ -92,6 +83,9 @@ class Detector:
         self.__users["probUmAlphaN"]  = probUmAlphaN
         self.__users["probBetaN"]     = probBetaN
         self.__users["probUmBetaN"]   = probUmBetaN
+
+    def predict_news(self, id_news):
+        pass
 
     def __test_ics(self):
         """
@@ -128,7 +122,7 @@ class Detector:
         print(confusion_matrix(self.__X_test_news["ground_truth_label"], predicted_labels))
         print(accuracy_score(self.__X_test_news["ground_truth_label"], predicted_labels))
 
-    def insert_news(self):
+    def insert_news_db(self):
         from datetime import datetime
 
         news = pd.read_csv("confia/data/news.csv", sep=";")
@@ -145,8 +139,20 @@ class Detector:
             print(args)
             self.__db.execute("INSERT INTO detectenv.news (id_news, text_news, datetime_publication, classification_outcome, ground_truth_label, id_news_original) VALUES (%s, %s, %s, %s, %s, %s);", args)
             self.__db.commit()
+    
+    def insert_update_accounts_db(self):
+        for _, row in self.__users.iterrows():
+            id_account      = str(row["id_social_media_account"])
+            probAlphaN      = str(row["probAlphaN"])
+            probUmAlphaN    = str(row["probUmAlphaN"])
+            probBetaN       = str(row["probBetaN"])
+            probUmBetaN     = str(row["probUmBetaN"])
+            
+            args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
+            self.__db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
+            self.__db.commit()
 
-    def insert_post(self):
+    def insert_post_db(self):
         from datetime import datetime
 
         for _, row in self.__news_users.iterrows():
@@ -157,6 +163,7 @@ class Detector:
 
             args = (id_social_media_account, id_news, None, text_post, 0, 0, date_time)
             self.__db.execute("INSERT INTO detectenv.post (id_social_media_account, id_news, parent_id_post, text_post, num_likes, num_shares, datetime_post) VALUES (%s, %s, %s, %s, %s, %s, %s);", args)
+            self.__db.commit()
 
     def read_news_users_from_file(self, news_users_file="confia/data/news_users.csv"):
         self.__news_users = pd.read_csv(news_users_file, sep=';')
