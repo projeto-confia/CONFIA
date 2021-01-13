@@ -85,7 +85,31 @@ class Detector:
         self.__users["probUmBetaN"]   = probUmBetaN
 
     def predict_news(self, id_news):
-        pass
+        """
+        Classifica uma notícia usando o ICS.
+        """
+        query = "select * from get_users_which_shared_the_news({0});".format(id_news)
+        usersWhichSharedTheNews = pd.read_sql_query(query, self.__db.connection)
+
+        productAlphaN    = 1.0
+        productUmAlphaN  = 1.0
+        productBetaN     = 1.0
+        productUmBetaN   = 1.0
+
+        print(usersWhichSharedTheNews)
+        
+        for _, row in usersWhichSharedTheNews.iterrows():
+            productAlphaN   = productAlphaN  * row["probalphan"]
+            productUmBetaN  = productUmBetaN * row["probumbetan"]
+        
+        # inferência bayesiana
+        reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
+        reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
+        
+        if reputation_news_tn >= reputation_news_fn:
+            return 0
+        else:
+            return 1
 
     def __test_ics(self):
         """
