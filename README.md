@@ -20,9 +20,9 @@ git clone https://github.com/projeto-confia/CONFIA
 
 #### 1.3. Configure o banco de dados (docker e docker-compose devem estar instalados)
 
-Edite o arquivo `docker.env.example`, inserindo seu e-mail e uma senha definida por você. Estas serão as credenciais para acessar o pgAdmin. Após a edição, renomeie o arquivo para `docker.env`.
+- Faça uma cópia do arquivo `docker.env.example` e renomeie a cópia para `docker.env`. Edite este novo arquivo inserindo seu e-mail e uma senha definida por você. Estas serão as credenciais para acessar o pgAdmin.
 
-Inicialize os serviços `postgreSQL` e `pgAdmin`. Abra um terminal, acesse o diretório que contém o arquivo `docker-compose.yml` e execute:
+- Inicialize os serviços `postgreSQL` e `pgAdmin`. Abra um terminal, acesse o diretório que contém o arquivo `docker-compose.yml` e execute:
 
 ```
 docker-compose up -d
