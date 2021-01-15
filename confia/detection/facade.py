@@ -1,18 +1,8 @@
 from confia.detection.detector import Detector
 
 class DetectorFacade:
-    def __init__(self):
-        self.__d = Detector()
+    def __init__(self, train_ics=True):
+        self.__d = Detector(train_ics)
 
-    def run(self, train_ics=False):
-        try:
-            if train_ics == False:
-               self.__d.train_ics()
-            
-            print(self.predict(40))
-
-        except Exception as e:
-            print(str(e))
-
-    def predict(self, id_news):
-        return self.__d.predict_news(id_news)
+    def run(self):    
+        self.__d.predict_news(40)
