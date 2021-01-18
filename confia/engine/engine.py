@@ -43,11 +43,9 @@ class Engine(object):
         try:
             print('Executando processo {} ...'.format(self.process_id))
             self.engine_status = 'running'
-            
             monitor_status = self.monitor()
             if monitor_status == 'error':
                 raise Exception()
-
             self.detector()
             time.sleep(5)
 

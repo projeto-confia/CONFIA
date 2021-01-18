@@ -56,8 +56,23 @@ class TwitterStreamListener(tweepy.StreamListener):
         self.users = data.User()
 
     def on_status(self, status):
-        print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, status.text))
-        self.users.write_in_csv(status.text, status.author.id)     
+        """
+        status: tweepy.models.status - objeto twitter
+        """
+        text = ''
+        if hasattr(status, "retweeted_status"):  # Checa se é retweet
+            try:
+                text = status.retweeted_status.extended_tweet["full_text"]
+            except AttributeError:
+                text = status.retweeted_status.text
+        else:
+            try:
+                text = status.extended_tweet["full_text"]
+            except AttributeError:
+                text = status.text
+
+        print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, text))
+        self.users.write_in_csv(text, status.author.id)
         
 
 class TwitterStream(StreamInterface):
@@ -73,8 +88,9 @@ class TwitterStream(StreamInterface):
         auth.set_access_token(tokens["access_token"], tokens["access_token_secret"])
 
         api = tweepy.API(auth)
-        streamAccess = tweepy.Stream(auth=api.auth, listener=self.streamListener)
-        streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19"], 
+        streamAccess = tweepy.Stream(auth=api.auth, listener=self.streamListener, tweet_mode='extended')
+        print('vai iniciar o streaming')
+        streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"], 
                             languages=["pt"],
                             is_async=True)
         time.sleep(interval)
