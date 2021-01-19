@@ -9,7 +9,8 @@ class MonitorFacade(object):
         self.status = 'stopped'
 
     
-    def run(self, interval, process_id):
+    # def run(self, interval, process_id):
+    def run(self, interval):
         try:
             print('Executando Monitor...')
             self.status = 'running'
@@ -18,8 +19,8 @@ class MonitorFacade(object):
             print("\tStreaming for {} seconds...".format(interval))
             twitter_stream.collect_data(interval=interval)
             print("\tStreaming finished.")
-            if process_id > 2:
-                raise Exception()
+            # if process_id > 2:
+            #     raise Exception()
         except Exception:
             self.status = 'error'
             # TODO: executar rotinas de notificação e logging
