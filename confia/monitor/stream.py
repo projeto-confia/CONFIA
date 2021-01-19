@@ -59,20 +59,53 @@ class TwitterStreamListener(tweepy.StreamListener):
         """
         status: tweepy.models.status - objeto twitter
         """
-        text = ''
+        # init
+        tweet = dict()
+
+        # social media
+        tweet['social_media_name'] = 'twitter'
+
+        # account
+        tweet['account_id'] = status.author.id_str
+        tweet['account_screen_name'] = status.author.screen_name
+        tweet['account_date_creation'] = status.author.created_at
+        tweet['account_blue_badge'] = status.author.verified
+
+        # post
+        tweet['id_str'] = status.id_str
+
+        if hasattr(status, "retweeted_status"):  # Checa se é retweet
+            tweet['parent_id_post'] = status.retweeted_status.id_str
+        else:
+            tweet['parent_id_post'] = None
+
+        tweet['text_post'] = ''
         if hasattr(status, "retweeted_status"):  # Checa se é retweet
             try:
-                text = status.retweeted_status.extended_tweet["full_text"]
+                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
             except AttributeError:
-                text = status.retweeted_status.text
+                tweet['text_post'] = status.retweeted_status.text
         else:
             try:
-                text = status.extended_tweet["full_text"]
+                tweet['text_post'] = status.extended_tweet["full_text"]
             except AttributeError:
-                text = status.text
+                tweet['text_post'] = status.text
 
-        print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, text))
-        self.users.write_in_csv(text, status.author.id)
+        tweet['num_likes'] = status.favorite_count  # será sempre 0, pois acabou de ser postado
+        tweet['num_shares'] = status.retweet_count # será sempre 0, pois acabou de ser postado
+        tweet['date_time_post'] = status.created_at
+
+        if hasattr(status, "retweeted_status"):
+            print(tweet['text_post'])
+            print()
+            print('id tweet:', tweet['id_str'], 'likes:', tweet['num_likes'], 'shares', tweet['num_shares'])
+            print('parent post id', tweet['parent_id_post'], 'shares:', status.retweeted_status.retweet_count, 'likes:', status.retweeted_status.favorite_count)
+            # print(tweet['parent_id_post'])
+            print('#####################################################')
+            print()
+
+        # print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, text))
+        # self.users.write_in_csv(text, status.author.id)
         
 
 class TwitterStream(StreamInterface):
