@@ -1,6 +1,7 @@
 import tweepy
 import confia.monitor.authconfig as cfg
 import confia.monitor.data_access as data
+from confia.monitor.dao import MonitorDAO
 import abc
 import time
 
@@ -139,4 +140,6 @@ class TwitterStream(StreamInterface):
         """
         docstring
         """
-        pass
+        dao = MonitorDAO()
+        dao.insert_posts()
+        
