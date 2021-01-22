@@ -1,9 +1,8 @@
 import tweepy
 import confia.monitor.authconfig as cfg
-import confia.monitor.data_access as data
 from confia.monitor.dao import MonitorDAO
 import abc
-import time
+import time, os
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -54,7 +53,9 @@ class StreamInterface(metaclass=abc.ABCMeta):
 class TwitterStreamListener(tweepy.StreamListener):
 
     def on_connect(self):
-        self.users = data.User()
+        self._dao = MonitorDAO()
+        self._tweet_csv_filename = 'tweets.csv'
+        self._tweet_csv_path = os.path.join("confia", "data", self._tweet_csv_filename)
 
     def on_status(self, status):
         """
@@ -64,19 +65,19 @@ class TwitterStreamListener(tweepy.StreamListener):
         tweet = dict()
 
         # social media
-        tweet['social_media_name'] = 'twitter'
+        tweet['name_social_media'] = 'twitter'
 
         # account
-        tweet['account_id'] = status.author.id_str
-        tweet['account_screen_name'] = status.author.screen_name
-        tweet['account_date_creation'] = status.author.created_at
-        tweet['account_blue_badge'] = status.author.verified
+        tweet['id_account'] = status.author.id_str
+        tweet['screen_name'] = status.author.screen_name
+        tweet['date_creation'] = status.author.created_at
+        tweet['blue_badge'] = status.author.verified
 
         # post
-        tweet['id_str'] = status.id_str
+        tweet['id_post'] = status.id
 
         if hasattr(status, "retweeted_status"):  # Checa se é retweet
-            tweet['parent_id_post'] = status.retweeted_status.id_str
+            tweet['parent_id_post'] = status.retweeted_status.id
         else:
             tweet['parent_id_post'] = None
 
@@ -94,24 +95,25 @@ class TwitterStreamListener(tweepy.StreamListener):
 
         tweet['num_likes'] = status.favorite_count  # será sempre 0, pois acabou de ser postado
         tweet['num_shares'] = status.retweet_count # será sempre 0, pois acabou de ser postado
-        tweet['date_time_post'] = status.created_at
+        tweet['datetime_post'] = status.created_at
 
-        if hasattr(status, "retweeted_status"):
-            print(tweet['text_post'])
-            print()
-            print('id tweet:', tweet['id_str'], 'likes:', tweet['num_likes'], 'shares', tweet['num_shares'])
-            print('parent post id', tweet['parent_id_post'], 'shares:', status.retweeted_status.retweet_count, 'likes:', status.retweeted_status.favorite_count)
-            # print(tweet['parent_id_post'])
-            print('#####################################################')
-            print()
+        # if hasattr(status, "retweeted_status"):
+        #     print(tweet['text_post'])
+        #     print()
+        #     print('id tweet:', tweet['id_str'], 'likes:', tweet['num_likes'], 'shares', tweet['num_shares'])
+        #     print('parent post id', tweet['parent_id_post'], 'shares:', status.retweeted_status.retweet_count, 'likes:', status.retweeted_status.favorite_count)
+        #     # print(tweet['parent_id_post'])
+        #     print('#####################################################')
+        #     print()
 
         # print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, text))
-        # self.users.write_in_csv(text, status.author.id)
+        self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
         
 
 class TwitterStream(StreamInterface):
     def __init__(self):
         self.streamListener = TwitterStreamListener()
+        self._dao = MonitorDAO()
 
     def collect_data(self, interval):
         """
@@ -123,7 +125,6 @@ class TwitterStream(StreamInterface):
 
         api = tweepy.API(auth)
         streamAccess = tweepy.Stream(auth=api.auth, listener=self.streamListener, tweet_mode='extended')
-        print('vai iniciar o streaming')
         streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"], 
                             languages=["pt"],
                             is_async=True)
@@ -140,6 +141,5 @@ class TwitterStream(StreamInterface):
         """
         docstring
         """
-        dao = MonitorDAO()
-        dao.insert_posts()
+        self._dao.insert_posts()
         
