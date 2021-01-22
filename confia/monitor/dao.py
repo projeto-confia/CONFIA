@@ -1,6 +1,7 @@
 from confia.orm.db_wrapper import DatabaseWrapper
 import datetime
 import sys
+import csv, os
 
 class MonitorDAO(object):
     """
@@ -8,7 +9,13 @@ class MonitorDAO(object):
     """
 
     def __init__(self):
-        pass
+        self._tweet_csv_header = ['name_social_media', 'id_account', 'screen_name',
+                                  'date_creation', 'blue_badge', 'id_post', 
+                                  'parent_id_post', 'text_post', 'num_likes', 'num_shares', 'datetime_post']
+        
+        self._tweet_csv_filename = 'tweets.csv'
+        self._tweet_csv_path = os.path.join("confia", "data", self._tweet_csv_filename)
+        self._id_social_media = None
 
 
     def insert_posts(self):
@@ -17,64 +24,88 @@ class MonitorDAO(object):
         """
 
         # carrega o arquivo csv
+        data = self._load_csv_to_dict(self._tweet_csv_path, fieldnames=self._tweet_csv_header, delimiter=';')
 
         # inicia a transação
-
-        # para cada registro csv:
-        
-            # consulta se a pessoa já possui registro de conta na rede social
-                # sim 
-                    # recupera o id da conta na rede social
-                # não
-                    # insere ou recupera o id da pessoa que publicou o post
-                    # insere ou recupera o id da rede social
-                    # insere a conta na rede social e recupera o id da conta na rede social
-
-            # consulta se a notícia já possui registro no banco
-                # sim
-                    # recupera o id da notícia
-                # não
-                    # insere a notícia e recupera o id
-
-            # insere o post
-
-        # comita a transação
-
-        # deleta o arquivo csv ou registra no log (e-mail) caso negativo
-
         try:
-            data = dict(name_social_media='linkedin',
-                    screen_name='augusto', 
-                    date_creation=datetime.datetime.now(), 
-                    blue_badge=True,
-                    id_account = '333333333333')
-
-            social_media_data = {x:data[x] for x in ['name_social_media']}
-            account_data = {x:data[x] for x in ['screen_name', 'date_creation', 'blue_badge', 'id_account']}
-
-            # usar o DatabaseWrapper em um contexto "with ... as" garante o commit ao final da execução do contexto
             with DatabaseWrapper() as db:
-                id_social_media = self._insert_record('detectenv.social_media', 
-                                        social_media_data,
-                                        'id_social_media',
+                for post in data:
+
+                    # separa os dados por tabela
+                    social_media_data = {k:post[k] for k in list(self._tweet_csv_header[:1])}
+                    account_data = {k:post[k] for k in list(self._tweet_csv_header[1:5])}
+                    post_data = {k:post[k] for k in list(self._tweet_csv_header[5:])}
+                    news_data = {'text_news': post['text_post'],
+                                 'datetime_publication': post['datetime_post']}
+
+                    # consulta se a pessoa já possui registro de conta na rede social
+                    id_social_media_account = self._get_id_social_media_account(account_data, db)
+                    if not id_social_media_account:
+                        # insere ou recupera o id da pessoa que publicou o post
+                        # TODO: verificar se vamos implementar
+
+                        # insere ou recupera o id da rede social
+                        # TODO: implementar e substituir o bloco abaixo
+
+                        # recupera o id da rede social
+                        if self._id_social_media is None:
+                            self._id_social_media = self._get_id_social_media(social_media_data, db)
+                        
+                        # insere a conta e recupera o id
+                        account_data['id_social_media'] = self._id_social_media
+                        id_social_media_account = self._insert_record('detectenv.social_media_account',
+                                                                      account_data,
+                                                                      'id_social_media_account',
+                                                                      db)
+
+                    # consulta se a notícia já possui registro no banco
+                    id_news = self._get_id_news(news_data, db)
+                    if not id_news:
+                        # insere a notícia e recupera o id
+                        id_news = self._insert_record('detectenv.news',
+                                                      news_data,
+                                                      'id_news',
+                                                      db)
+
+                    # insere o post
+                    post_data['id_social_media_account'] = id_social_media_account
+                    post_data['id_news'] = id_news
+                    if not post_data['parent_id_post']:
+                        post_data['parent_id_post'] = None
+                    self._insert_record('detectenv.post',
+                                        post_data,
+                                        'id_post',
                                         db)
-                print('id_social_media', id_social_media)
-                account_data['id_social_media'] = id_social_media
-                id_account = self._insert_record('detectenv.social_media_account',
-                                                account_data,
-                                                'id_social_media_account',
-                                                db)
-                print('id_account', id_account)
+
+            # deleta o arquivo csv ou registra no log (e-mail) caso negativo
+            # TODO: implementar
+
         except Exception as e:
             self._error_handler(e)
             raise
 
 
-    def _load_csv(self, file_path):
+    def write_in_csv_from_dict(self, data, file_path):
+        with open(file_path, mode='a') as f:
+            writer = csv.DictWriter(f, data.keys(), delimiter=';')
+            writer.writerow(data)
+
+
+    def _load_csv_to_dict(self, file_path, fieldnames, delimiter=','):
         """
-        Carrega o arquivo csv resultante da coleta
+        Carrega um arquivo csv
+
+        Retorno
+        --------
+        data: list of dicts
         """
-        pass
+
+        data = list()
+        with open(file_path) as f:
+            reader = csv.DictReader(f, fieldnames=fieldnames, delimiter=delimiter)
+            for row in reader:
+                data.append(row)
+        return data
 
 
     def _delete_csv(self, file_path):
@@ -119,6 +150,82 @@ class MonitorDAO(object):
         return db.fetchone()[0]
 
 
+    # TODO: refatorar para função genéria _get_id_record
+    def _get_id_social_media_account(self, ac_data, db):
+        """
+        Recupera o id da conta na rede social
+
+        Parâmetros
+        -----------
+        ac_data: dict
+            Dicionário contendo os dados da conta na rede social
+
+        db: DatabaseWrapper
+            Instância de conexão com o banco de dados
+
+        Retorno
+        ----------
+        id: int
+            id se já está registrado, 0 caso contrário
+        """
+
+        sql_string = "SELECT id_social_media_account from detectenv.social_media_account where id_account = %s;"
+        # TODO: verificar se usaremos string ou bigint
+        arg = ac_data['id_account']
+        record = db.query(sql_string, (arg,))
+        return 0 if not len(record) else record[0][0]
+
+
+    def _get_id_social_media(self, sm_data, db):
+        """
+        Recupera o id da rede social
+
+        Parâmetros
+        -----------
+        sm_data: dict
+            Dicionário contendo os dados da rede social
+
+        db: DatabaseWrapper
+            Instância de conexão com o banco de dados
+
+        Retorno
+        ----------
+        id: int
+            id se já está registrado, 0 caso contrário
+        """
+
+        sql_string = "SELECT id_social_media from detectenv.social_media where upper(name_social_media) = upper(%s);"
+        arg = sm_data['name_social_media']
+        record = db.query(sql_string, (arg,))
+        # print('id_social_media', record)
+        return 0 if not len(record) else record[0][0]
+
+
+    def _get_id_news(self, news_data, db):
+        """
+        Recupera o id da notícia
+
+        Parâmetros
+        -----------
+        news_data: dict
+            Dicionário contendo os dados da notícia
+
+        db: DatabaseWrapper
+            Instância de conexão com o banco de dados
+
+        Retorno
+        ----------
+        id: int
+            id se já está registrado, 0 caso contrário
+        """
+
+        sql_string = "SELECT id_news from detectenv.news where upper(text_news) = upper(%s);"
+        arg = news_data['text_news']
+        record = db.query(sql_string, (arg,))
+        # print('id_news', record)
+        return 0 if not len(record) else record[0][0]
+
+
     def _error_handler(self, err):
         """
         docstring
@@ -126,3 +233,5 @@ class MonitorDAO(object):
         _, _, traceback = sys.exc_info()
         print ("\n{}: {} on line number {}".format(type(err).__name__, err, traceback.tb_lineno))
         print(traceback.tb_frame, '\n')
+
+
