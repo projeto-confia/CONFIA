@@ -1,5 +1,6 @@
-import csv 
 import pandas as pd
+import csv, os
+from datetime import datetime
 from confia.orm.db_wrapper import DatabaseWrapper
 
 class DAO:
@@ -55,3 +56,16 @@ class DAO:
 
     def read_news_users_from_csv(self, news_users_file="confia/data/news_users.csv"):
         return pd.read_csv(news_users_file, sep=';')
+
+    def write_streaming_tweet_in_csv(self, path_file, tweet, userID):           
+
+        with open(path_file, mode='a') as tweet_file:
+            # verifica se o arquivo está vazio para criar o header do csv
+            if os.stat(path_file).st_size == 0:
+                writer = csv.writer(tweet_file, delimiter=',')
+                writer.writerow(["datetime", "userId", "tweet"])    
+            
+            else:
+                now = datetime.now()
+                writer = csv.writer(tweet_file, delimiter=',')
+                writer.writerow(["{0}:{1}:{2}".format(now.hour, now.minute, now.second), userID, tweet.replace('\n', ' ')])
