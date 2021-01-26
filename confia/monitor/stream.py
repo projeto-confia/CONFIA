@@ -2,6 +2,7 @@ import tweepy
 import confia.monitor.authconfig as cfg
 import confia.monitor.data_access as data
 import abc
+import re
 import time
 
 
@@ -56,8 +57,25 @@ class TwitterStreamListener(tweepy.StreamListener):
         self.users = data.User()
 
     def on_status(self, status):
-        print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, status.text))
-        self.users.write_in_csv(status.text, status.author.id)     
+        tweet = ""
+        if hasattr(status, "retweeted_status"):  # verifica se é um retwwet
+            try:
+                tweet = status.retweeted_status.extended_tweet["full_text"]
+                print(tweet)
+            except AttributeError:
+                tweet = status.retweeted_status.text
+                print(tweet)
+        else:
+            try:
+                tweet = status.extended_tweet["full_text"]
+                print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, tweet))
+                self.users.write_in_csv(tweet, status.author.id)     
+            except AttributeError:
+                tweet = status.text
+                print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, tweet))
+        
+        tweet = tweet.replace("\n", " ")
+        self.users.write_in_csv(tweet, status.author.id) 
         
 
 class TwitterStream(StreamInterface):
@@ -73,7 +91,7 @@ class TwitterStream(StreamInterface):
         auth.set_access_token(tokens["access_token"], tokens["access_token_secret"])
 
         api = tweepy.API(auth)
-        streamAccess = tweepy.Stream(auth=api.auth, listener=self.streamListener)
+        streamAccess = tweepy.Stream(auth=api.auth, listener=self.streamListener, tweet_mode='extended')
         streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19"], 
                             languages=["pt"],
                             is_async=True)
