@@ -5,9 +5,10 @@ import time
 import os
 from datetime import datetime
 from confia.orm.dao import DAO
-
+from confia.monitor.preprocessing import TextPreprocessing
 
 class StreamInterface(metaclass=abc.ABCMeta):
+
     @classmethod
     def __subclasshook__(cls, subclass):
         return (hasattr(subclass, 'collect_data') and 
@@ -59,7 +60,7 @@ class TwitterStreamListener(tweepy.StreamListener):
 
     def on_status(self, status):
         tweet = ""
-        if hasattr(status, "retweeted_status"):  # verifica se é um retwwet
+        if hasattr(status, "retweeted_status"):  # verifica se é um retweet
             try:
                 tweet = status.retweeted_status.extended_tweet["full_text"]
                 print(tweet)
@@ -75,6 +76,11 @@ class TwitterStreamListener(tweepy.StreamListener):
                 print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, tweet))
         
         tweet = tweet.replace("\n", " ")
+
+        # processa o texto da mensagem.
+        preprocessing = TextPreprocessing()
+        preprocessing.print_preprocessing(tweet)
+
         path = os.path.join("confia", "data", datetime.today().strftime('%Y-%m-%d') + ".csv")
         self.dao.write_streaming_tweet_in_csv(path, tweet, status.author.id) 
         
