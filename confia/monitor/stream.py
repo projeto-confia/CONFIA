@@ -1,9 +1,10 @@
 import tweepy
 import confia.monitor.authconfig as cfg
-import confia.monitor.data_access as data
 import abc
-import re
 import time
+import os
+from datetime import datetime
+from confia.orm.dao import DAO
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -54,7 +55,7 @@ class StreamInterface(metaclass=abc.ABCMeta):
 class TwitterStreamListener(tweepy.StreamListener):
 
     def on_connect(self):
-        self.users = data.User()
+        self.dao = DAO()
 
     def on_status(self, status):
         tweet = ""
@@ -68,14 +69,14 @@ class TwitterStreamListener(tweepy.StreamListener):
         else:
             try:
                 tweet = status.extended_tweet["full_text"]
-                print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, tweet))
-                self.users.write_in_csv(tweet, status.author.id)     
+                print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, tweet))    
             except AttributeError:
                 tweet = status.text
                 print("\tID: {0} - @{1} - {2}\n".format(status.author.id, status.author.screen_name, tweet))
         
         tweet = tweet.replace("\n", " ")
-        self.users.write_in_csv(tweet, status.author.id) 
+        path = os.path.join("confia", "data", datetime.today().strftime('%Y-%m-%d') + ".csv")
+        self.dao.write_streaming_tweet_in_csv(path, tweet, status.author.id) 
         
 
 class TwitterStream(StreamInterface):
