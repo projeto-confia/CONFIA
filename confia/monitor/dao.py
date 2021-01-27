@@ -78,7 +78,7 @@ class MonitorDAO(object):
                                         db)
 
             # deleta o arquivo csv ou registra no log (e-mail) caso negativo
-            # TODO: implementar
+            os.remove(self._tweet_csv_path)
 
         except Exception as e:
             self._error_handler(e)
