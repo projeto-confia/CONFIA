@@ -79,7 +79,7 @@ class TwitterStreamListener(tweepy.StreamListener):
 
         # processa o texto da mensagem.
         preprocessing = TextPreprocessing()
-        preprocessing.print_preprocessing(tweet)
+        preprocessing.process_text(tweet)
 
         path = os.path.join("confia", "data", datetime.today().strftime('%Y-%m-%d') + ".csv")
         self.dao.write_streaming_tweet_in_csv(path, tweet, status.author.id) 
