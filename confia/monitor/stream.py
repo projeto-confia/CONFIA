@@ -74,18 +74,18 @@ class TwitterStreamListener(tweepy.StreamListener):
         tweet['name_social_media'] = 'twitter'
 
         # account
-        tweet['id_account'] = status.author.id_str
+        tweet['id_account_social_media'] = status.author.id_str
         tweet['screen_name'] = status.author.screen_name
         tweet['date_creation'] = status.author.created_at
         tweet['blue_badge'] = status.author.verified
 
         # post
-        tweet['id_post'] = status.id
+        tweet['id_post_social_media'] = status.id
 
         if hasattr(status, "retweeted_status"):  # Checa se é retweet
-            tweet['parent_id_post'] = status.retweeted_status.id
+            tweet['parent_id_post_social_media'] = status.retweeted_status.id
         else:
-            tweet['parent_id_post'] = None
+            tweet['parent_id_post_social_media'] = None
 
         tweet['text_post'] = ''
         if hasattr(status, "retweeted_status"):  # Checa se é retweet

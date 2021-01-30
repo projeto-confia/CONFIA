@@ -9,9 +9,9 @@ class MonitorDAO(object):
     """
 
     def __init__(self):
-        self._tweet_csv_header = ['name_social_media', 'id_account', 'screen_name',
-                                  'date_creation', 'blue_badge', 'id_post', 
-                                  'parent_id_post', 'text_post', 'num_likes', 'num_shares', 'datetime_post']
+        self._tweet_csv_header = ['name_social_media', 'id_account_social_media', 'screen_name',
+                                  'date_creation', 'blue_badge', 'id_post_social_media', 
+                                  'parent_id_post_social_media', 'text_post', 'num_likes', 'num_shares', 'datetime_post']
         
         self._tweet_csv_filename = 'tweets.csv'
         self._tweet_csv_path = os.path.join("confia", "data", self._tweet_csv_filename)
@@ -70,8 +70,8 @@ class MonitorDAO(object):
                     # insere o post
                     post_data['id_social_media_account'] = id_social_media_account
                     post_data['id_news'] = id_news
-                    if not post_data['parent_id_post']:
-                        post_data['parent_id_post'] = None
+                    if not post_data['parent_id_post_social_media']:
+                        post_data['parent_id_post_social_media'] = None
                     self._insert_record('detectenv.post',
                                         post_data,
                                         'id_post',
@@ -169,9 +169,8 @@ class MonitorDAO(object):
             id se já está registrado, 0 caso contrário
         """
 
-        sql_string = "SELECT id_social_media_account from detectenv.social_media_account where id_account = %s;"
-        # TODO: verificar se usaremos string ou bigint
-        arg = ac_data['id_account']
+        sql_string = "SELECT id_social_media_account from detectenv.social_media_account where id_account_social_media = %s;"
+        arg = ac_data['id_account_social_media']
         record = db.query(sql_string, (arg,))
         return 0 if not len(record) else record[0][0]
 
