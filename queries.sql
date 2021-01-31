@@ -19,15 +19,19 @@ ALTER TABLE detectenv.social_media_account ALTER COLUMN blue_badge DROP NOT NULL
 
 drop function insert_update_social_media_account;
 drop function get_users_which_shared_the_news;
+    
 
-CREATE FUNCTION insert_update_social_media_account(idSocialMediaAccount varchar(30), idSocialMedia int, idOwner int, screenName varchar(30), dateCreation date, blueBadge boolean, prob_AlphaN double precision, prob_BetaN double precision, prob_UmAlphaN double precision, prob_UmBetaN double precision) RETURNS VOID AS $$ 
+CREATE OR REPLACE FUNCTION detectenv.insert_update_social_media_account(idSocialMedia int, idOwner int, screenName varchar(30), dateCreation date, blueBadge boolean, prob_AlphaN double precision, prob_BetaN double precision, prob_UmAlphaN double precision, prob_UmBetaN double precision, idAccountSocialMedia bigint)
+RETURNS VOID AS $$ 
     DECLARE 
     BEGIN 
-		INSERT INTO detectenv.social_media_account(id_account, id_social_media, id_owner, screen_name, date_creation, blue_badge, probalphan, probbetan, probumalphan, probumbetan) values (idSocialMediaAccount, idSocialMedia, idOwner, screenName, dateCreation, blueBadge, prob_AlphaN, prob_BetaN, prob_UmAlphaN, prob_UmBetaN) 
-		ON CONFLICT (id_account) DO 
-		UPDATE SET probalphan = prob_AlphaN, probbetan = prob_BetaN, probumalphan = prob_UmAlphaN, probumbetan = prob_UmBetaN WHERE social_media_account.id_account = idSocialMediaAccount;
+		INSERT INTO detectenv.social_media_account(id_social_media, id_owner, screen_name, date_creation, blue_badge, probalphan, probbetan, probumalphan, probumbetan, id_account_social_media) values (idSocialMedia, idOwner, screenName, dateCreation, blueBadge, prob_AlphaN, prob_BetaN, prob_UmAlphaN, prob_UmBetaN, idAccountSocialMedia) 
+		ON CONFLICT (id_account_social_media) DO 
+		UPDATE SET probalphan = prob_AlphaN, probbetan = prob_BetaN, probumalphan = prob_UmAlphaN, probumbetan = prob_UmBetaN WHERE social_media_account.id_account_social_media = idAccountSocialMedia;
     END;
-    $$ LANGUAGE 'plpgsql'; 
+    $$ LANGUAGE 'plpgsql';
+
+CREATE UNIQUE INDEX idAccountSocialMedia_idx ON detectenv.social_media_account(id_account_social_media); 
 
 DO $$ BEGIN
     PERFORM insert_update_social_media_account('488790680', 2, NULL, NULL, NULL, NULL, 0.5, 0.5, 0.5, 0.5);
@@ -53,8 +57,7 @@ select * from detectenv.social_media_account where id_account = '488790680';
 delete from detectenv.social_media_account where id_account = '488790680';
 explain analyze select * from detectenv.social_media_account where id_account = '488790680';
 
-CREATE UNIQUE INDEX idSocialMediaAccount_hash ON detectenv.social_media_account(id_account);
-drop index detectenv.idSocialMediaAccount_hash;
+drop index detectenv.idSocialMediaAccount_idx;
 
 CREATE INDEX idnews_original_hash_idx ON detectenv.news using hash(id_news_original);
 drop index detectenv.idSocialMediaAccount_hash;
