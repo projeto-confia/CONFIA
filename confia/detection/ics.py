@@ -12,7 +12,7 @@ class ICS:
 
         self.__dao        = DAO()
         self.__users      = self.__dao.read_query_to_dataframe("select * from detectenv.social_media_account;")
-        self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news;")
+        self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where ground_truth_label is not null;")
         self.__news_users = self.__dao.read_query_to_dataframe("select * from detectenv.post;")
         self.__smoothing  = laplace_smoothing
         self.__omega      = omega

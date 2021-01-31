@@ -13,12 +13,12 @@ class StreamInterface(metaclass=abc.ABCMeta):
 
     @classmethod
     def __subclasshook__(cls, subclass):
-        return (hasattr(subclass, 'collect_data') and 
-                callable(subclass.collect_data) and 
-                hasattr(subclass, 'process_data') and 
+        return (hasattr(subclass, 'collect_data') and
+                callable(subclass.collect_data) and
+                hasattr(subclass, 'process_data') and
                 callable(subclass.process_data) and
-                hasattr(subclass, 'persist_data') and 
-                callable(subclass.persist_data) or 
+                hasattr(subclass, 'persist_data') and
+                callable(subclass.persist_data) or
                 NotImplemented)
 
     @abc.abstractmethod
@@ -38,7 +38,7 @@ class StreamInterface(metaclass=abc.ABCMeta):
     def process_data(self):
         """
         Processa os dados coletados da rede social.
-        
+
         Retorna:
             True se não ocorrer falha, False caso contrário.
         """
@@ -48,7 +48,7 @@ class StreamInterface(metaclass=abc.ABCMeta):
     def persist_data(self):
         """
         Persiste os dados processados na base relacional.
-        
+
         Retorna:
             True se não ocorrer falha, False caso contrário.
         """
@@ -61,7 +61,8 @@ class TwitterStreamListener(tweepy.StreamListener):
         # self._preprocessing = TextPreprocessing()
         self._dao = MonitorDAO()
         self._tweet_csv_filename = 'tweets.csv'
-        self._tweet_csv_path = os.path.join("confia", "data", self._tweet_csv_filename)
+        self._tweet_csv_path = os.path.join(
+            "confia", "data", self._tweet_csv_filename)
 
     def on_status(self, status):
         """
@@ -98,13 +99,15 @@ class TwitterStreamListener(tweepy.StreamListener):
                 tweet['text_post'] = status.extended_tweet["full_text"]
             except AttributeError:
                 tweet['text_post'] = status.text
-                
-        # processa o texto da mensagem.
-        # tweet['text_post'] = tweet['text_post'].replace("\n", " ")
-        # self._preprocessing.process_text(tweet)
 
-        tweet['num_likes'] = status.favorite_count  # será sempre 0, pois acabou de ser postado
-        tweet['num_shares'] = status.retweet_count # será sempre 0, pois acabou de ser postado
+        # processa o texto da mensagem.
+        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
+        # self._preprocessing.process_text(tweet['text_post'])
+
+        # será sempre 0, pois acabou de ser postado
+        tweet['num_likes'] = status.favorite_count
+        # será sempre 0, pois acabou de ser postado
+        tweet['num_shares'] = status.retweet_count
         tweet['datetime_post'] = status.created_at
 
         # if hasattr(status, "retweeted_status"):
@@ -118,6 +121,7 @@ class TwitterStreamListener(tweepy.StreamListener):
 
         self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
 
+
 class TwitterStream(StreamInterface):
     def __init__(self):
         self.streamListener = TwitterStreamListener()
@@ -128,12 +132,15 @@ class TwitterStream(StreamInterface):
         docstring
         """
         tokens = cfg.tokens
-        auth = tweepy.OAuthHandler(tokens["consumer_key"], tokens["consumer_secret"])
-        auth.set_access_token(tokens["access_token"], tokens["access_token_secret"])
+        auth = tweepy.OAuthHandler(
+            tokens["consumer_key"], tokens["consumer_secret"])
+        auth.set_access_token(
+            tokens["access_token"], tokens["access_token_secret"])
 
         api = tweepy.API(auth)
-        streamAccess = tweepy.Stream(auth=api.auth, listener=self.streamListener, tweet_mode='extended')
-        streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"], 
+        streamAccess = tweepy.Stream(
+            auth=api.auth, listener=self.streamListener, tweet_mode='extended')
+        streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"],
                             languages=["pt"],
                             is_async=True)
         time.sleep(interval)
@@ -150,4 +157,3 @@ class TwitterStream(StreamInterface):
         docstring
         """
         self._dao.insert_posts()
-        

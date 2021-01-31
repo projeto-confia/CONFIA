@@ -1,14 +1,15 @@
 import time
 from confia.monitor.stream import TwitterStream
 
+
 class MonitorFacade(object):
     """
     docstring
     """
+
     def __init__(self):
         self.status = 'stopped'
 
-    
     # def run(self, interval, process_id):
     def run(self, interval):
         try:
@@ -33,5 +34,3 @@ class MonitorFacade(object):
             status = self.status
             self.status = 'stopped'
             return status
-
-

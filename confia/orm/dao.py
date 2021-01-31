@@ -22,21 +22,30 @@ class DAO:
             gt_label    = bool(row["ground_truth_label"])
 
             args = (id_news, text_news, date_time, None, gt_label, id_original)
-            print(args)
             self.__db.execute("INSERT INTO detectenv.news (id_news, text_news, datetime_publication, classification_outcome, ground_truth_label, id_news_original) VALUES (%s, %s, %s, %s, %s, %s);", args)
             self.__db.commit()
     
     def insert_update_user_accounts_db(self, users):
+        i = 1
+        total = len(users.index)
         for _, row in users.iterrows():
-            id_account      = str(row["id_social_media_account"])
-            probAlphaN      = str(row["probAlphaN"])
-            probUmAlphaN    = str(row["probUmAlphaN"])
-            probBetaN       = str(row["probBetaN"])
-            probUmBetaN     = str(row["probUmBetaN"])
+            print("Inserindo/atualizando usuário {0} de {1}...\r".format(i, total), end='', flush=True)
+
+            id_social_media             = 2 # TODO: mudar isso quando começarmos a trabalhar com outras redes sociais.
+            id_owner                    = row["id_owner"]
+            screen_name                 = str(row["screen_name"])
+            date_creation               = row["date_creation"]
+            blue_badge                  = row["blue_badge"]
+            probAlphaN                  = row["probAlphaN"]
+            probUmAlphaN                = row["probUmAlphaN"]
+            probBetaN                   = row["probBetaN"]
+            probUmBetaN                 = row["probUmBetaN"]
+            id_account_social_media     = row["id_account_social_media"]
             
-            args = (id_account, 2, None, None, None, None, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN)
-            self.__db.execute("DO $$ BEGIN PERFORM insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
+            args = (id_social_media, id_owner, screen_name, date_creation, blue_badge, probAlphaN, probBetaN, probUmAlphaN, probUmBetaN, id_account_social_media)
+            self.__db.execute("DO $$ BEGIN PERFORM detectenv.insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
             self.__db.commit()
+            i = i + 1
 
     def insert_post_db(self, posts):
         from datetime import datetime
