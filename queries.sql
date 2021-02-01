@@ -95,3 +95,18 @@ INSERT INTO detectenv.social_media (name_social_media) values ('Twitter');
 -- ALTER SEQUENCE detectenv.news_id_news_seq RESTART WITH 1
 
 ALTER TABLE detectenv.post ADD CONSTRAINT social_media_account_post_fk FOREIGN KEY (id_social_media_account) REFERENCES detectenv.social_media_account (id_social_media_account);
+
+
+-- ========================================================================================================================================================
+CREATE OR REPLACE FUNCTION detectenv.get_news_shared_by_users_with_params_ics()
+returns table (id_social_media_account BIGINT, probalphan DOUBLE PRECISION, probbetan DOUBLE PRECISION, probumalphan DOUBLE PRECISION, probumbetan DOUBLE PRECISION, id_post bigint, id_news bigint, classification_outcome boolean, ground_truth_label boolean) AS 
+$$
+begin
+	return query
+	select q.id_social_media_account, q.probalphan, q.probbetan, q.probumalphan, q.probumbetan, post.id_post, news.id_news, news.classification_outcome, news.ground_truth_label from 
+	(select * from detectenv.social_media_account as sma
+	where (sma.probalphan != 0.5 or sma.probbetan != 0.5 or sma.probumalphan != 0.5 or sma.probumbetan != 0.5)
+	order by id_social_media_account asc) as q, detectenv.news as news, detectenv.post as post
+	where q.id_social_media_account = post.id_social_media_account and post.id_news = news.id_news and news.ground_truth_label is null;
+end	
+$$ LANGUAGE 'plpgsql';

@@ -5,6 +5,7 @@ import math
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
 from confia.orm.dao import DAO
+from time import sleep
 
 class ICS:
 
@@ -90,8 +91,13 @@ class ICS:
         Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
         """
         self.__init_params(test_size)
+        i = 0
+        users_unique = self.__train_news_users["id_social_media_account"].unique()
+        total = len(users_unique)
         
-        for userId in self.__train_news_users["id_social_media_account"].unique():            
+        for userId in users_unique:   
+            i = i + 1
+            print("", end="Progresso do treinamento: {0:.2f}%\r".format(float((i / total) * 100)), flush=True)
             
             # obtém os labels das notícias compartilhadas por cada usuário.
             newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_social_media_account"] == userId])
@@ -121,8 +127,8 @@ class ICS:
         """
         Classifica uma notícia usando o ICS.
         """
-        query = "select * from get_users_which_shared_the_news({0});".format(id_news)
-        usersWhichSharedTheNews = self.__dao.read_query_to_dataframe(query)
+
+        usersWhichSharedTheNews = self.__dao.get_users_which_shared_the_news(id_news)
 
         productAlphaN    = 1.0
         productUmAlphaN  = 1.0
