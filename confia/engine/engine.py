@@ -12,7 +12,7 @@ class Engine(object):
         # load json
         self.engine_frequency = 30
         self.engine_status = 'stopped'
-        self.monitor_stream_time = 10
+        self.monitor_stream_time = 30
         # self.process_id = 1
 
         # start logger
