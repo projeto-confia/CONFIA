@@ -27,9 +27,7 @@ class Detector:
                 for _, row in news_shared_by_users_with_params_ics.iterrows():
                     id_news            = row["id_news"]
                     predicted_label    = self.predict_news(id_news)
-                    
-                    # atribui temporariamente a 'ground_truth_label' o mesmo rótulo predito pelo ICS.
-                    ground_truth_label = (row["ground_truth_label"] if row["ground_truth_label"] != None else bool(predicted_label))
+                    ground_truth_label = row["ground_truth_label"] 
                     news.append(id_news)
 
                     # atualiza os labels da notícia 'id_news'.
