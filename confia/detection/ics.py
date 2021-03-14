@@ -139,9 +139,12 @@ class ICS:
         productUmBetaN   = 1.0
         
         for _, row in usersWhichSharedTheNews.iterrows():
-            productAlphaN   = productAlphaN  * row["probalphan"]
-            productUmBetaN  = productUmBetaN * row["probumbetan"]
-        
+
+            if math.isnan(row["probalphan"]) != True and math.isnan(row["probumbetan"]) != True:
+
+                productAlphaN   = productAlphaN  * row["probalphan"]
+                productUmBetaN  = productUmBetaN * row["probumbetan"]
+                
         # inferência bayesiana
         reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
         reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100

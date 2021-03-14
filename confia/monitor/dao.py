@@ -53,6 +53,10 @@ class MonitorDAO(object):
                         
                         # insere a conta e recupera o id
                         account_data['id_social_media'] = self._id_social_media
+                        account_data["probalphan"] = 0.5
+                        account_data["probbetan"] = 0.5
+                        account_data["probumalphan"] = 0.5
+                        account_data["probumbetan"] = 0.5
                         id_social_media_account = self._insert_record('detectenv.social_media_account',
                                                                       account_data,
                                                                       'id_social_media_account',

@@ -43,5 +43,4 @@ class Detector:
         label = self.__ics.predict(id_news)
         
         print("Notícia {0} legítima de acordo com o ICS.".format(id_news)) if label == 0 else print("Notícia {0} falsa de acordo com o ICS.".format(id_news))
-
         return label
