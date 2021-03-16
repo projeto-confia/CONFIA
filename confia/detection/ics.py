@@ -139,17 +139,20 @@ class ICS:
         productUmBetaN   = 1.0
         
         for _, row in usersWhichSharedTheNews.iterrows():
-
-            if math.isnan(row["probalphan"]) != True and math.isnan(row["probumbetan"]) != True:
-
-                productAlphaN   = productAlphaN  * row["probalphan"]
-                productUmBetaN  = productUmBetaN * row["probumbetan"]
+            productAlphaN   = productAlphaN  * row["probalphan"]
+            productUmBetaN  = productUmBetaN * row["probumbetan"]
                 
         # inferência bayesiana
         reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
         reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
+
+        # calculando o grau de probabilidade da predição.
+        total = reputation_news_tn + reputation_news_fn
+        prob = 0
         
         if reputation_news_tn >= reputation_news_fn:
-            return 0 # notícia classificada como legítima.
+            prob = reputation_news_tn / total
+            return 0, prob # notícia classificada como legítima.
         else:
-            return 1 # notícia classificada como fake.
+            prob = reputation_news_fn / total
+            return 1, prob # notícia classificada como fake.

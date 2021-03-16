@@ -12,7 +12,7 @@ class Engine(object):
         # load json
         self.engine_frequency = 30
         self.engine_status = 'stopped'
-        self.monitor_stream_time = 30
+        self.monitor_stream_time = 120
         # self.process_id = 1
 
         # start logger
@@ -56,7 +56,8 @@ class Engine(object):
             # print('Processo {} finalizado.\n'.format(self.process_id))
             print('Processo finalizado.\n')
             # self.process_id += 1
-        except:
+        except Exception as e:
+            print(e)
             self.engine_status = 'paused'
             # TODO: executar rotinas de notificação e logging
         else:
