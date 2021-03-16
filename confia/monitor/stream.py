@@ -89,11 +89,16 @@ class TwitterStreamListener(tweepy.StreamListener):
             tweet['parent_id_post_social_media'] = None
 
         tweet['text_post'] = ''
+        tweet['num_likes'] = 0
+        tweet['num_shares'] = 0
         if hasattr(status, "retweeted_status"):  # Checa se é retweet
             try:
                 tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
             except AttributeError:
                 tweet['text_post'] = status.retweeted_status.text
+            finally:
+                tweet['num_likes'] = status.retweeted_status.favorite_count
+                tweet['num_shares'] = status.retweeted_status.retweet_count
         else:
             try:
                 tweet['text_post'] = status.extended_tweet["full_text"]
@@ -105,9 +110,9 @@ class TwitterStreamListener(tweepy.StreamListener):
         # self._preprocessing.process_text(tweet['text_post'])
 
         # será sempre 0, pois acabou de ser postado
-        tweet['num_likes'] = status.favorite_count
+        # tweet['num_likes'] = status.favorite_count
         # será sempre 0, pois acabou de ser postado
-        tweet['num_shares'] = status.retweet_count
+        # tweet['num_shares'] = status.retweet_count
         tweet['datetime_post'] = status.created_at
 
         # if hasattr(status, "retweeted_status"):
