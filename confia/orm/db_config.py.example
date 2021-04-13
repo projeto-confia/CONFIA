@@ -1,0 +1,7 @@
+DATABASE_CONFIG = {
+    'host': 'localhost',
+    'port': '15432',
+    'user': 'admin',
+    'password': 'postgres',
+    'database': 'confia'
+}
