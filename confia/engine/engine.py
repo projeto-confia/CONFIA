@@ -1,6 +1,7 @@
 import threading
 import time
 from confia.monitor.facade import MonitorFacade
+from confia.detection.facade import DetectorFacade
 
 class Engine(object):
     """
@@ -11,8 +12,8 @@ class Engine(object):
         # load json
         self.engine_frequency = 30
         self.engine_status = 'stopped'
-        self.monitor_stream_time = 10
-        self.process_id = 1
+        self.monitor_stream_time = 30
+        # self.process_id = 1
 
         # start logger
 
@@ -40,17 +41,21 @@ class Engine(object):
 
     def run_process(self):
         try:
-            print('Executando processo {} ...'.format(self.process_id))
+            # print('Executando processo {} ...'.format(self.process_id))
+            print('Executando processo ...')
             self.engine_status = 'running'
             monitor_status = self.monitor()
             if monitor_status == 'error':
                 raise Exception()
             self.detector()
             time.sleep(5)
+
             self.interventor()
             time.sleep(5)
-            print('Processo {} finalizado.\n'.format(self.process_id))
-            self.process_id += 1
+            
+            # print('Processo {} finalizado.\n'.format(self.process_id))
+            print('Processo finalizado.\n')
+            # self.process_id += 1
         except:
             self.engine_status = 'paused'
             # TODO: executar rotinas de notificação e logging
@@ -63,7 +68,8 @@ class Engine(object):
         docstring
         """
         monitor = MonitorFacade()
-        status = monitor.run(interval=self.monitor_stream_time, process_id=self.process_id)
+        # status = monitor.run(interval=self.monitor_stream_time, process_id=self.process_id)
+        status = monitor.run(interval=self.monitor_stream_time)
         print('Status retornado pelo monitor: {}.'.format(status))
         return status
 
@@ -72,7 +78,11 @@ class Engine(object):
         """
         docstring
         """
-        print('Executando Detector...')
+        detector = DetectorFacade()
+        detector.run()
+        # status = detector.run(interval=self.monitor_stream_time, process_id=self.process_id)
+        # print('Status retornado pelo detector: {}.'.format(status))
+        # return status
 
 
     def interventor(self):
