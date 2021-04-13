@@ -25,13 +25,13 @@ class Detector:
                 print("Atualizando notícias compartilhadas por usuários reputados...\n")
                 news = []
                 for _, row in news_shared_by_users_with_params_ics.iterrows():
-                    id_news            = row["id_news"]
-                    predicted_label    = self.predict_news(id_news)
+                    id_news = row["id_news"]
+                    predicted_label, prob_label = self.predict_news(id_news)
                     ground_truth_label = row["ground_truth_label"] 
                     news.append(id_news)
 
                     # atualiza os labels da notícia 'id_news'.
-                    dao.update_news_labels(id_news, bool(predicted_label), ground_truth_label)
+                    dao.update_news_labels(id_news, bool(predicted_label), ground_truth_label, prob_label)
                 
                 print("\nAs seguintes notícias foram atualizadas:")
                 print(*news, sep=', ')
@@ -40,8 +40,7 @@ class Detector:
             print("Ocorreu um erro ao atualizar os dados.\n{0}.".format(e.args))
 
     def predict_news(self, id_news):
-        label = self.__ics.predict(id_news)
+        label, prob = self.__ics.predict(id_news)
         
-        print("Notícia {0} legítima de acordo com o ICS.".format(id_news)) if label == 0 else print("Notícia {0} falsa de acordo com o ICS.".format(id_news))
-
-        return label
+        print(f"Notícia {id_news} legítima com probabilidade de {round(prob * 100, 3)}% de acordo com o ICS.") if label == 0 else print(f"Notícia {id_news} falsa com probabilidade de {round(prob * 100, 3)}% de acordo com o ICS.")
+        return label, prob
