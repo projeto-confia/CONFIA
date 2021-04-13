@@ -25,12 +25,12 @@ class DAO:
             self.__db.execute("INSERT INTO detectenv.news (id_news, text_news, datetime_publication, classification_outcome, ground_truth_label) VALUES (%s, %s, %s, %s, %s);", args)
             self.__db.commit()
 
-    def update_news_labels(self, id_news, classification_outcome, ground_truth_label):
+    def update_news_labels(self, id_news, classification_outcome, ground_truth_label, prob_label):
         """
-        Atualiza os atributos 'classification_outcome' e 'ground_truth_label' referentes à notícia 'id_news'.
+        Atualiza os atributos 'classification_outcome', 'prob_classification' e 'ground_truth_label' referentes à notícia 'id_news'.
         """
-        args = (classification_outcome, ground_truth_label, id_news)
-        self.__db.execute("UPDATE detectenv.news SET classification_outcome = %s, ground_truth_label = %s where id_news = %s;", args)
+        args = (classification_outcome, ground_truth_label, prob_label, id_news)
+        self.__db.execute("UPDATE detectenv.news SET classification_outcome = %s, ground_truth_label = %s, prob_classification = %s where id_news = %s;", args)
         self.__db.commit()
 
     def get_news_shared_by_users_with_params_ics(self):
