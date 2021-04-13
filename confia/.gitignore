@@ -140,6 +140,7 @@ cython_debug/
 # old
 *config.py
 __pycache__
+
 # dados
 data/*
 !data/.gitkeep
