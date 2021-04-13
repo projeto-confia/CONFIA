@@ -20,9 +20,11 @@ class ICS:
 
     def __init_params(self, test_size = 0.3):
 
+        news = self.__news[self.__news['ground_truth_label'].notnull()]
+
         # divide 'self.__news_users' em treino e teste.
-        labels = self.__news["ground_truth_label"]
-        self.__X_train_news, self.__X_test_news, _, _ = train_test_split(self.__news, labels, test_size=test_size, stratify=labels)
+        labels = news["ground_truth_label"]
+        self.__X_train_news, self.__X_test_news, _, _ = train_test_split(news, labels, test_size=test_size, stratify=labels)
 
         # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
         self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
@@ -83,8 +85,9 @@ class ICS:
                 predicted_labels.append(1)
 
         # mostra os resultados da matriz de confusão e acurácia.
-        print(confusion_matrix(self.__X_test_news["ground_truth_label"], predicted_labels))
-        print(accuracy_score(self.__X_test_news["ground_truth_label"], predicted_labels))
+        gt = self.__X_test_news["ground_truth_label"].tolist()
+        print(confusion_matrix(gt, predicted_labels))
+        print(accuracy_score(gt, predicted_labels))
 
     def fit(self, test_size = 0.3):
         """
@@ -138,12 +141,18 @@ class ICS:
         for _, row in usersWhichSharedTheNews.iterrows():
             productAlphaN   = productAlphaN  * row["probalphan"]
             productUmBetaN  = productUmBetaN * row["probumbetan"]
-        
+                
         # inferência bayesiana
         reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
         reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
+
+        # calculando o grau de probabilidade da predição.
+        total = reputation_news_tn + reputation_news_fn
+        prob = 0
         
         if reputation_news_tn >= reputation_news_fn:
-            return 0 # notícia classificada como legítima.
+            prob = reputation_news_tn / total
+            return 0, prob # notícia classificada como legítima.
         else:
-            return 1 # notícia classificada como fake.
+            prob = reputation_news_fn / total
+            return 1, prob # notícia classificada como fake.
