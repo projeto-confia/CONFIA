@@ -2,6 +2,7 @@ import threading
 import time
 from confia.monitor.facade import MonitorFacade
 from confia.detection.facade import DetectorFacade
+from confia.scraping.facade import ScrapingFacade
 
 class Engine(object):
     """
@@ -44,14 +45,18 @@ class Engine(object):
             # print('Executando processo {} ...'.format(self.process_id))
             print('Executando processo ...')
             self.engine_status = 'running'
+            
             monitor_status = self.monitor()
             if monitor_status == 'error':
                 raise Exception()
+            
             self.detector()
             time.sleep(5)
 
             self.interventor()
             time.sleep(5)
+            
+            self.scraping()
             
             # print('Processo {} finalizado.\n'.format(self.process_id))
             print('Processo finalizado.\n')
@@ -90,3 +95,11 @@ class Engine(object):
         docstring
         """
         print('Executando Interventor...')
+        
+        
+    def scraping(self):
+        """
+        docstring
+        """
+        scraping = ScrapingFacade()
+        scraping.run()
