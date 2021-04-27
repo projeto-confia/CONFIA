@@ -5,6 +5,9 @@ from bs4 import BeautifulSoup
 from confia.scraping.dao import ScrapingDAO
 
 
+# TODO: refatorar
+# implementar uma interface
+# implementar uma classe (extends interface) para cada agẽncia de checagem
 class Scraping(object):
     
     def __init__(self):
@@ -13,7 +16,7 @@ class Scraping(object):
         self._article_csv_path = os.path.join("confia", "data", self._article_csv_filename)
         
         
-    def scrape_all_data(self):
+    def recover_data(self):
         # scraping
         page = 1
         url = "https://www.boatos.org/tag/coronavirus/page/{}".format(page)
@@ -32,6 +35,10 @@ class Scraping(object):
             page += 1
             url = "https://www.boatos.org/tag/coronavirus/page/{}".format(page)
             response = requests.get(url)
+            
+            
+    def update_data(self):
+        print("\tAtualiza os dados")
 
 
     def _parse_to_dict(self, article):
