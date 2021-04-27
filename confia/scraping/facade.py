@@ -9,13 +9,18 @@ class ScrapingFacade(object):
     def __init__(self):
         self.status = 'stopped'
 
-    def run(self):
+    def run(self, initial_load):
         try:
             print('Running Scraping...')
             self.status = 'running'
             scraping = Scraping()
             print("\tScraping initialized.")
-            scraping.scrape_all_data()
+            
+            if not initial_load:
+                scraping.update_data()
+            else:
+                scraping.recover_data()
+            
             print("\tScraping finished.")
             
             # print('\tPersisting data')
