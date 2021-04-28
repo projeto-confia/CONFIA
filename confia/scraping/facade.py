@@ -14,18 +14,17 @@ class ScrapingFacade(object):
             print('Running Scraping...')
             self.status = 'running'
             scraping = Scraping()
-            print("\tScraping initialized.")
             
+            print("\tScraping initialized.")
             if not initial_load:
                 scraping.update_data()
             else:
                 scraping.recover_data()
-            
             print("\tScraping finished.")
             
-            # print('\tPersisting data')
-            # twitter_stream.persist_data()
-            # print('\tData persisted')
+            print('\tPersisting data')
+            scraping.persist_data()
+            print('\tData persisted')
             
         except Exception:
             self.status = 'error'
