@@ -37,6 +37,10 @@ class Scraping(object):
             response = requests.get(url)
             
             
+    def persist_data(self):
+        self._dao.insert_articles()
+            
+            
     def update_data(self):
         print("\tAtualiza os dados")
 
@@ -44,12 +48,13 @@ class Scraping(object):
     def _parse_to_dict(self, article):
         # init
         parsed_article = dict()
-        parsed_article['external_id'] = article['id'][5:]
+        parsed_article['name_agency'] = 'boatos.org'
+        parsed_article['publication_external_id'] = article['id'][5:]
         element = article.select_one('.entry-title > a')
-        parsed_article['title'] = element['title'][:-7]
-        parsed_article['url'] = element['href']
-        parsed_article['datetime'] = article.select_one('.entry-date')['datetime']
-        parsed_article['tags'] = [tag.text for tag in article.select('.tag-links > a') if tag.text not in ('Lista de fake news sobre o novo coronavírus (Covid-19)')]
+        parsed_article['publication_title'] = element['title'][:-7]
+        parsed_article['publication_url'] = element['href']
+        parsed_article['publication_datetime'] = article.select_one('.entry-date')['datetime']
+        parsed_article['publication_tags'] = [tag.text for tag in article.select('.tag-links > a') if tag.text not in ('Lista de fake news sobre o novo coronavírus (Covid-19)')]
         return parsed_article
             
             

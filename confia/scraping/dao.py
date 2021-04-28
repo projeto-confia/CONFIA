@@ -2,6 +2,7 @@ from confia.orm.db_wrapper import DatabaseWrapper
 import datetime
 import sys
 import csv, os
+import re
 
 class ScrapingDAO(object):
     """
@@ -9,10 +10,15 @@ class ScrapingDAO(object):
     """
 
     def __init__(self):
-        self._article_csv_header = ['external_id', 'title', 'url', 'datetime', 'tags']
+        self._article_csv_header = ['name_agency',
+                                    'publication_external_id', 
+                                    'publication_title', 
+                                    'publication_url', 
+                                    'publication_datetime', 
+                                    'publication_tags']
         self._article_csv_filename = 'articles.csv'
         self._article_csv_path = os.path.join("confia", "data", self._article_csv_filename)
-        # self._id_social_media = None
+        self._id_agency = None
 
 
     def insert_articles(self):
@@ -28,9 +34,21 @@ class ScrapingDAO(object):
             with DatabaseWrapper() as db:
                 for article in data:
                     
+                    # separa os dados
+                    agency_data = {k:article[k] for k in list(self._article_csv_header[:1])}
+                    publication_data = {k:article[k] for k in list(self._article_csv_header[1:])}
+                    
+                    # insere ou recupera o id da agencia de checagem de fatos
+                    # TODO: implementar e substituir o bloco abaixo
+
+                    # recupera o id da agencia de checagem de fatos
+                    if self._id_agency is None:
+                        self._id_agency = self._get_id_agency(agency_data, db)
+                    
                     # insere o artigo
-                    self._insert_record('detectenv.post',
-                                        article,
+                    publication_data['id_trusted_agency'] = self._id_agency
+                    self._insert_record('detectenv.agency_news_checked',
+                                        publication_data,
                                         'id_news_checked',
                                         db)
 
@@ -105,6 +123,32 @@ class ScrapingDAO(object):
         # print(sql_string)
         db.execute(sql_string, list(data.values()))
         return db.fetchone()[0]
+    
+    
+    # TODO: refatorar para função genéria _get_id_record
+    def _get_id_agency(self, agency_data, db):
+        """
+        Recupera o id da agência de checagem de fatos
+
+        Parâmetros
+        -----------
+        agency_data: dict
+            Dicionário contendo os dados da agência de checagem
+
+        db: DatabaseWrapper
+            Instância de conexão com o banco de dados
+
+        Retorno
+        ----------
+        id: int
+            id se já está registrado, 0 caso contrário
+        """
+
+        sql_string = "SELECT id_trusted_agency from detectenv.trusted_agency where upper(name_agency) = upper(%s);"
+        arg = agency_data['name_agency']
+        record = db.query(sql_string, (arg,))
+        # print('id_news', record)
+        return 0 if not len(record) else record[0][0]
  
 
     def _error_handler(self, err):
