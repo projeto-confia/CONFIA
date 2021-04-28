@@ -2,7 +2,7 @@ from confia.orm.db_wrapper import DatabaseWrapper
 import datetime
 import sys
 import csv, os
-import re
+
 
 class ScrapingDAO(object):
     """
@@ -21,13 +21,22 @@ class ScrapingDAO(object):
         self._id_agency = None
 
 
-    def insert_articles(self):
+    def insert_articles(self, initial_load):
         """
         docstring
         """
 
         # carrega o arquivo csv
-        data = self._load_csv_to_dict(self._article_csv_path, fieldnames=self._article_csv_header, delimiter=';')
+        try:
+            data = self._load_csv_to_dict(self._article_csv_path, fieldnames=self._article_csv_header, delimiter=';')
+        except Exception as e:
+            if initial_load:
+                self._error_handler(e)
+                raise
+            else:
+                print('\tData file not found!')
+                print('\tNo new articles persisted.')
+                return
 
         # inicia a transação
         try:
@@ -66,6 +75,25 @@ class ScrapingDAO(object):
             writer.writerow(data)
 
 
+    def get_last_article_datetime(self):
+        """
+        Recupera o maior datetime de publicação de artigo
+
+        Retorno
+        ----------
+        datetime: datetime
+            datetime se existe registro, 0 caso contrário
+        """
+        sql_string = "SELECT MAX(ag.publication_datetime) FROM detectenv.agency_news_checked ag;"
+        try:
+            with DatabaseWrapper() as db:
+                record = db.query(sql_string)
+            return 0 if not len(record) else record[0][0]
+        except Exception as e:
+            self._error_handler(e)
+            raise
+            
+        
     def _load_csv_to_dict(self, file_path, fieldnames, delimiter=','):
         """
         Carrega um arquivo csv
