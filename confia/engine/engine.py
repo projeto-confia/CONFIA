@@ -10,13 +10,14 @@ class Engine(object):
     """
 
     def __init__(self):
+        # TODO: implementar o load do json
         # load json
         self.engine_frequency = 21600  # 21.600 seconds == 6 hours
         self.engine_status = 'stopped'
         self.monitor_stream_time = 30
-        self.scraping_initial_load = False
-        # self.process_id = 1
+        self.scraping_initial_load = True
 
+        # TODO: implementar
         # start logger
 
 
@@ -24,6 +25,7 @@ class Engine(object):
         """
         docstring
         """
+        # TODO: implementar
         # load json
 
 
@@ -33,37 +35,33 @@ class Engine(object):
         """
         threading.Timer(self.engine_frequency, self.run).start()
         if self.engine_status == 'running':
-            print("Engine em processo. Não pode iniciar um novo.")
+            print("Engine in process. Impossible start a new one.")
         elif self.engine_status == 'stopped':
             self.run_process()
         else:
-            print("Engine unavailable")
+            print("Engine unavailable.")
             # TODO: executar rotinas de notificação e logging
 
 
     def run_process(self):
         try:
-            # print('Executando processo {} ...'.format(self.process_id))
-            print('Executando processo ...')
+            print('Running process ...')
             self.engine_status = 'running'
             
-            # monitor_status = self.monitor()
-            # if monitor_status == 'error':
-            #     raise Exception()
+            monitor_status = self.monitor()
+            if monitor_status == 'error':
+                raise Exception()
             
-            # self.detector()
-            # time.sleep(5)
+            self.detector()
 
-            # self.interventor()
-            # time.sleep(5)
+            self.interventor()
+            time.sleep(5)
             
             scraping_status = self.scraping()
             if scraping_status == 'error':
                 raise Exception()
             
-            # print('Processo {} finalizado.\n'.format(self.process_id))
-            print('Processo finalizado.\n')
-            # self.process_id += 1
+            print('Process finished.\n')
         except:
             self.engine_status = 'paused'
             # TODO: executar rotinas de notificação e logging
@@ -76,9 +74,8 @@ class Engine(object):
         docstring
         """
         monitor = MonitorFacade()
-        # status = monitor.run(interval=self.monitor_stream_time, process_id=self.process_id)
         status = monitor.run(interval=self.monitor_stream_time)
-        print('Status retornado pelo monitor: {}.'.format(status))
+        print('Status returned by the monitor module: {}.'.format(status))
         return status
 
 
@@ -97,7 +94,7 @@ class Engine(object):
         """
         docstring
         """
-        print('Executando Interventor...')
+        print('Running Interventor...')
         
         
     def scraping(self):
@@ -110,5 +107,5 @@ class Engine(object):
         #       tal rotina deverá verificar se existem dados populados no banco
         if self.scraping_initial_load:
             self.scraping_initial_load = False
-        print('Status retornado pelo scraping: {}.'.format(status))
+        print('Status returned by the scraping module: {}.'.format(status))
         return status
