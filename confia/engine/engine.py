@@ -14,7 +14,7 @@ class Engine(object):
         self.engine_frequency = 21600  # 21.600 seconds == 6 hours
         self.engine_status = 'stopped'
         self.monitor_stream_time = 30
-        self.scraping_initial_load = True
+        self.scraping_initial_load = False
         # self.process_id = 1
 
         # start logger

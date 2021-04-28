@@ -17,14 +17,19 @@ class ScrapingFacade(object):
             
             print("\tScraping initialized.")
             if not initial_load:
+                print("\tUpdating data...")
                 scraping.update_data()
             else:
-                scraping.recover_data()
+                print("\tFetching data...")
+                scraping.fetch_data()
             print("\tScraping finished.")
             
-            print('\tPersisting data')
-            scraping.persist_data()
-            print('\tData persisted')
+            print('\tPersisting data...')
+            # TODO: refatorar
+            # chamar o método abaixo somente se há arquivo de dados
+            # talvez os métodos fetch_data() e update_data() possam retornar essa informação
+            scraping.persist_data(initial_load)
+            # print('\tData persisted.')
             
         except Exception:
             self.status = 'error'

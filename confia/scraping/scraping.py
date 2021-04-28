@@ -1,6 +1,7 @@
 # packages
 import time, os
 import requests
+from datetime import datetime
 from bs4 import BeautifulSoup
 from confia.scraping.dao import ScrapingDAO
 
@@ -16,7 +17,7 @@ class Scraping(object):
         self._article_csv_path = os.path.join("confia", "data", self._article_csv_filename)
         
         
-    def recover_data(self):
+    def fetch_data(self):
         # scraping
         page = 1
         url = "https://www.boatos.org/tag/coronavirus/page/{}".format(page)
@@ -37,12 +38,31 @@ class Scraping(object):
             response = requests.get(url)
             
             
-    def persist_data(self):
-        self._dao.insert_articles()
+    def persist_data(self, initial_load):
+        self._dao.insert_articles(initial_load)
             
             
     def update_data(self):
-        print("\tAtualiza os dados")
+        # recupera o último datetime no banco
+        last_article_datetime = self._dao.get_last_article_datetime()
+        
+        # recupera a página mais recente do site boatos.org
+        url = "https://www.boatos.org/tag/coronavirus/page/1"
+        response = requests.get(url)
+        if response.status_code != 200:
+            print('\tUnreachable URL! Response status code: {}'.format(response.status_code))
+            raise
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        articles = soup.findAll('article')
+        
+        # insere artigos com datetime superior ao último cadastrado no banco
+        for article in articles:
+            current_article_datetime_str = article.select_one('.entry-date')['datetime'][:-6]
+            current_article_datetime = datetime.strptime(current_article_datetime_str, '%Y-%m-%dT%H:%M:%S')
+            if current_article_datetime <= last_article_datetime:
+                return
+            self._write_in_csv(article)
 
 
     def _parse_to_dict(self, article):
