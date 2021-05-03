@@ -14,7 +14,7 @@ class Engine(object):
         # load json
         self.engine_frequency = 21600  # 21.600 seconds == 6 hours
         self.engine_status = 'stopped'
-        self.monitor_stream_time = 30
+        self.monitor_stream_time = 240
         self.scraping_initial_load = True
 
         # TODO: implementar
@@ -54,12 +54,12 @@ class Engine(object):
             
             self.detector()
 
-            self.interventor()
+            # self.interventor()
             time.sleep(5)
             
-            scraping_status = self.scraping()
-            if scraping_status == 'error':
-                raise Exception()
+            # scraping_status = self.scraping()
+            # if scraping_status == 'error':
+            #     raise Exception()
             
             print('Process finished.\n')
         except:
