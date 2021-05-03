@@ -133,6 +133,7 @@ soupsieve==2.2.1
 systemd-python==234
 terminado==0.9.1
 testpath==0.4.4
+textdistance==4.2.1
 threadpoolctl==2.1.0
 toml==0.10.2
 tornado==6.1
