@@ -6,7 +6,7 @@ from datetime import datetime
 import confia.monitor.authconfig as cfg
 from confia.orm.dao import DAO
 from confia.monitor.dao import MonitorDAO
-from confia.Preprocessing.preprocessing import TextPreprocessing
+from confia.preprocessing.text_preprocessing import TextPreprocessing
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -61,8 +61,7 @@ class TwitterStreamListener(tweepy.StreamListener):
         # self._preprocessing = TextPreprocessing()
         self._dao = MonitorDAO()
         self._tweet_csv_filename = 'tweets.csv'
-        self._tweet_csv_path = os.path.join(
-            "confia", "data", self._tweet_csv_filename)
+        self._tweet_csv_path = os.path.join("confia", "data", self._tweet_csv_filename)
 
     def on_status(self, status):
         """
