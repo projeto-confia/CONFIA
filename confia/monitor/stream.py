@@ -6,7 +6,7 @@ from datetime import datetime
 import confia.monitor.authconfig as cfg
 from confia.orm.dao import DAO
 from confia.monitor.dao import MonitorDAO
-from confia.monitor.preprocessing import TextPreprocessing
+from confia.Preprocessing.preprocessing import TextPreprocessing
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
