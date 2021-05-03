@@ -21,6 +21,8 @@ class ICS:
     def __init_params(self, test_size = 0.3):
 
         news = self.__news[self.__news['ground_truth_label'].notnull()]
+        if not len(news.index):
+            return 0
 
         # divide 'self.__news_users' em treino e teste.
         labels = news["ground_truth_label"]
@@ -52,6 +54,9 @@ class ICS:
         self.__users["probUmAlphaN"]  = probUmAlphaN
         self.__users["probBetaN"]     = probBetaN
         self.__users["probUmBetaN"]   = probUmBetaN
+        
+        return 1
+    
 
     def __assess(self):
         """
@@ -93,8 +98,11 @@ class ICS:
         """
         Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
         """
+        status_code = self.__init_params(test_size)
+        if not status_code:
+            return 0
+        
         i = 0
-        self.__init_params(test_size)
         users_unique = self.__train_news_users["id_social_media_account"].unique()
         total = len(users_unique)
         
