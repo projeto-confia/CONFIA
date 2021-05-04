@@ -47,12 +47,13 @@ class ScrapingDAO(object):
                     agency_data = {k:article[k] for k in list(self._article_csv_header[:1])}
                     publication_data = {k:article[k] for k in list(self._article_csv_header[1:])}
                     
-                    # insere ou recupera o id da agencia de checagem de fatos
-                    # TODO: implementar e substituir o bloco abaixo
-
                     # recupera o id da agencia de checagem de fatos
                     if self._id_agency is None:
-                        self._id_agency = self._get_id_agency(agency_data, db)
+                        id = self._get_id_agency(agency_data, db)
+                        self._id_agency = id if id else self._insert_record('detectenv.trusted_agency',
+                                                                             agency_data,
+                                                                             'id_trusted_agency',
+                                                                             db)
                     
                     # insere o artigo
                     publication_data['id_trusted_agency'] = self._id_agency
@@ -177,8 +178,8 @@ class ScrapingDAO(object):
         record = db.query(sql_string, (arg,))
         # print('id_news', record)
         return 0 if not len(record) else record[0][0]
- 
-
+    
+    
     def _error_handler(self, err):
         """
         docstring
