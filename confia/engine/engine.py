@@ -12,10 +12,9 @@ class Engine(object):
     def __init__(self):
         # TODO: implementar o load do json
         # load json
-        self.engine_frequency = 21600  # 21.600 seconds == 6 hours
+        self.engine_frequency = 21600    # 21.600 seconds == 6 hours
         self.engine_status = 'stopped'
-        self.monitor_stream_time = 30
-        self.scraping_initial_load = True
+        self.monitor_stream_time = 1200  # 1.200 seconds == 20 minutes
 
         # TODO: implementar
         # start logger
@@ -55,7 +54,6 @@ class Engine(object):
             self.detector()
 
             self.interventor()
-            time.sleep(5)
             
             scraping_status = self.scraping()
             if scraping_status == 'error':
@@ -95,6 +93,7 @@ class Engine(object):
         docstring
         """
         print('Running Interventor...')
+        time.sleep(5)
         
         
     def scraping(self):
@@ -102,10 +101,6 @@ class Engine(object):
         docstring
         """
         scraping = ScrapingFacade()
-        status = scraping.run(initial_load = self.scraping_initial_load)
-        # TODO: refatorar - incluir a rotina de load inicial no init da engine
-        #       tal rotina deverá verificar se existem dados populados no banco
-        if self.scraping_initial_load:
-            self.scraping_initial_load = False
+        status = scraping.run()
         print('Status returned by the scraping module: {}.'.format(status))
         return status

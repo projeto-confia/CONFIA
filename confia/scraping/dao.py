@@ -28,6 +28,8 @@ class ScrapingDAO(object):
 
         # carrega o arquivo csv
         try:
+            # TODO: fazer uma chamada da biblioteca 'os' do python, para verificar se o arquivo existe
+            #       se o arquivo não existir, tratar o retorno de acordo com initial_load
             data = self._load_csv_to_dict(self._article_csv_path, fieldnames=self._article_csv_header, delimiter=';')
         except Exception as e:
             if initial_load:
@@ -86,6 +88,17 @@ class ScrapingDAO(object):
             datetime se existe registro, 0 caso contrário
         """
         sql_string = "SELECT MAX(ag.publication_datetime) FROM detectenv.agency_news_checked ag;"
+        try:
+            with DatabaseWrapper() as db:
+                record = db.query(sql_string)
+            return 0 if not len(record) else record[0][0]
+        except Exception as e:
+            self._error_handler(e)
+            raise
+        
+        
+    def get_num_storaged_articles(self):
+        sql_string = "SELECT COUNT(ag.id_trusted_agency) FROM detectenv.trusted_agency ag;"
         try:
             with DatabaseWrapper() as db:
                 record = db.query(sql_string)
