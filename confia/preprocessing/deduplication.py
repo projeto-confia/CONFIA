@@ -23,8 +23,10 @@ def text_cleaning(raw_tweet):
 if __name__ == "__main__":
     dao = DAO()
     news = dao.read_query_to_dataframe("select * from detectenv.news;")
+    news.to_csv(r"confia/data/news.csv", index=True)
     threshold = 70
     similar_tweets = []
+    ids = []
     
     # escolhe um id aleatório para fazer a comparação.
     news_idx = random.randint(0, len(news))
@@ -41,13 +43,14 @@ if __name__ == "__main__":
         similarity = fuzz.token_sort_ratio(chosen_news_cleaned, current_news)
 
         if similarity >= threshold:
+            ids.append(news.iloc[i]["id_news"])
             similar_tweets.append(current_news)
 
     end_time = time.time() - start_time
     
-    print(f"ORIGINAL TWEET: {chosen_news}\n\n{len(similar_tweets)} SIMILAR TWEETS TO: {chosen_news_cleaned}\n\n")
+    print(f"\nORIGINAL TWEET: {chosen_news}\n\n{len(similar_tweets)} SIMILAR TWEETS TO: {chosen_news_cleaned}\n\n")
     for i in range(len(similar_tweets)):
-        print(f"{i+1} -> {similar_tweets[i]}")
+        print(f"{ids[i]} -> {similar_tweets[i]}")
     print(f"\nExecution time: {end_time} seconds.")
 
 

@@ -14,7 +14,7 @@ class Engine(object):
         # load json
         self.engine_frequency = 21600  # 21.600 seconds == 6 hours
         self.engine_status = 'stopped'
-        self.monitor_stream_time = 240
+        self.monitor_stream_time = 1800
         self.scraping_initial_load = True
 
         # TODO: implementar
