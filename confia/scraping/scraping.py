@@ -15,6 +15,7 @@ class Scraping(object):
         self._dao = ScrapingDAO()
         self._article_csv_filename = 'articles.csv'
         self._article_csv_path = os.path.join("confia", "data", self._article_csv_filename)
+        self.initial_load = False if self._dao.get_num_storaged_articles() else True
         
         
     def fetch_data(self):
@@ -38,8 +39,8 @@ class Scraping(object):
             response = requests.get(url)
             
             
-    def persist_data(self, initial_load):
-        self._dao.insert_articles(initial_load)
+    def persist_data(self):
+        self._dao.insert_articles(self.initial_load)
             
             
     def update_data(self):
