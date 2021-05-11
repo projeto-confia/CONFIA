@@ -3,6 +3,7 @@ import time
 from confia.monitor.facade import MonitorFacade
 from confia.detection.facade import DetectorFacade
 from confia.scraping.facade import ScrapingFacade
+from confia.interventor.facade import InterventorFacade
 
 class Engine(object):
     """
@@ -53,7 +54,9 @@ class Engine(object):
             
             self.detector()
 
-            self.interventor()
+            interventor_status = self.interventor()
+            if interventor_status == 'error':
+                raise Exception()
             
             scraping_status = self.scraping()
             if scraping_status == 'error':
@@ -92,8 +95,10 @@ class Engine(object):
         """
         docstring
         """
-        print('Running Interventor...')
-        time.sleep(5)
+        interventor = InterventorFacade()
+        status = interventor.run()
+        print('Status returned by the interventor module: {}.'.format(status))
+        return status
         
         
     def scraping(self):
