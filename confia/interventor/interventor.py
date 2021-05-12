@@ -29,11 +29,14 @@ class Interventor(object):
             
 
     def send_news_to_agency(self):
-        pass
-        # simular o envio do arquivo
-        # inserir no banco os registros na tabela checking_outcome
-            # cuidado especial para o controle de inconsistencia
-            # ou seja, arquivo ser enviado mas registros não serem persistidos no banco
+        # TODO: criar módulo python para envio e leitura de e-mail
+        print('\tSending mail...')
+        
+        # Registro no banco de dados
+        self._dao.persist_excel_in_db()
+        
+        # TODO: implementar controle de inconsistencia
+        # Arquivo enviado, registros não persistidos e vice-verdadeiras
     
             
     # TODO: implementar usando o algoritmo de deduplicação
