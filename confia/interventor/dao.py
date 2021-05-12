@@ -1,11 +1,13 @@
+import os, sys
+import xlsxwriter
 from confia.orm.db_wrapper import DatabaseWrapper
-import sys
 
 
 class InterventorDAO(object):
     
     def __init__(self):
-        pass
+        self._excel_file_path = os.path.join('confia', 'data', 'confia.xlsx')
+        self._workbook = None
     
     
     def select_candidate_news_to_check(self):
@@ -33,6 +35,28 @@ class InterventorDAO(object):
         except Exception as e:
             self._error_handler(e)
             raise
+        
+    
+    def get_workbook(self):
+        try:
+            if not self._workbook:
+                workbook = xlsxwriter.Workbook(self._excel_file_path)
+                bold = workbook.add_format({'bold': True})
+                text_wrap = workbook.add_format({'text_wrap': True})
+                worksheet = workbook.add_worksheet('planilha1')
+                worksheet.set_column(1, 1, 100, text_wrap)
+                worksheet.write(0, 0, 'Id', bold)
+                worksheet.write(0, 1, 'Texto', bold)
+                self._workbook = workbook
+            return self._workbook
+        except Exception as e:
+            self._error_handler(e)
+            raise
+        
+        
+    def close_workbook(self):
+        self._workbook.close()
+        self._workbook = None
         
         
     def _error_handler(self, err):
