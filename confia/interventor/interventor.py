@@ -1,4 +1,3 @@
-import xlsxwriter
 from confia.interventor.dao import InterventorDAO
 
 
