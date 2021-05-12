@@ -1,5 +1,7 @@
 import os, sys
+import pandas as pd
 import xlsxwriter
+from datetime import datetime
 from confia.orm.db_wrapper import DatabaseWrapper
 
 
@@ -57,6 +59,29 @@ class InterventorDAO(object):
     def close_workbook(self):
         self._workbook.close()
         self._workbook = None
+        
+        
+    def persist_excel_in_db(self):
+        try:
+            df = pd.read_excel(self._excel_file_path, 'planilha1', engine='openpyxl')
+            ids = df['Id'].tolist()
+            # TODO: datetime deve ser do envio do e-mail
+            dt = datetime.now()
+
+            args = ((id, 1, dt) for id in ids)
+            sql_string = "INSERT INTO detectenv.checking_outcome \
+                            (id_news, id_trusted_agency, datetime_sent_for_checking) \
+                            VALUES (%s,%s,%s);"
+
+            with DatabaseWrapper() as db:
+                for tup in args:
+                    db.execute(sql_string, tup)
+                    
+            os.remove(self._excel_file_path)
+            
+        except Exception as e:
+            self._error_handler(e)
+            raise
         
         
     def _error_handler(self, err):
