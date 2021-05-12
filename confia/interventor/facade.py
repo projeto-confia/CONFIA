@@ -17,9 +17,9 @@ class InterventorFacade(object):
             interventor = Interventor()
             print("\tInterventor initialized.")
             print("\tSelecting news to be checked...")
-            interventor.select_news_to_check()
-            print("\tSending selected news to agency...")
-            interventor.send_news_to_agency()
+            if (interventor.select_news_to_check()):
+                print("\tSending selected news to agency...")
+                interventor.send_news_to_agency()
         except Exception:
             self.status = 'error'
             # TODO: executar rotinas de notificação e logging
@@ -28,4 +28,4 @@ class InterventorFacade(object):
         finally:
             status = self.status
             self.status = 'stopped'
-            return status        
+            return status

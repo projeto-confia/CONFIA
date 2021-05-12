@@ -1,4 +1,5 @@
 from confia.orm.db_wrapper import DatabaseWrapper
+import sys
 
 
 class InterventorDAO(object):
@@ -8,11 +9,12 @@ class InterventorDAO(object):
     
     
     def select_candidate_news_to_check(self):
-        """Select candidate news to be send to ACFs
+        """Select candidate news to be send to Fact Check Agencys
 
         Returns:
-            [list]: [list of candidates]
+            list: list of candidates
         """
+        
         sql_string =   "select n.id_news, n.text_news \
                         from detectenv.news n left join detectenv.checking_outcome co on co.id_news = n.id_news \
                                             inner join detectenv.post p on p.id_news = n.id_news \
@@ -34,9 +36,6 @@ class InterventorDAO(object):
         
         
     def _error_handler(self, err):
-        """
-        docstring
-        """
         _, _, traceback = sys.exc_info()
         print ("\n{}: {} on line number {}".format(type(err).__name__, err, traceback.tb_lineno))
         print(traceback.tb_frame, '\n')
