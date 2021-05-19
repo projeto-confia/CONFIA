@@ -12,7 +12,7 @@ class DuplicationAnalyzer:
         news2_cleaned = self._text_processing.text_cleaning(news2)
         similarity = fuzz.token_sort_ratio(news1_cleaned, news2_cleaned)
 
-        return similarity >= self._threshold
+        return similarity >= self._threshold, news1_cleaned, news2_cleaned
 
 
     
