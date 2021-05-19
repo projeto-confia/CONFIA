@@ -33,9 +33,10 @@ class TextPreprocessing:
         """remove hyperlinks, nomes de usuário precedidos pelo '@', pontuações e caracteres especiais."""
 
         text_cleaned = re.sub('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+#]|[!*\(\),]|''(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', text, flags=re.MULTILINE)
-        text_cleaned = re.sub("(@[A-Za-z0-9_]+)", "", text_cleaned, flags=re.MULTILINE)
         text_cleaned = re.sub(r" #\w+\b(?!\s+\w+)", '', text_cleaned, flags=re.MULTILINE)
+        text_cleaned = re.sub("(@[A-Za-z0-9_]+)", "", text_cleaned, flags=re.MULTILINE)
         text_cleaned = "".join([char.lower() for char in text_cleaned if char not in string.punctuation])
+        # print(self.tokenize(text_cleaned))
         text_cleaned = re.sub('\s+', ' ', text_cleaned).strip()
 
         # remove dígitos
