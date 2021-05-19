@@ -22,7 +22,7 @@ class TextPreprocessing:
         self.__tokenizer = TweetTokenizer()
         self.__lemmatizer = WordNetLemmatizer()
         self.__stopwords = nltk.corpus.stopwords.words('portuguese')
-        self.__punctuation = '!"$%&\'()*+,-./:;<=>?@[\]^_`{|}~'
+        self.__punctuation = '!"$%&\'()*+,-./:;<=>?[\]^_`{|}~'
 
     def __check_nltk_packages(self, install_nltk_packages):
         if install_nltk_packages == True:
