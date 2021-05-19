@@ -22,8 +22,7 @@ if __name__ == "__main__":
         if i == news_idx: continue
         
         current_news = news.iloc[i]["text_news"]
-        is_similar,n1,n2 = duplication_analyzer.check_duplications(chosen_news, current_news)
-        if i == 395: print(n1 + '\n' + n2)
+        is_similar = duplication_analyzer.check_duplications(chosen_news, current_news)
 
         if is_similar == True:
             similar_news_ids.append(news.iloc[i]["id_news"])
