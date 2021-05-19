@@ -4,16 +4,16 @@ import random
 import time
 
 if __name__ == "__main__":
-    duplication_analyzer = DuplicationAnalyzer()
+    duplication_analyzer = DuplicationAnalyzer(70)
     dao = DAO()
 
     news = dao.read_query_to_dataframe("select * from detectenv.news;")
     similar_news = []
     similar_news_ids = []
-    # news.to_csv(r"confia/data/news.csv", index=True)
+    news.to_csv(r"confia/data/news.csv", index=True)
     
     # escolhe um id aleatório para fazer a comparação.
-    news_idx = random.randint(0, len(news))
+    news_idx = 6 #random.randint(0, len(news))
     chosen_news = news.iloc[news_idx]["text_news"]
 
     start_time = time.time()
@@ -22,7 +22,8 @@ if __name__ == "__main__":
         if i == news_idx: continue
         
         current_news = news.iloc[i]["text_news"]
-        is_similar = duplication_analyzer.check_duplications(chosen_news, current_news)
+        is_similar,n1,n2 = duplication_analyzer.check_duplications(chosen_news, current_news)
+        if i == 395: print(n1 + '\n' + n2)
 
         if is_similar == True:
             similar_news_ids.append(news.iloc[i]["id_news"])
