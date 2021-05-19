@@ -13,7 +13,7 @@ if __name__ == "__main__":
     news.to_csv(r"confia/data/news.csv", index=True)
     
     # escolhe um id aleatório para fazer a comparação.
-    news_idx = 6 #random.randint(0, len(news))
+    news_idx = 734 #random.randint(0, len(news))
     chosen_news = news.iloc[news_idx]["text_news"]
 
     start_time = time.time()
