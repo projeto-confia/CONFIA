@@ -1,13 +1,14 @@
-import pandas as pd
-import nltk
-import re
-import string
 from googletrans import Translator
 from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
-import fuzzywuzzy
+import pandas as pd
+import nltk
+import re
+import string
+import re
+
 
 class TextPreprocessing:
 
@@ -27,6 +28,19 @@ class TextPreprocessing:
             nltk.download('averaged_perceptron_tagger')
             nltk.download('wordnet')
             nltk.download('stopwords')
+
+    def text_cleaning(text):
+        """remove hyperlinks, nomes de usuário precedidos pelo '@', pontuações e caracteres especiais."""
+
+        text_cleaned = re.sub('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+#]|[!*\(\),]|''(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', text, flags=re.MULTILINE)
+        text_cleaned = re.sub("(@[A-Za-z0-9_]+)", "", text_cleaned, flags=re.MULTILINE)
+        text_cleaned = re.sub(r"#(\w+)", ' ', text_cleaned, flags=re.MULTILINE)
+        text_cleaned = "".join([char.lower() for char in text_cleaned if char not in string.punctuation])
+        text_cleaned = re.sub('\s+', ' ', text_cleaned).strip()
+
+        # remove dígitos
+        # tweet = re.sub(r"\d", "", tweet)
+        return text_cleaned.lower()
 
     def translate(self, tweet):
         """
@@ -60,10 +74,3 @@ class TextPreprocessing:
                 lemmatized_text.append(token.lower())
 
         return lemmatized_text
-
-    def process_text(self, tweet):
-        tweet = self.translate(tweet)
-        tokens = self.tokenize(tweet)
-        lemmatized_text = self.lemmatizer(tokens)
-
-        print("\nTweet processado: {0}\n".format(lemmatized_text))
