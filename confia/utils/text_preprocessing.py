@@ -21,6 +21,8 @@ class TextPreprocessing:
         self.__translator = Translator()
         self.__tokenizer = TweetTokenizer()
         self.__lemmatizer = WordNetLemmatizer()
+        self.__stopwords = nltk.corpus.stopwords.words('portuguese')
+        self.__punctuation = '!"$%&\'()*+,-./:;<=>?@[\]^_`{|}~'
 
     def __check_nltk_packages(self, install_nltk_packages):
         if install_nltk_packages == True:
@@ -33,10 +35,11 @@ class TextPreprocessing:
         """remove hyperlinks, nomes de usuário precedidos pelo '@', pontuações e caracteres especiais."""
 
         text_cleaned = re.sub('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+#]|[!*\(\),]|''(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', text, flags=re.MULTILINE)
+        text_cleaned = "".join([char.lower() for char in text_cleaned if char not in self.__punctuation])
         text_cleaned = re.sub(r" #\w+\b(?!\s+\w+)", '', text_cleaned, flags=re.MULTILINE)
+        text_cleaned = text_cleaned.replace('#', '')
         text_cleaned = re.sub("(@[A-Za-z0-9_]+)", "", text_cleaned, flags=re.MULTILINE)
-        text_cleaned = "".join([char.lower() for char in text_cleaned if char not in string.punctuation])
-        # print(self.tokenize(text_cleaned))
+        # text_cleaned = "".join([char.lower() for char in text_cleaned if char not in self.__stopwords])
         text_cleaned = re.sub('\s+', ' ', text_cleaned).strip()
 
         # remove dígitos
