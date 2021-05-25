@@ -3,6 +3,8 @@ import time
 from confia.monitor.facade import MonitorFacade
 from confia.detection.facade import DetectorFacade
 from confia.scraping.facade import ScrapingFacade
+from confia.fcmanager.facade import FactCheckManagerFacade
+from confia.interventor.facade import InterventorFacade
 
 class Engine(object):
     """
@@ -12,10 +14,9 @@ class Engine(object):
     def __init__(self):
         # TODO: implementar o load do json
         # load json
-        self.engine_frequency = 21600  # 21.600 seconds == 6 hours
+        self.engine_frequency = 21600    # 21.600 seconds == 6 hours
         self.engine_status = 'stopped'
-        self.monitor_stream_time = 1200
-        self.scraping_initial_load = True
+        self.monitor_stream_time = 1200  # 1.200 seconds == 20 minutes
 
         # TODO: implementar
         # start logger
@@ -52,10 +53,15 @@ class Engine(object):
             if monitor_status == 'error':
                 raise Exception()
             
+            fact_check_manager_status = self.fact_check_manager()
+            if fact_check_manager_status == 'error':
+                raise Exception()
+            
             self.detector()
 
-            # self.interventor()
-            time.sleep(5)
+            interventor_status = self.interventor()
+            if interventor_status == 'error':
+                raise Exception()
             
             # scraping_status = self.scraping()
             # if scraping_status == 'error':
@@ -94,7 +100,10 @@ class Engine(object):
         """
         docstring
         """
-        print('Running Interventor...')
+        interventor = InterventorFacade()
+        status = interventor.run()
+        print('Status returned by the interventor module: {}.'.format(status))
+        return status
         
         
     def scraping(self):
@@ -102,10 +111,17 @@ class Engine(object):
         docstring
         """
         scraping = ScrapingFacade()
-        status = scraping.run(initial_load = self.scraping_initial_load)
-        # TODO: refatorar - incluir a rotina de load inicial no init da engine
-        #       tal rotina deverá verificar se existem dados populados no banco
-        if self.scraping_initial_load:
-            self.scraping_initial_load = False
+        status = scraping.run()
         print('Status returned by the scraping module: {}.'.format(status))
         return status
+
+
+    def fact_check_manager(self):
+        """
+        docstring
+        """
+        fact_check_manager = FactCheckManagerFacade()
+        status = fact_check_manager.run()
+        print('Status returned by the fcmanager module: {}.'.format(status))
+        return status
+        
