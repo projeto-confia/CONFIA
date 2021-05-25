@@ -15,11 +15,9 @@ class FactCheckManagerFacade(object):
             print('Running FactCheckManager...')
             self.status = 'running'
             fact_check_manager = FactCheckManager()
-            print('\tProcessing feed from agency...')
             fact_check_manager.process_agency_feed()
-            print('\tPersisting data...')
             fact_check_manager.persist_data()
-        except Exception:
+        except:
             self.status = 'error'
             # TODO: executar rotinas de notificação e logging
         else:

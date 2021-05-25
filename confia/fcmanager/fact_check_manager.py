@@ -5,8 +5,10 @@ class FactCheckManager(object):
     
     
     def process_agency_feed(self):
-        print('\tProcessing agency field now')
+        print('\tProcessing feed from agency...')
+        print('\tAgency feed processed')
         
     
     def persist_data(self):
-        print('\tPersisting data now')
+        print('\tPersisting data...')
+        print('\tData persisted')
