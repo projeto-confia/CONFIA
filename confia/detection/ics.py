@@ -21,7 +21,9 @@ class ICS:
     def __init_params(self, test_size = 0.3):
 
         news = self.__news[self.__news['ground_truth_label'].notnull()]
-
+        if not len(news.index):
+            return 0
+        
         # divide 'self.__news_users' em treino e teste.
         labels = news["ground_truth_label"]
         self.__X_train_news, self.__X_test_news, _, _ = train_test_split(news, labels, test_size=test_size, stratify=labels)
@@ -31,8 +33,12 @@ class ICS:
         self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
 
         # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
-        self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
-        self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
+        # TODO: refatorar separando os testes
+        try:
+            self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
+            self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
+        except:
+            return 0
 
         # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
         self.__train_news_users = self.__train_news_users[self.__train_news_users["id_social_media_account"].isin(self.__test_news_users["id_social_media_account"])]
@@ -52,6 +58,9 @@ class ICS:
         self.__users["probUmAlphaN"]  = probUmAlphaN
         self.__users["probBetaN"]     = probBetaN
         self.__users["probUmBetaN"]   = probUmBetaN
+        
+        return 1
+    
 
     def __assess(self):
         """
@@ -93,8 +102,11 @@ class ICS:
         """
         Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
         """
+        status_code = self.__init_params(test_size)
+        if not status_code:
+            return 0
+        
         i = 0
-        self.__init_params(test_size)
         users_unique = self.__train_news_users["id_social_media_account"].unique()
         total = len(users_unique)
         
