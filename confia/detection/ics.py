@@ -23,7 +23,7 @@ class ICS:
         news = self.__news[self.__news['ground_truth_label'].notnull()]
         if not len(news.index):
             return 0
-
+        
         # divide 'self.__news_users' em treino e teste.
         labels = news["ground_truth_label"]
         self.__X_train_news, self.__X_test_news, _, _ = train_test_split(news, labels, test_size=test_size, stratify=labels)
@@ -33,8 +33,12 @@ class ICS:
         self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
 
         # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
-        self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
-        self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
+        # TODO: refatorar separando os testes
+        try:
+            self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
+            self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
+        except:
+            return 0
 
         # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
         self.__train_news_users = self.__train_news_users[self.__train_news_users["id_social_media_account"].isin(self.__test_news_users["id_social_media_account"])]
