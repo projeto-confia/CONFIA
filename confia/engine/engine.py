@@ -3,6 +3,7 @@ import time
 from confia.monitor.facade import MonitorFacade
 from confia.detection.facade import DetectorFacade
 from confia.scraping.facade import ScrapingFacade
+from confia.fcmanager.facade import FactCheckManagerFacade
 from confia.interventor.facade import InterventorFacade
 
 class Engine(object):
@@ -50,6 +51,10 @@ class Engine(object):
             
             monitor_status = self.monitor()
             if monitor_status == 'error':
+                raise Exception()
+            
+            fact_check_manager_status = self.fact_check_manager()
+            if fact_check_manager_status == 'error':
                 raise Exception()
             
             self.detector()
@@ -109,3 +114,14 @@ class Engine(object):
         status = scraping.run()
         print('Status returned by the scraping module: {}.'.format(status))
         return status
+
+
+    def fact_check_manager(self):
+        """
+        docstring
+        """
+        fact_check_manager = FactCheckManagerFacade()
+        status = fact_check_manager.run()
+        print('Status returned by the fcmanager module: {}.'.format(status))
+        return status
+        
