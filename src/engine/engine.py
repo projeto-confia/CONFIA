@@ -1,10 +1,10 @@
 import threading
 import time
-from confia.monitor.facade import MonitorFacade
-from confia.detection.facade import DetectorFacade
-from confia.scraping.facade import ScrapingFacade
-from confia.fcmanager.facade import FactCheckManagerFacade
-from confia.interventor.facade import InterventorFacade
+from src.monitor.facade import MonitorFacade
+from src.detection.facade import DetectorFacade
+from src.scraping.facade import ScrapingFacade
+from src.fcmanager.facade import FactCheckManagerFacade
+from src.interventor.facade import InterventorFacade
 
 class Engine(object):
     """
