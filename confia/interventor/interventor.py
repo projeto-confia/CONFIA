@@ -5,29 +5,38 @@ class Interventor(object):
     
     def __init__(self):
         self._dao = InterventorDAO()
+        self._has_news_to_be_checked = False
+        print("\tInterventor initialized.")
     
     
-    def select_news_to_check(self):
+    def select_news_to_be_checked(self):
         """Armazena em arquivo excel as notícias a serem enviadas à ACF
-
-        Returns:
-            boll: True se há notícias, False caso contrário
         """
-        candidate_news = self._dao.select_candidate_news_to_check()
+        
+        print("\tSelecting news to be checked...")
+        
+        candidate_news = self._dao.select_candidate_news_to_be_checked()
         if not len(candidate_news):
-            return False
-        row = 1
+            return
+        
+        row = 0
         for id_news, text_news in candidate_news:
             if self._is_news_in_fca_data(text_news):
                 continue
+            row += 1
             self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 0, id_news)
             self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 1, text_news)
-            row += 1
         self._dao.close_workbook()
-        return True
+        
+        self._has_news_to_be_checked = bool(row)
             
 
     def send_news_to_agency(self):
+        if not self._has_news_to_be_checked:
+            return
+        
+        print("\tSending selected news to agency...")
+        
         # TODO: criar módulo python para envio e leitura de e-mail
         print('\tSending mail...')
         
@@ -35,7 +44,9 @@ class Interventor(object):
         self._dao.persist_excel_in_db()
         
         # TODO: implementar controle de inconsistencia
-        # Arquivo enviado, registros não persistidos e vice-verdadeiras
+        # Arquivo enviado, registros não persistidos e vice-versa
+        
+        self._has_news_to_be_checked = False
     
             
     # TODO: implementar usando o algoritmo de deduplicação

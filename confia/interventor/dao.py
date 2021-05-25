@@ -12,7 +12,7 @@ class InterventorDAO(object):
         self._workbook = None
     
     
-    def select_candidate_news_to_check(self):
+    def select_candidate_news_to_be_checked(self):
         """Select candidate news to be send to Fact Check Agencys
 
         Returns:
