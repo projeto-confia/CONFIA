@@ -26,6 +26,7 @@ defusedxml==0.6.0
 distro==1.4.0
 distro-info===0.23ubuntu1
 duplicity==0.8.12.0
+fuzzywuzz==0.18.0
 entrypoints==0.3
 fasteners==0.14.1
 future==0.18.2
@@ -110,6 +111,7 @@ PySocks==1.7.1
 python-apt==2.0.0+ubuntu0.20.4.4
 python-dateutil==2.8.1
 python-debian===0.1.36ubuntu1
+python-Levenshtein==0.12.2
 pytz==2020.4
 pyxdg==0.26
 PyYAML==5.3.1
@@ -133,6 +135,7 @@ soupsieve==2.2.1
 systemd-python==234
 terminado==0.9.1
 testpath==0.4.4
+textdistance==4.2.1
 threadpoolctl==2.1.0
 toml==0.10.2
 tornado==6.1

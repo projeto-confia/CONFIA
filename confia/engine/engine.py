@@ -63,9 +63,9 @@ class Engine(object):
             if interventor_status == 'error':
                 raise Exception()
             
-            scraping_status = self.scraping()
-            if scraping_status == 'error':
-                raise Exception()
+            # scraping_status = self.scraping()
+            # if scraping_status == 'error':
+            #     raise Exception()
             
             print('Process finished.\n')
         except:
