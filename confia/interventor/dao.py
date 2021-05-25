@@ -19,6 +19,7 @@ class InterventorDAO(object):
             list: list of candidates
         """
         
+        # TODO: substituir valores fixos pelos parâmetros do ambiente (interval, threshold, limit)
         sql_string =   "select n.id_news, n.text_news \
                         from detectenv.news n left join detectenv.checking_outcome co on co.id_news = n.id_news \
                                             inner join detectenv.post p on p.id_news = n.id_news \
@@ -33,7 +34,7 @@ class InterventorDAO(object):
         try:
             with DatabaseWrapper() as db:
                 records = db.query(sql_string)
-            return 0 if not len(records) else records
+            return records
         except Exception as e:
             self._error_handler(e)
             raise
