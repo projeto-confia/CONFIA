@@ -17,7 +17,7 @@ class ScrapingDAO(object):
                                     'publication_datetime', 
                                     'publication_tags']
         self._article_csv_filename = 'articles.csv'
-        self._article_csv_path = os.path.join("confia", "data", self._article_csv_filename)
+        self._article_csv_path = os.path.join("src", "data", self._article_csv_filename)
         self._id_agency = None
 
 

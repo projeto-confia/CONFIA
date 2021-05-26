@@ -14,7 +14,7 @@ class Scraping(object):
     def __init__(self):
         self._dao = ScrapingDAO()
         self._article_csv_filename = 'articles.csv'
-        self._article_csv_path = os.path.join("confia", "data", self._article_csv_filename)
+        self._article_csv_path = os.path.join("src", "data", self._article_csv_filename)
         self.initial_load = False if self._dao.get_num_storaged_articles() else True
         
         
