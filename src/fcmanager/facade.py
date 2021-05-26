@@ -1,4 +1,4 @@
-from confia.fcmanager.fact_check_manager import FactCheckManager
+from src.fcmanager.fact_check_manager import FactCheckManager
 
 
 class FactCheckManagerFacade(object):

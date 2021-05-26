@@ -1,4 +1,4 @@
-from confia.detection.detector import Detector
+from src.detection.detector import Detector
 
 
 class DetectorFacade:

@@ -1,5 +1,5 @@
 import time
-from confia.monitor.stream import TwitterStream
+from src.monitor.stream import TwitterStream
 
 
 class MonitorFacade(object):

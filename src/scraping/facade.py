@@ -1,4 +1,4 @@
-from confia.scraping.scraping import Scraping
+from src.scraping.scraping import Scraping
 
 
 class ScrapingFacade(object):

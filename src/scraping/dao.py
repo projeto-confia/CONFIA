@@ -1,4 +1,4 @@
-from confia.orm.db_wrapper import DatabaseWrapper
+from src.orm.db_wrapper import DatabaseWrapper
 import datetime
 import sys
 import csv, os

@@ -4,7 +4,7 @@ import numpy as np
 import math
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
-from confia.orm.dao import DAO
+from src.orm.dao import DAO
 from time import sleep
 
 class ICS:

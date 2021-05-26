@@ -3,7 +3,7 @@ import time, os
 import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
-from confia.scraping.dao import ScrapingDAO
+from src.scraping.dao import ScrapingDAO
 
 
 # TODO: refatorar

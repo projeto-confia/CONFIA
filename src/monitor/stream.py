@@ -3,9 +3,9 @@ import abc
 import time
 import os
 from datetime import datetime
-import confia.monitor.authconfig as cfg
-from confia.orm.dao import DAO
-from confia.monitor.dao import MonitorDAO
+import src.monitor.authconfig as cfg
+from src.orm.dao import DAO
+from src.monitor.dao import MonitorDAO
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -59,7 +59,7 @@ class TwitterStreamListener(tweepy.StreamListener):
     def on_connect(self):
         self._dao = MonitorDAO()
         self._tweet_csv_filename = 'tweets.csv'
-        self._tweet_csv_path = os.path.join("confia", "data", self._tweet_csv_filename)
+        self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
 
     def on_status(self, status):
         """
