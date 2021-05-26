@@ -52,7 +52,7 @@ class Scraping(object):
         response = requests.get(url)
         if response.status_code != 200:
             print('\tUnreachable URL! Response status code: {}'.format(response.status_code))
-            raise
+            raise Exception('Unreachable URL! Request Status Code: {}'.format(response.status_code))
         
         soup = BeautifulSoup(response.text, 'html.parser')
         articles = soup.findAll('article')
