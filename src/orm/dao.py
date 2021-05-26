@@ -1,7 +1,7 @@
 import pandas as pd
 import csv, os
 from datetime import datetime
-from confia.orm.db_wrapper import DatabaseWrapper
+from src.orm.db_wrapper import DatabaseWrapper
 
 class DAO:
 

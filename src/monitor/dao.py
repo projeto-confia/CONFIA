@@ -1,4 +1,4 @@
-from confia.orm.db_wrapper import DatabaseWrapper
+from src.orm.db_wrapper import DatabaseWrapper
 import datetime
 import sys
 import csv, os
@@ -14,7 +14,7 @@ class MonitorDAO(object):
                                   'parent_id_post_social_media', 'text_post', 'num_likes', 'num_shares', 'datetime_post']
         
         self._tweet_csv_filename = 'tweets.csv'
-        self._tweet_csv_path = os.path.join("confia", "data", self._tweet_csv_filename)
+        self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
         self._id_social_media = None
 
 

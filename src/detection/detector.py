@@ -1,5 +1,5 @@
-from confia.detection.ics import ICS
-from confia.orm.dao import DAO
+from src.detection.ics import ICS
+from src.orm.dao import DAO
 
 class Detector:
 

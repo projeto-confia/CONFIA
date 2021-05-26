@@ -1,4 +1,4 @@
-from confia.interventor.dao import InterventorDAO
+from src.interventor.dao import InterventorDAO
 
 
 class Interventor(object):

@@ -1,4 +1,4 @@
-from confia.interventor.interventor import Interventor
+from src.interventor.interventor import Interventor
 
 
 class InterventorFacade(object):
