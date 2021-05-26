@@ -142,5 +142,8 @@ cython_debug/
 __pycache__
 
 # dados
-data/*
+data/
 !data/.gitkeep
+
+# vscode stuff
+.vscode
