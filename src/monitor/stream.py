@@ -6,6 +6,7 @@ from datetime import datetime
 import src.monitor.authconfig as cfg
 from src.orm.dao import DAO
 from src.monitor.dao import MonitorDAO
+import logging
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -60,6 +61,7 @@ class TwitterStreamListener(tweepy.StreamListener):
         self._dao = MonitorDAO()
         self._tweet_csv_filename = 'tweets.csv'
         self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
+        # TODO: erro ao criar o arquivo não dispara exceção. Experimentar mover para o init de TwitterStream
 
     def on_status(self, status):
         """
@@ -125,14 +127,22 @@ class TwitterStreamListener(tweepy.StreamListener):
 
 
 class TwitterStream(StreamInterface):
-    def __init__(self):
+    
+    def __init__(self, interval):
+        self._logger = logging.getLogger('automata')
         self.streamListener = TwitterStreamListener()
         self._dao = MonitorDAO()
+        self._interval = interval
+        self._logger.info("Twitter Streaming initialized.")
+    
 
-    def collect_data(self, interval):
+    def collect_data(self):
         """
         docstring
         """
+        
+        self._logger.info("Streaming for {} seconds...".format(self._interval))
+        
         tokens = cfg.tokens
         auth = tweepy.OAuthHandler(
             tokens["consumer_key"], tokens["consumer_secret"])
@@ -145,17 +155,20 @@ class TwitterStream(StreamInterface):
         streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"],
                             languages=["pt"],
                             is_async=True)
-        time.sleep(interval)
+        time.sleep(self._interval)
         streamAccess.disconnect()
 
+    
     def process_data(self):
         """
         docstring
         """
         pass
 
+    
     def persist_data(self):
         """
         docstring
         """
+        self._logger.info('Persisting data...')
         self._dao.insert_posts()
