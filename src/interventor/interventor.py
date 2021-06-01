@@ -1,19 +1,21 @@
 from src.interventor.dao import InterventorDAO
+import logging
 
 
 class Interventor(object):
     
     def __init__(self):
+        self._logger = logging.getLogger('automata')
         self._dao = InterventorDAO()
         self._has_news_to_be_checked = False
-        print("\tInterventor initialized.")
+        self._logger.info("Interventor initialized.")
     
     
     def select_news_to_be_checked(self):
         """Armazena em arquivo excel as notícias a serem enviadas à ACF
         """
         
-        print("\tSelecting news to be checked...")
+        self._logger.info("Selecting news to be checked...")
         
         candidate_news = self._dao.select_candidate_news_to_be_checked()
         if not len(candidate_news):
@@ -33,14 +35,14 @@ class Interventor(object):
 
     def send_news_to_agency(self):
         if not self._has_news_to_be_checked:
+            self._logger.info('There were no news selected to send.')
             return
         
-        print("\tSending selected news to agency...")
-        
         # TODO: criar módulo python para envio e leitura de e-mail
-        print('\tSending mail...')
+        self._logger.info("Sending selected news to agency...")
         
         # Registro no banco de dados
+        self._logger.info('Persisting sent data...')
         self._dao.persist_excel_in_db()
         
         # TODO: implementar controle de inconsistencia
