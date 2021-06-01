@@ -52,23 +52,11 @@ class Engine(object):
             self._logger.info('Running process...')
             self.engine_status = 'running'
             
-            self.monitor()
-            # if monitor_status == 'error':
-            #     raise Exception()
-            
-            self.fact_check_manager()
-            # if fact_check_manager_status == 'error':
-            #     raise Exception()
-            
-            self.detector()
-
-            self.interventor()
-            # if interventor_status == 'error':
-            #     raise Exception()
-            
-            self.scraping()
-            # if scraping_status == 'error':
-            #     raise Exception()
+            MonitorFacade().run(interval=self.monitor_stream_time)
+            FactCheckManagerFacade().run()
+            DetectorFacade().run()
+            InterventorFacade().run()
+            ScrapingFacade().run()
             
             self.engine_status = 'stopped'
             self._logger.info('Process finished.')
@@ -76,55 +64,3 @@ class Engine(object):
             self.engine_status = 'error'
             self._logger.critical('Engine in critical status.', exc_info=True)
             raise
-
-    
-    def monitor(self):
-        """
-        docstring
-        """
-        monitor = MonitorFacade()
-        monitor.run(interval=self.monitor_stream_time)
-        # print('Status returned by the monitor module: {}.'.format(status))
-        # return monitor.status
-
-
-    def detector(self):
-        """
-        docstring
-        """
-        detector = DetectorFacade()
-        detector.run()
-        # status = detector.run(interval=self.monitor_stream_time, process_id=self.process_id)
-        # print('Status retornado pelo detector: {}.'.format(status))
-        # return status
-
-
-    def interventor(self):
-        """
-        docstring
-        """
-        interventor = InterventorFacade()
-        status = interventor.run()
-        print('Status returned by the interventor module: {}.'.format(status))
-        return status
-        
-        
-    def scraping(self):
-        """
-        docstring
-        """
-        scraping = ScrapingFacade()
-        status = scraping.run()
-        print('Status returned by the scraping module: {}.'.format(status))
-        return status
-
-
-    def fact_check_manager(self):
-        """
-        docstring
-        """
-        fact_check_manager = FactCheckManagerFacade()
-        status = fact_check_manager.run()
-        print('Status returned by the fcmanager module: {}.'.format(status))
-        return status
-        
