@@ -9,7 +9,7 @@ def init_log(verbose=False):
 
     # file handler
     file_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler('logs/hoje.log')
+    file_handler = logging.FileHandler('logs/automata.log')
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(file_format)
     logger.addHandler(file_handler)
