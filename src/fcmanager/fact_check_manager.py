@@ -1,14 +1,15 @@
+import logging
+
+
 class FactCheckManager(object):
     
     def __init__(self):
-        pass
+        self._logger = logging.getLogger('automata')
     
     
     def process_agency_feed(self):
-        print('\tProcessing feed from agency...')
-        print('\tAgency feed processed')
+        self._logger.info('Processing feed from agency...')
         
     
     def persist_data(self):
-        print('\tPersisting data...')
-        print('\tData persisted')
+        self._logger.info('Persisting data...')
