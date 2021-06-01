@@ -1,6 +1,4 @@
 from src.orm.db_wrapper import DatabaseWrapper
-import datetime
-import sys
 import csv, os
 
 
@@ -31,13 +29,13 @@ class ScrapingDAO(object):
             # TODO: fazer uma chamada da biblioteca 'os' do python, para verificar se o arquivo existe
             #       se o arquivo não existir, tratar o retorno de acordo com initial_load
             data = self._load_csv_to_dict(self._article_csv_path, fieldnames=self._article_csv_header, delimiter=';')
-        except Exception as e:
+        except:
+            # TODO: transferir o teste condicional para o arquivo scraping.py
             if initial_load:
-                self._error_handler(e)
                 raise
             else:
-                print('\tData file not found!')
-                print('\tNo new articles persisted.')
+                # print('\tData file not found!')
+                # print('\tNo new articles persisted.')
                 return
 
         # inicia a transação
@@ -67,8 +65,7 @@ class ScrapingDAO(object):
             # deleta o arquivo csv ou registra no log (e-mail) caso negativo
             os.remove(self._article_csv_path)
 
-        except Exception as e:
-            self._error_handler(e)
+        except:
             raise
 
 
@@ -92,8 +89,7 @@ class ScrapingDAO(object):
             with DatabaseWrapper() as db:
                 record = db.query(sql_string)
             return 0 if not len(record) else record[0][0]
-        except Exception as e:
-            self._error_handler(e)
+        except:
             raise
         
         
@@ -103,8 +99,7 @@ class ScrapingDAO(object):
             with DatabaseWrapper() as db:
                 record = db.query(sql_string)
             return 0 if not len(record) else record[0][0]
-        except Exception as e:
-            self._error_handler(e)
+        except:
             raise
             
         
@@ -123,13 +118,6 @@ class ScrapingDAO(object):
             for row in reader:
                 data.append(row)
         return data
-
-
-    def _delete_csv(self, file_path):
-        """
-        Deleta o arquivo csv resultante da coleta
-        """
-        pass
 
 
     def _insert_record(self, tablename, data, returning, db):
@@ -191,14 +179,3 @@ class ScrapingDAO(object):
         record = db.query(sql_string, (arg,))
         # print('id_news', record)
         return 0 if not len(record) else record[0][0]
-    
-    
-    def _error_handler(self, err):
-        """
-        docstring
-        """
-        _, _, traceback = sys.exc_info()
-        print ("\n{}: {} on line number {}".format(type(err).__name__, err, traceback.tb_lineno))
-        print(traceback.tb_frame, '\n')
-
-
