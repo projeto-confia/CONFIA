@@ -5,6 +5,8 @@ class FactCheckManager(object):
     
     def __init__(self):
         self._logger = logging.getLogger('automata')
+        # other inicial actions
+        self._logger.info('FactCheckManager initialized.')
     
     
     def process_agency_feed(self):
