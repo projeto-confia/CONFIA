@@ -1,6 +1,4 @@
 from src.orm.db_wrapper import DatabaseWrapper
-import datetime
-import sys
 import csv, os
 
 class MonitorDAO(object):
@@ -22,6 +20,8 @@ class MonitorDAO(object):
         """
         docstring
         """
+        
+        # TODO: incluir testes de existência do arquivo e existẽncia de registros (file_exists, has_data)
 
         # carrega o arquivo csv
         data = self._load_csv_to_dict(self._tweet_csv_path, fieldnames=self._tweet_csv_header, delimiter=';')
@@ -84,8 +84,7 @@ class MonitorDAO(object):
             # deleta o arquivo csv ou registra no log (e-mail) caso negativo
             os.remove(self._tweet_csv_path)
 
-        except Exception as e:
-            self._error_handler(e)
+        except:
             raise
 
 
@@ -110,13 +109,6 @@ class MonitorDAO(object):
             for row in reader:
                 data.append(row)
         return data
-
-
-    def _delete_csv(self, file_path):
-        """
-        Deleta o arquivo csv resultante da coleta
-        """
-        pass
 
 
     def _insert_record(self, tablename, data, returning, db):
@@ -227,14 +219,3 @@ class MonitorDAO(object):
         record = db.query(sql_string, (arg,))
         # print('id_news', record)
         return 0 if not len(record) else record[0][0]
-
-
-    def _error_handler(self, err):
-        """
-        docstring
-        """
-        _, _, traceback = sys.exc_info()
-        print ("\n{}: {} on line number {}".format(type(err).__name__, err, traceback.tb_lineno))
-        print(traceback.tb_frame, '\n')
-
-

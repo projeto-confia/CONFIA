@@ -4,6 +4,7 @@ import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
 from src.scraping.dao import ScrapingDAO
+import logging
 
 
 # TODO: refatorar
@@ -12,20 +13,26 @@ from src.scraping.dao import ScrapingDAO
 class Scraping(object):
     
     def __init__(self):
+        self._logger = logging.getLogger('automata')
         self._dao = ScrapingDAO()
         self._article_csv_filename = 'articles.csv'
         self._article_csv_path = os.path.join("src", "data", self._article_csv_filename)
+        # TODO: o método abaixo está buscando o count do id_agency
+        # refatorar, usando o método já existente no DAO (get_id_agency)
         self.initial_load = False if self._dao.get_num_storaged_articles() else True
+        self._logger.info("Scraping initialized.")
         
         
     def fetch_data(self):
+        self._logger.info("Fetching data...")
+        
         # scraping
         page = 1
         url = "https://www.boatos.org/tag/coronavirus/page/{}".format(page)
         response = requests.get(url)
 
         while response.status_code == 200:
-            print('\tscraping page {}...'.format(page))
+            self._logger.info('scraping page {}...'.format(page))
             
             soup = BeautifulSoup(response.text, 'html.parser')
             articles = soup.findAll('article')
@@ -40,10 +47,15 @@ class Scraping(object):
             
             
     def persist_data(self):
+        # TODO: verificar antes se há arquivo de dados
+        #       caso contrário, return
+        self._logger.info('Persisting data...')
         self._dao.insert_articles(self.initial_load)
             
             
     def update_data(self):
+        self._logger.info("Updating data...")
+        
         # recupera o último datetime no banco
         last_article_datetime = self._dao.get_last_article_datetime()
         
@@ -51,7 +63,7 @@ class Scraping(object):
         url = "https://www.boatos.org/tag/coronavirus/page/1"
         response = requests.get(url)
         if response.status_code != 200:
-            print('\tUnreachable URL! Response status code: {}'.format(response.status_code))
+            self._logger.info('Unreachable URL! Response status code: {}'.format(response.status_code))
             raise Exception('Unreachable URL! Request Status Code: {}'.format(response.status_code))
         
         soup = BeautifulSoup(response.text, 'html.parser')

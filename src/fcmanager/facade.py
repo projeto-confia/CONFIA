@@ -1,4 +1,5 @@
 from src.fcmanager.fact_check_manager import FactCheckManager
+import logging
 
 
 class FactCheckManagerFacade(object):
@@ -7,22 +8,15 @@ class FactCheckManagerFacade(object):
     """
 
     def __init__(self):
-        self.status = 'stopped'
+        self._logger = logging.getLogger('automata')
         
 
     def run(self):
         try:
-            print('Running FactCheckManager...')
-            self.status = 'running'
+            self._logger.info('Running FactCheckManager...')
             fact_check_manager = FactCheckManager()
             fact_check_manager.process_agency_feed()
             fact_check_manager.persist_data()
+            self._logger.info('FactCheckManager finished.')
         except:
-            self.status = 'error'
-            # TODO: executar rotinas de notificação e logging
-        else:
-            self.status = 'finished'
-        finally:
-            status = self.status
-            self.status = 'stopped'
-            return status
+            raise
