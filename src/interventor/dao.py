@@ -8,7 +8,7 @@ from src.orm.db_wrapper import DatabaseWrapper
 class InterventorDAO(object):
     
     def __init__(self):
-        self._excel_file_path = os.path.join('confia', 'data', 'confia.xlsx')
+        self._excel_file_path = os.path.join('src', 'data', 'confia.xlsx')
         self._workbook = None
     
     
@@ -35,8 +35,7 @@ class InterventorDAO(object):
             with DatabaseWrapper() as db:
                 records = db.query(sql_string)
             return records
-        except Exception as e:
-            self._error_handler(e)
+        except:
             raise
         
     
@@ -52,8 +51,7 @@ class InterventorDAO(object):
                 worksheet.write(0, 1, 'Texto', bold)
                 self._workbook = workbook
             return self._workbook
-        except Exception as e:
-            self._error_handler(e)
+        except:
             raise
         
         
@@ -63,6 +61,7 @@ class InterventorDAO(object):
         
         
     def persist_excel_in_db(self):
+        
         try:
             df = pd.read_excel(self._excel_file_path, 'planilha1', engine='openpyxl')
             ids = df['Id'].tolist()
@@ -80,12 +79,5 @@ class InterventorDAO(object):
                     
             os.remove(self._excel_file_path)
             
-        except Exception as e:
-            self._error_handler(e)
+        except:
             raise
-        
-        
-    def _error_handler(self, err):
-        _, _, traceback = sys.exc_info()
-        print ("\n{}: {} on line number {}".format(type(err).__name__, err, traceback.tb_lineno))
-        print(traceback.tb_frame, '\n')

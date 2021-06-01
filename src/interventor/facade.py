@@ -1,4 +1,5 @@
 from src.interventor.interventor import Interventor
+import logging
 
 
 class InterventorFacade(object):
@@ -7,22 +8,15 @@ class InterventorFacade(object):
     """
 
     def __init__(self):
-        self.status = 'stopped'
+        self._logger = logging.getLogger('automata')
 
 
     def run(self):
         try:
-            print('Running Interventor...')
-            self.status = 'running'
+            self._logger.info('Running Interventor...')
             interventor = Interventor()
             interventor.select_news_to_be_checked()
             interventor.send_news_to_agency()
-        except Exception:
-            self.status = 'error'
-            # TODO: executar rotinas de notificação e logging
-        else:
-            self.status = 'finished'
-        finally:
-            status = self.status
-            self.status = 'stopped'
-            return status
+            self._logger.info('Interventor finished.')
+        except:
+            raise
