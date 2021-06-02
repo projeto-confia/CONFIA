@@ -12,7 +12,12 @@ class DetectorFacade:
     def run(self):
         try:
             self._logger.info('Running Detector...')
-            self._detector = Detector(config.DETECTOR.TRAIN_ICS)
+            self._detector = Detector()
+            
+            if config.DETECTOR.TRAIN_ICS == True:
+                self._detector.fit()
+
+            self._detector.run()
             self._logger.info('Detector finished.')
         except:
             raise
