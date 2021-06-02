@@ -1,5 +1,6 @@
 from src.scraping.scraping import Scraping
 import logging
+from src.config import Config as config
 
 
 class ScrapingFacade(object):
@@ -8,7 +9,7 @@ class ScrapingFacade(object):
     """
 
     def __init__(self):
-        self._logger = logging.getLogger('automata')
+        self._logger = logging.getLogger(config.LOGGING.NAME)
 
 
     def run(self):
