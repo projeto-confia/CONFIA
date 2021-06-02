@@ -21,6 +21,7 @@ class ICS:
     def __init_params(self, test_size = 0.3):
 
         news = self.__news[self.__news['ground_truth_label'].notnull()]
+       
         if not len(news.index):
             return 0
         
