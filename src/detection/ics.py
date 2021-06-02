@@ -12,15 +12,18 @@ class ICS:
 
     def __init__(self, laplace_smoothing=0.01, omega=0.5):
         self.__logger     = logging.getLogger()
+        self.__logger.setLevel(logging.INFO)
         self.__dao        = DAO()
         self.__users      = self.__dao.read_query_to_dataframe("select * from detectenv.social_media_account;")
-        self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where classification_outcome is not null;")
+        self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news;")
+        # self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where classification_outcome is not null;")
         self.__news_users = self.__dao.read_query_to_dataframe("select * from detectenv.post;")
         self.__smoothing  = laplace_smoothing
         self.__omega      = omega
 
     def _fit_initialization(self, test_size = 0.3):
         news = self.__news[self.__news['ground_truth_label'].notnull()]
+        print(news)
 
         # se não tem amostras rotuladas no dataset, retorna uma exceção
         if len(news) == 0:
