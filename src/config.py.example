@@ -1,0 +1,30 @@
+# system configuration parameters
+
+class Config(object):
+    
+    # logging
+    class LOGGING(object):
+        VERBOSE = False
+        FILE_PATH = 'logs/automata.log'
+        NAME = 'automata'
+    
+    # system
+    class STATUS(object):
+        STOPPED = 0
+        RUNNING = 1
+        ERROR   = 2
+    
+    # engine
+    class ENGINE(object):
+        FREQUENCY = 21600  # 21.600 seconds == 6 hours
+        MONITOR_ACTIVATED = True
+        FACT_CHECK_MANAGER_ACTIVATED = True
+        DETECTOR_ACTIVATED = False
+        INTERVENTOR_ACTIVATED = True
+        SCRAPING_ACTIVATED = True
+        
+    # monitor
+    class MONITOR(object):
+        STREAM_TIME = 15  # 1.200 seconds == 20 minutes
+        # TODO: verificar viabilidade de emprego de REGEX para SEARCH_TAGS
+        SEARCH_TAGS = ["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"]
