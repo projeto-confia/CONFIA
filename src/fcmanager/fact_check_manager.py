@@ -1,10 +1,11 @@
 import logging
+from src.config import Config as config
 
 
 class FactCheckManager(object):
     
     def __init__(self):
-        self._logger = logging.getLogger('automata')
+        self._logger = logging.getLogger(config.LOGGING.NAME)
         # other inicial actions
         self._logger.info('FactCheckManager initialized.')
     

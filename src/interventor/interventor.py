@@ -1,11 +1,12 @@
 from src.interventor.dao import InterventorDAO
 import logging
+from src.config import Config as config
 
 
 class Interventor(object):
     
     def __init__(self):
-        self._logger = logging.getLogger('automata')
+        self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = InterventorDAO()
         self._has_news_to_be_checked = False
         self._logger.info("Interventor initialized.")
@@ -17,7 +18,9 @@ class Interventor(object):
         
         self._logger.info("Selecting news to be checked...")
         
-        candidate_news = self._dao.select_candidate_news_to_be_checked()
+        candidate_news = self._dao.select_candidate_news_to_be_checked(window_size=config.INTERVENTOR.WINDOW_SIZE,
+                                                                       prob_classif_threshold=config.INTERVENTOR.PROB_CLASSIF_THRESHOLD,
+                                                                       num_records=config.INTERVENTOR.NUM_NEWS_TO_SELECT)
         if not len(candidate_news):
             return
         

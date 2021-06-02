@@ -1,5 +1,6 @@
 from src.fcmanager.fact_check_manager import FactCheckManager
 import logging
+from src.config import Config as config
 
 
 class FactCheckManagerFacade(object):
@@ -8,7 +9,7 @@ class FactCheckManagerFacade(object):
     """
 
     def __init__(self):
-        self._logger = logging.getLogger('automata')
+        self._logger = logging.getLogger(config.LOGGING.NAME)
         
 
     def run(self):

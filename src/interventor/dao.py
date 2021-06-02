@@ -1,4 +1,4 @@
-import os, sys
+import os
 import pandas as pd
 import xlsxwriter
 from datetime import datetime
@@ -12,25 +12,37 @@ class InterventorDAO(object):
         self._workbook = None
     
     
-    def select_candidate_news_to_be_checked(self):
+    def select_candidate_news_to_be_checked(self, 
+                                            window_size=7, 
+                                            prob_classif_threshold=0.9, 
+                                            num_records=4):
         """Select candidate news to be send to Fact Check Agencys
+        
+        Candidate news will be query in database according function parameters.
+        The query will sort records by num_shares, prob_classification.
+        The top num_records will be returned.
+
+        Args:
+            window_size (int, optional): Num days before current day to filter datetime_publications. Defaults to 7.
+            prob_classif_threshold (float, optional): Threshold to filter publications by prob_classification. Defaults to 0.9.
+            num_records (int, optional): Num of records to get. Defaults to 4.
 
         Returns:
             list: list of candidates
         """
         
-        # TODO: substituir valores fixos pelos parâmetros do ambiente (interval, threshold, limit)
         sql_string =   "select n.id_news, n.text_news \
                         from detectenv.news n left join detectenv.checking_outcome co on co.id_news = n.id_news \
                                             inner join detectenv.post p on p.id_news = n.id_news \
-                        where n.datetime_publication > current_date - interval '7' day \
+                        where n.datetime_publication > current_date - interval '" + str(window_size) + "' day \
                             and n.ground_truth_label is null \
                             and n.classification_outcome = True \
                             and co.id_news is null \
-                            and n.prob_classification > 0.9 \
+                            and n.prob_classification > " + str(prob_classif_threshold) + " \
                         group by n.id_news, n.text_news, n.prob_classification \
                         order by max(p.num_shares) desc, n.prob_classification desc \
-                        limit 4;"
+                        limit " + str(num_records) + ";"
+        
         try:
             with DatabaseWrapper() as db:
                 records = db.query(sql_string)
