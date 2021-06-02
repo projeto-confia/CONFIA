@@ -5,6 +5,7 @@ from src.detection.facade import DetectorFacade
 from src.scraping.facade import ScrapingFacade
 from src.fcmanager.facade import FactCheckManagerFacade
 from src.interventor.facade import InterventorFacade
+from src.config import Config as config
 
 
 class Engine(object):
@@ -15,13 +16,8 @@ class Engine(object):
     def __init__(self):
         
         # logging
-        self._logger = logging.getLogger('automata')
-        
-        # TODO: implementar o load do json
-        # load json
-        self.engine_frequency = 21600    # 21.600 seconds == 6 hours
-        self.engine_status = 'stopped'
-        self.monitor_stream_time = 1200  # 1.200 seconds == 20 minutes
+        self._logger = logging.getLogger(config.LOGGING.NAME)
+        self.engine_status = config.STATUS.STOPPED
         self._logger.info('System ready.')
 
 
@@ -30,37 +26,41 @@ class Engine(object):
         docstring
         """
         # TODO: implementar
-        # load json
+        # load config
 
 
     def run(self):
         """
         docstring
         """
-        threading.Timer(self.engine_frequency, self.run).start()
-        if self.engine_status == 'running':
+        threading.Timer(config.ENGINE.FREQUENCY, self.run).start()
+        if self.engine_status == config.STATUS.RUNNING :
             self._logger.warning("Engine in processing. Impossible start a new one.")
-        elif self.engine_status == 'stopped':
+        elif self.engine_status == config.STATUS.STOPPED:
             self.run_process()
         else:
             self._logger.error("Engine unavailable.")
-            # TODO: executar rotinas de notificação e logging
 
 
     def run_process(self):
         try:
             self._logger.info('Running process...')
-            self.engine_status = 'running'
+            self.engine_status = config.STATUS.RUNNING
             
-            MonitorFacade().run(interval=self.monitor_stream_time)
-            FactCheckManagerFacade().run()
-            DetectorFacade().run()
-            InterventorFacade().run()
-            ScrapingFacade().run()
+            if config.ENGINE.MONITOR_ACTIVATED:
+                MonitorFacade().run()
+            if config.ENGINE.FACT_CHECK_MANAGER_ACTIVATED:
+                FactCheckManagerFacade().run()
+            if config.ENGINE.DETECTOR_ACTIVATED:
+                DetectorFacade().run()
+            if config.ENGINE.INTERVENTOR_ACTIVATED:
+                InterventorFacade().run()
+            if config.ENGINE.SCRAPING_ACTIVATED:
+                ScrapingFacade().run()
             
-            self.engine_status = 'stopped'
+            self.engine_status = config.STATUS.STOPPED
             self._logger.info('Process finished.')
         except:
-            self.engine_status = 'error'
+            self.engine_status = config.STATUS.ERROR
             self._logger.critical('Engine in critical status.', exc_info=True)
             raise
