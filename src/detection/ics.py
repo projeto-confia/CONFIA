@@ -1,9 +1,5 @@
-import csv
-from os import EX_CANTCREAT 
 import pandas as pd
 import logging
-import numpy as np
-import math
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
 from src.orm.dao import DAO
@@ -15,8 +11,7 @@ class ICS:
         self.__logger.setLevel(logging.INFO)
         self.__dao        = DAO()
         self.__users      = self.__dao.read_query_to_dataframe("select * from detectenv.social_media_account;")
-        self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news;")
-        # self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where classification_outcome is not null;")
+        self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where classification_outcome is not null;")
         self.__news_users = self.__dao.read_query_to_dataframe("select * from detectenv.post;")
         self.__smoothing  = laplace_smoothing
         self.__omega      = omega
