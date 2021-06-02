@@ -1,16 +1,17 @@
-import csv 
+import csv
+from os import EX_CANTCREAT 
 import pandas as pd
+import logging
 import numpy as np
 import math
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
 from src.orm.dao import DAO
-from time import sleep
 
 class ICS:
 
     def __init__(self, laplace_smoothing=0.01, omega=0.5):
-
+        self.__logger     = logging.getLogger()
         self.__dao        = DAO()
         self.__users      = self.__dao.read_query_to_dataframe("select * from detectenv.social_media_account;")
         self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where classification_outcome is not null;")
@@ -18,12 +19,13 @@ class ICS:
         self.__smoothing  = laplace_smoothing
         self.__omega      = omega
 
-    def __init_params(self, test_size = 0.3):
+    def _fit_initialization(self, test_size = 0.3):
 
         news = self.__news[self.__news['ground_truth_label'].notnull()]
-       
-        if not len(news.index):
-            return 0
+
+        # se não tem amostras rotuladas no dataset, retorna uma exceção
+        if len(news) == 0:
+            raise Exception("Não há notícias rotuladas para realizar o treinamento do ICS.")
         
         # divide 'self.__news_users' em treino e teste.
         labels = news["ground_truth_label"]
@@ -34,12 +36,14 @@ class ICS:
         self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
 
         # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
-        # TODO: refatorar separando os testes
         try:
             self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
+        except:
+            raise Exception("Não há notícias rotuladas como 'não fake (0)' para realizar o treinamento do ICS.")
+        try:
             self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
         except:
-            return 0
+            raise Exception("Não há notícias rotuladas como 'fake (1)' para realizar o treinamento do ICS.")
 
         # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
         self.__train_news_users = self.__train_news_users[self.__train_news_users["id_social_media_account"].isin(self.__test_news_users["id_social_media_account"])]
@@ -58,10 +62,7 @@ class ICS:
         self.__users["probAlphaN"]    = probAlphaN
         self.__users["probUmAlphaN"]  = probUmAlphaN
         self.__users["probBetaN"]     = probBetaN
-        self.__users["probUmBetaN"]   = probUmBetaN
-        
-        return 1
-    
+        self.__users["probUmBetaN"]   = probUmBetaN    
 
     def __assess(self):
         """
@@ -103,9 +104,7 @@ class ICS:
         """
         Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
         """
-        status_code = self.__init_params(test_size)
-        if not status_code:
-            return 0
+        self._fit_initialization(test_size)
         
         i = 0
         users_unique = self.__train_news_users["id_social_media_account"].unique()
@@ -137,7 +136,13 @@ class ICS:
             self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
 
         self.__assess()   
-        return self.__users
+        self._logger.info("\nSalvando os parâmetros de usuário no banco de dados...")
+       
+        try:
+            self.__dao.insert_update_user_accounts_db(self.__users)
+            self._logger.info("\nParâmetros dos usuários salvos com sucesso!\n")
+        except:
+            raise Exception("Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.")
 
     def predict(self, id_news):
         """
