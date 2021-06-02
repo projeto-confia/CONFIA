@@ -7,6 +7,7 @@ class Detector:
     def __init__(self):
         self.__ics = ICS(laplace_smoothing=0.01, omega=0.5)
         self.__logger = logging.getLogger()
+        self.__logger.setLevel(logging.INFO)
         self.__dao = DAO()
 
     def fit(self):
