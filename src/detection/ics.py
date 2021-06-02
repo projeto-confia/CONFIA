@@ -20,7 +20,6 @@ class ICS:
         self.__omega      = omega
 
     def _fit_initialization(self, test_size = 0.3):
-
         news = self.__news[self.__news['ground_truth_label'].notnull()]
 
         # se não tem amostras rotuladas no dataset, retorna uma exceção
@@ -97,8 +96,8 @@ class ICS:
 
         # mostra os resultados da matriz de confusão e acurácia.
         gt = self.__X_test_news["ground_truth_label"].tolist()
-        print(confusion_matrix(gt, predicted_labels))
-        print(accuracy_score(gt, predicted_labels))
+        self.__logger.info(f"Desempenho do ICS no conjunto de teste:\nMatriz de confusão:\n{confusion_matrix(gt, predicted_labels)}")
+        self.__logger.info(f"Acurácia: {accuracy_score(gt, predicted_labels)}")
 
     def fit(self, test_size = 0.3):
         """
@@ -136,13 +135,13 @@ class ICS:
             self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
 
         self.__assess()   
-        self.__logger.info("\nSalvando os parâmetros de usuário no banco de dados...")
        
+        self.__logger.info("\nSalvando os parâmetros de usuário no banco de dados...")
         try:
             self.__dao.insert_update_user_accounts_db(self.__users)
             self.__logger.info("\nParâmetros dos usuários salvos com sucesso!\n")
-        except:
-            raise Exception("Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.")
+        except Exception as e:
+            raise Exception(f"Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.\n{e.args}")
 
     def predict(self, id_news):
         """
