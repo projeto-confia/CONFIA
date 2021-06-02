@@ -2,11 +2,11 @@ import tweepy
 import abc
 import time
 import os
-from datetime import datetime
-import src.monitor.authconfig as cfg
-from src.orm.dao import DAO
-from src.monitor.dao import MonitorDAO
 import logging
+# TODO: transferir authconfig para config.py
+import src.monitor.authconfig as cfg
+from src.config import Config as config
+from src.monitor.dao import MonitorDAO
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -22,12 +22,9 @@ class StreamInterface(metaclass=abc.ABCMeta):
                 NotImplemented)
 
     @abc.abstractmethod
-    def collect_data(self, interval: int):
+    def collect_data(self):
         """
         Coleta dados da rede social.
-
-        Parâmetros:
-            interval (int) - Tempo em segundos para a coleta de dados.
 
         Retorna:
             TRUE se não ocorrer falha, FALSE caso contrário.
@@ -128,11 +125,11 @@ class TwitterStreamListener(tweepy.StreamListener):
 
 class TwitterStream(StreamInterface):
     
-    def __init__(self, interval):
-        self._logger = logging.getLogger('automata')
+    def __init__(self):
+        self._logger = logging.getLogger(config.LOGGING.NAME)
         self.streamListener = TwitterStreamListener()
         self._dao = MonitorDAO()
-        self._interval = interval
+        self.stream_time = config.MONITOR.STREAM_TIME
         self._logger.info("Twitter Streaming initialized.")
     
 
@@ -141,7 +138,7 @@ class TwitterStream(StreamInterface):
         docstring
         """
         
-        self._logger.info("Streaming for {} seconds...".format(self._interval))
+        self._logger.info("Streaming for {} seconds...".format(self.stream_time))
         
         tokens = cfg.tokens
         auth = tweepy.OAuthHandler(
@@ -152,10 +149,10 @@ class TwitterStream(StreamInterface):
         api = tweepy.API(auth)
         streamAccess = tweepy.Stream(
             auth=api.auth, listener=self.streamListener, tweet_mode='extended')
-        streamAccess.filter(track=["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"],
+        streamAccess.filter(track=config.MONITOR.SEARCH_TAGS,
                             languages=["pt"],
                             is_async=True)
-        time.sleep(self._interval)
+        time.sleep(self.stream_time)
         streamAccess.disconnect()
 
     
