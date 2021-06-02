@@ -5,6 +5,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from src.scraping.dao import ScrapingDAO
 import logging
+from src.config import Config as config
 
 
 # TODO: refatorar
@@ -13,7 +14,7 @@ import logging
 class Scraping(object):
     
     def __init__(self):
-        self._logger = logging.getLogger('automata')
+        self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = ScrapingDAO()
         self._article_csv_filename = 'articles.csv'
         self._article_csv_path = os.path.join("src", "data", self._article_csv_filename)
