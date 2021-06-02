@@ -19,13 +19,13 @@ class Config(object):
         FREQUENCY = 21600  # 21.600 seconds == 6 hours
         MONITOR_ACTIVATED = True
         FACT_CHECK_MANAGER_ACTIVATED = True
-        DETECTOR_ACTIVATED = False
+        DETECTOR_ACTIVATED = True
         INTERVENTOR_ACTIVATED = True
         SCRAPING_ACTIVATED = True
         
     # monitor
     class MONITOR(object):
-        STREAM_TIME = 15  # 1.200 seconds == 20 minutes
+        STREAM_TIME = 1200  # 1.200 seconds == 20 minutes
         SEARCH_TAGS = ["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"]
 
     # interventor
