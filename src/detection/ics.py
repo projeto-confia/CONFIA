@@ -136,11 +136,11 @@ class ICS:
             self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
 
         self.__assess()   
-        self._logger.info("\nSalvando os parâmetros de usuário no banco de dados...")
+        self.__logger.info("\nSalvando os parâmetros de usuário no banco de dados...")
        
         try:
             self.__dao.insert_update_user_accounts_db(self.__users)
-            self._logger.info("\nParâmetros dos usuários salvos com sucesso!\n")
+            self.__logger.info("\nParâmetros dos usuários salvos com sucesso!\n")
         except:
             raise Exception("Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.")
 
