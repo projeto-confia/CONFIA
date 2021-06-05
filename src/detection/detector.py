@@ -14,9 +14,6 @@ class Detector:
         try:
             print("Iniciando o treinamento do ICS...")
             self.__ics.fit()
-                # TODO: parametrizar a quantidade mínima de exemplos para o treinamento
-                # elif len(df_users.index) < 50:
-                #     print('Não há dados suficientes para treinamento.')
         except Exception as e:
             self.__logger.error(f"Ocorreu um erro durante o treinamento do ICS: {e.args}")
 
@@ -41,9 +38,9 @@ class Detector:
                 
                 print("\nAs seguintes notícias foram atualizadas:")
                 print(*news, sep=', ')
-
         except Exception as e:
-            self.__logger.error(f"Ocorreu um erro ao atualizar os parâmetros de usuário: {e.args}")
+            self.__logger.error(f"Ocorreu um erro durante a atualização das notícias: {e.args}")
+
 
     def predict_news(self, id_news):
         label, prob = self.__ics.predict(id_news)
