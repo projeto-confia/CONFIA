@@ -17,7 +17,7 @@ class DetectorFacade:
             
             if config.DETECTOR.TRAIN_ICS == True:
                 self._detector.fit()
-
+            
             self._detector.run()
 
             if id_news_to_be_predicted != -1:

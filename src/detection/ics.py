@@ -18,7 +18,6 @@ class ICS:
 
     def _fit_initialization(self, test_size = 0.3):
         news = self.__news[self.__news['ground_truth_label'].notnull()]
-        print(news)
 
         # se não tem amostras rotuladas no dataset, retorna uma exceção
         if len(news) == 0:
@@ -30,7 +29,9 @@ class ICS:
 
         # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
         self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
+
         self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
+        # print(self.__test_news_users)
 
         # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
         try:
@@ -94,8 +95,8 @@ class ICS:
 
         # mostra os resultados da matriz de confusão e acurácia.
         gt = self.__X_test_news["ground_truth_label"].tolist()
-        self.__logger.info(f"Desempenho do ICS no conjunto de teste:\nMatriz de confusão:\n{confusion_matrix(gt, predicted_labels)}")
-        self.__logger.info(f"Acurácia: {accuracy_score(gt, predicted_labels)}")
+        print(f"Desempenho do ICS no conjunto de teste:\nMatriz de confusão:\n{confusion_matrix(gt, predicted_labels)}")
+        print(f"Acurácia: {accuracy_score(gt, predicted_labels)}")
 
     def fit(self, test_size = 0.3):
         """
