@@ -15,14 +15,7 @@ class ScrapingFacade(object):
     def run(self):
         try:
             self._logger.info('Running Scraping...')
-            scraping = Scraping()
-            # TODO: refatorar
-            # transferir o teste condicional para scraping.py
-            if not scraping.initial_load:
-                scraping.update_data()
-            else:
-                scraping.fetch_data()
-            scraping.persist_data()
+            Scraping().run()
             self._logger.info('Scraping finished.')
         except:
             raise
