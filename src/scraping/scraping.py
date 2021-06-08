@@ -8,20 +8,24 @@ import logging
 from src.config import Config as config
 
 
-# TODO: refatorar
-# implementar uma interface
-# implementar uma classe (extends interface) para cada agẽncia de checagem
 class Scraping(object):
     
     def __init__(self):
+        super().__init__()
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = ScrapingDAO()
         self._article_csv_filename = 'articles.csv'
         self._article_csv_path = os.path.join("src", "data", self._article_csv_filename)
+    
+
+class ScrapingBoatosOrg(Scraping):
+    
+    def __init__(self):
+        super().__init__()
         # TODO: o método abaixo está buscando o count do id_agency
         # refatorar, usando o método já existente no DAO (get_id_agency)
         self.initial_load = False if self._dao.get_num_storaged_articles() else True
-        self._logger.info("Scraping initialized.")
+        self._logger.info("Scraping Boatos Org initialized.")
         
     
     def run(self):
