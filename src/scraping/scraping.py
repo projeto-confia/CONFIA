@@ -23,6 +23,14 @@ class Scraping(object):
         self.initial_load = False if self._dao.get_num_storaged_articles() else True
         self._logger.info("Scraping initialized.")
         
+    
+    def run(self):
+        if not self.initial_load:
+            self.update_data()
+        else:
+            self.fetch_data()
+        self.persist_data()
+        
         
     def fetch_data(self):
         self._logger.info("Fetching data...")
