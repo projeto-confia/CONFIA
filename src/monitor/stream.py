@@ -169,3 +169,27 @@ class TwitterStream(StreamInterface):
         """
         self._logger.info('Persisting data...')
         self._dao.insert_posts()
+
+
+class TwitterAPI(object):
+    
+    def __init__(self):
+        self._logger = logging.getLogger(config.LOGGING.NAME)
+        self._tokens = cfg.tokens
+        self._api = None
+        
+        
+    def connect(self):
+        if not self._api:
+            try:
+                auth = tweepy.OAuthHandler(self._tokens['consumer_key'], self._tokens['consumer_secret'])
+                auth.set_access_token(self._tokens['access_token'], self._tokens['access_token_secret'])
+                self._api = tweepy.API(auth)
+            except:
+                self._logger.error('Unable to connect to Twitter API.')
+                raise
+            
+    
+    # TODO: implementar
+    def disconnect(self):
+        pass
