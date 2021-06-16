@@ -178,9 +178,11 @@ class TwitterAPI(object):
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._tokens = cfg.tokens
-        self._media_accounts = config.MONITOR.MEDIA_TWITTER_ACCOUNTS
         self._search_tags = config.MONITOR.SEARCH_TAGS
         self._api = None
+        self._dao = MonitorDAO()
+        self._name_social_media = 'twitter'
+        self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
         
         
     def connect(self):
@@ -215,12 +217,11 @@ class TwitterAPI(object):
         self.connect()
         
         try:
-            for status in tweepy.Cursor(self._api.user_timeline, id=self._media_accounts[0]).items(100):
-                # print(status)
-                tweet = self._normalize_text(status.text).lower()
-                if pattern.search(tweet):
-                    print(status.text)
-                    print('-------------------------------')
+            for media_screen_name in self._media_accounts:
+                for status in tweepy.Cursor(self._api.user_timeline, id=media_screen_name).items(10):
+                    tweet = self._normalize_text(status.text).lower()
+                    if pattern.search(tweet):
+                        print(media_screen_name, status.text)
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(self._media_accounts[0]))
             raise
