@@ -92,6 +92,22 @@ class MonitorDAO(object):
         with open(file_path, mode='a') as f:
             writer = csv.DictWriter(f, data.keys(), delimiter=';')
             writer.writerow(data)
+            
+            
+    def get_media_accounts(self, name_social_media):
+        sql_string = 'select sma.screen_name \
+                      from detectenv.owner o inner join detectenv.social_media_account sma on \
+                          sma.id_owner = o.id_owner \
+                      where o.is_media \
+                          and o.is_media_activated \
+                          and sma.id_social_media = \
+                              (select sm.id_social_media \
+                               from detectenv.social_media sm \
+                               where upper(sm.name_social_media) = upper(%s));'
+
+        with DatabaseWrapper() as db:
+            records = db.query(sql_string, (name_social_media,))
+            return [record[0] for record in records]
 
 
     def _load_csv_to_dict(self, file_path, fieldnames, delimiter=','):
