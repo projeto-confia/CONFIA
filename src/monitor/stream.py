@@ -1,3 +1,4 @@
+import re
 import tweepy
 import abc
 import time
@@ -7,6 +8,7 @@ import logging
 import src.monitor.authconfig as cfg
 from src.config import Config as config
 from src.monitor.dao import MonitorDAO
+from unicodedata import normalize
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -176,6 +178,8 @@ class TwitterAPI(object):
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._tokens = cfg.tokens
+        self._media_accounts = config.MONITOR.MEDIA_TWITTER_ACCOUNTS
+        self._search_tags = config.MONITOR.SEARCH_TAGS
         self._api = None
         
         
@@ -193,3 +197,30 @@ class TwitterAPI(object):
     # TODO: implementar
     def disconnect(self):
         pass
+    
+    
+    def _normalize_text(self, text):
+        return normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
+
+
+    def fetch_data(self):
+        
+        # remover acentos, aplicar lower e transformar a tag list em set
+        tags = set(map(str.lower, map(self._normalize_text, self._search_tags)))
+        
+        # regex pattern
+        regex_string = '|'.join(tags)
+        pattern = re.compile(regex_string)
+        
+        self.connect()
+        
+        try:
+            for status in tweepy.Cursor(self._api.user_timeline, id=self._media_accounts[0]).items(100):
+                # print(status)
+                tweet = self._normalize_text(status.text).lower()
+                if pattern.search(tweet):
+                    print(status.text)
+                    print('-------------------------------')
+        except:
+            self._logger.error('Exception while trying colect twitter statuses from {}'.format(self._media_accounts[0]))
+            raise
