@@ -218,10 +218,76 @@ class TwitterAPI(object):
         
         try:
             for media_screen_name in self._media_accounts:
-                for status in tweepy.Cursor(self._api.user_timeline, id=media_screen_name).items(10):
-                    tweet = self._normalize_text(status.text).lower()
-                    if pattern.search(tweet):
-                        print(media_screen_name, status.text)
+                for status in tweepy.Cursor(self._api.user_timeline, 
+                                            id=media_screen_name, 
+                                            tweet_mode='extended').items(20):
+                    # print(status)
+                    tweet = self._process_status(status)
+                    text_post = self._normalize_text(tweet['text_post']).lower()
+                    if pattern.search(text_post):
+                        print(media_screen_name)
+                        print(tweet['text_post'])
+                        print(tweet)
+                        print('---------------------------------------')
+                        # self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(self._media_accounts[0]))
             raise
+        
+        
+    def _process_status(self, status):
+        """
+        status: tweepy.models.status - objeto twitter
+        """
+        
+        # init
+        tweet = dict()
+
+        # social media
+        tweet['name_social_media'] = self._name_social_media
+        
+        # account
+        tweet['id_account_social_media'] = status.author.id_str
+
+        # post
+        tweet['id_post_social_media'] = status.id
+
+        if hasattr(status, "retweeted_status"):  # Checa se é retweet
+            tweet['parent_id_post_social_media'] = status.retweeted_status.id
+        else:
+            tweet['parent_id_post_social_media'] = None
+
+        tweet['text_post'] = ''
+        tweet['num_likes'] = 0
+        tweet['num_shares'] = 0
+        if hasattr(status, "retweeted_status"):  # Checa se é retweet
+            try:
+                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
+            except AttributeError:
+                tweet['text_post'] = status.retweeted_status.full_text
+            finally:
+                tweet['num_likes'] = status.retweeted_status.favorite_count
+                tweet['num_shares'] = status.retweeted_status.retweet_count
+        else:
+            try:
+                tweet['text_post'] = status.extended_tweet["full_text"]
+            except AttributeError:
+                tweet['text_post'] = status.full_text
+
+        # processa o texto da mensagem.
+        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
+        
+        # demais atributos
+        tweet['num_likes'] = status.favorite_count or tweet['num_likes']
+        tweet['num_shares'] = status.retweet_count or tweet['num_shares']
+        tweet['datetime_post'] = status.created_at
+
+        # if hasattr(status, "retweeted_status"):
+        #     print(tweet['text_post'])
+        #     print()
+        #     print('id tweet:', tweet['id_str'], 'likes:', tweet['num_likes'], 'shares', tweet['num_shares'])
+        #     print('parent post id', tweet['parent_id_post'], 'shares:', status.retweeted_status.retweet_count, 'likes:', status.retweeted_status.favorite_count)
+        #     # print(tweet['parent_id_post'])
+        #     print('#####################################################')
+        #     print()
+        return tweet
