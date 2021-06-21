@@ -95,7 +95,7 @@ class MonitorDAO(object):
             
             
     def get_media_accounts(self, name_social_media):
-        sql_string = 'select sma.screen_name \
+        sql_string = 'select sma.id_social_media_account, sma.screen_name \
                       from detectenv.owner o inner join detectenv.social_media_account sma on \
                           sma.id_owner = o.id_owner \
                       where o.is_media \
@@ -106,8 +106,7 @@ class MonitorDAO(object):
                                where upper(sm.name_social_media) = upper(%s));'
 
         with DatabaseWrapper() as db:
-            records = db.query(sql_string, (name_social_media,))
-            return [record[0] for record in records]
+            return db.query(sql_string, (name_social_media,))
 
 
     def _load_csv_to_dict(self, file_path, fieldnames, delimiter=','):

@@ -210,84 +210,73 @@ class TwitterAPI(object):
         # remover acentos, aplicar lower e transformar a tag list em set
         tags = set(map(str.lower, map(self._normalize_text, self._search_tags)))
         
-        # regex pattern
+        # regex pattern from tag list
         regex_string = '|'.join(tags)
         pattern = re.compile(regex_string)
         
         self.connect()
         
         try:
-            for media_screen_name in self._media_accounts:
+            for id_social_media_account, screen_name in self._media_accounts:
                 for status in tweepy.Cursor(self._api.user_timeline, 
-                                            id=media_screen_name, 
+                                            id=screen_name, 
                                             tweet_mode='extended').items(20):
                     # print(status)
-                    tweet = self._process_status(status)
-                    text_post = self._normalize_text(tweet['text_post']).lower()
+                    tweet = self._process_status(status, id_social_media_account)
+                    text_post = self._normalize_text(tweet['post']['text_post']).lower()
                     if pattern.search(text_post):
-                        print(media_screen_name)
-                        print(tweet['text_post'])
-                        print(tweet)
+                        post = tweet['post']
+                        for key, value in post.items():
+                            print(key, '{}: {}'.format(type(value), value))
                         print('---------------------------------------')
+                        break
                         # self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(self._media_accounts[0]))
             raise
         
         
-    def _process_status(self, status):
+    def _process_status(self, status, id_social_media_account):
         """
         status: tweepy.models.status - objeto twitter
         """
         
         # init
         tweet = dict()
-
-        # social media
-        tweet['name_social_media'] = self._name_social_media
-        
-        # account
-        tweet['id_account_social_media'] = status.author.id_str
+        tweet['post'] = dict()
 
         # post
-        tweet['id_post_social_media'] = status.id
-
+        tweet['post']['id_social_media_account'] = id_social_media_account
+        tweet['post']['id_post_social_media'] = status.id
+        
         if hasattr(status, "retweeted_status"):  # Checa se é retweet
-            tweet['parent_id_post_social_media'] = status.retweeted_status.id
+            tweet['post']['parent_id_post_social_media'] = status.retweeted_status.id
         else:
-            tweet['parent_id_post_social_media'] = None
+            tweet['post']['parent_id_post_social_media'] = None
 
-        tweet['text_post'] = ''
-        tweet['num_likes'] = 0
-        tweet['num_shares'] = 0
+        tweet['post']['text_post'] = ''
+        tweet['post']['num_likes'] = 0
+        tweet['post']['num_shares'] = 0
         if hasattr(status, "retweeted_status"):  # Checa se é retweet
             try:
-                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
+                tweet['post']['text_post'] = status.retweeted_status.extended_tweet["full_text"]
             except AttributeError:
-                tweet['text_post'] = status.retweeted_status.full_text
+                tweet['post']['text_post'] = status.retweeted_status.full_text
             finally:
-                tweet['num_likes'] = status.retweeted_status.favorite_count
-                tweet['num_shares'] = status.retweeted_status.retweet_count
+                tweet['post']['num_likes'] = status.retweeted_status.favorite_count
+                tweet['post']['num_shares'] = status.retweeted_status.retweet_count
         else:
             try:
-                tweet['text_post'] = status.extended_tweet["full_text"]
+                tweet['post']['text_post'] = status.extended_tweet["full_text"]
             except AttributeError:
-                tweet['text_post'] = status.full_text
+                tweet['post']['text_post'] = status.full_text
 
         # processa o texto da mensagem.
-        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
+        tweet['post']['text_post'] = tweet['post']['text_post'].replace("\n", " ")
         
         # demais atributos
-        tweet['num_likes'] = status.favorite_count or tweet['num_likes']
-        tweet['num_shares'] = status.retweet_count or tweet['num_shares']
-        tweet['datetime_post'] = status.created_at
+        tweet['post']['num_likes'] = status.favorite_count or tweet['num_likes']
+        tweet['post']['num_shares'] = status.retweet_count or tweet['num_shares']
+        tweet['post']['datetime_post'] = status.created_at
 
-        # if hasattr(status, "retweeted_status"):
-        #     print(tweet['text_post'])
-        #     print()
-        #     print('id tweet:', tweet['id_str'], 'likes:', tweet['num_likes'], 'shares', tweet['num_shares'])
-        #     print('parent post id', tweet['parent_id_post'], 'shares:', status.retweeted_status.retweet_count, 'likes:', status.retweeted_status.favorite_count)
-        #     # print(tweet['parent_id_post'])
-        #     print('#####################################################')
-        #     print()
         return tweet
