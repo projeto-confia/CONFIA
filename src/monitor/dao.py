@@ -162,6 +162,26 @@ class MonitorDAO(object):
             os.remove(self._tweet_pkl_path)
         except:
             raise
+        
+        
+    def get_last_media_post(self, id_social_media_account):
+        """Recupera o maior datetime de publicação de post
+
+        Args:
+            id_social_media_account (int): Id da conta da media na rede social
+
+        Returns:
+            datetime: Maior datetime de publicação armazenado no banco
+        """
+        sql_string = "SELECT MAX(p.datetime_post) \
+                      FROM detectenv.post p \
+                      WHERE p.id_social_media_account = %s;"
+        try:
+            with DatabaseWrapper() as db:
+                record = db.query(sql_string, params=(id_social_media_account,))
+                return record[0][0]
+        except:
+            raise
 
 
     def _load_pkl(self, filepath):
