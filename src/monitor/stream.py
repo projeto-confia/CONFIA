@@ -199,10 +199,10 @@ class TwitterAPI(object):
         for id_social_media_account, screen_name, initial_load in self._media_accounts:
             if not initial_load:
                 self._logger.info('Updating data from {}'.format(screen_name))
-                # self._update_data()
+                self._update_data(id_social_media_account, screen_name, pattern)
             else:
                 self._logger.info('Fetching data from {}'.format(screen_name))
-                self._fetch_data(id_social_media_account, screen_name, pattern)
+                self._fetch_data(id_social_media_account, screen_name, pattern, items=1000)  # TODO: parametrizar a qtd items?
         
         self._logger.info('Persisting data')
         self._persist_data()
@@ -226,16 +226,31 @@ class TwitterAPI(object):
         pass
 
 
-    def _fetch_data(self, id_social_media_account, screen_name, pattern):
+    def _fetch_data(self, id_social_media_account, screen_name, pattern, items=0, datetime_limit=None):
+        """Recupera tweets da timeline da media e armazena em arquivo
+
+        Args:
+            id_social_media_account (int): Id da conta da media na rede social
+            screen_name (str): Screen name da conta na rede social
+            pattern (re.Pattern): Objeto Pattern do módulo re
+            items (int, optional): Quantidade de posts a serem recuperados. \
+                Se 0 for passado, todos os posts serão recuperados. \
+                Defaults to 0.
+            datetime_limit (datetime, optional): Datetime limite do post que deve \
+                ser recuperado. Defaults to None.
+        """
+        print('type: ', type(pattern))
         
         try:
             tweets = list()
             for status in tweepy.Cursor(self._api.user_timeline, 
                                         id=screen_name, 
-                                        tweet_mode='extended').items(1000):  # TODO: parametrizar a qtd items?
-                # print(status)
+                                        tweet_mode='extended').items(items):
                 tweet = self._process_status(status, id_social_media_account)
                 text_post = self._normalize_text(tweet['text_post']).lower()
+                if datetime_limit and tweet['datetime_post'] <= datetime_limit:
+                    break
+                
                 if pattern.search(text_post):
                     tweets.append(tweet)
                     
@@ -245,6 +260,14 @@ class TwitterAPI(object):
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(screen_name))
             raise
+        
+    
+    def _update_data(self, id_social_media_account, screen_name, pattern):
+        # recupera o último datetime no banco
+        last_post_datetime = self._dao.get_last_media_post(id_social_media_account)
+        
+        # recupera os posts mais recentes da media
+        self._fetch_data(id_social_media_account, screen_name, pattern, datetime_limit=last_post_datetime)
     
     
     def _persist_data(self):
