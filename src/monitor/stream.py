@@ -61,11 +61,19 @@ class TwitterStreamListener(tweepy.StreamListener):
         self._tweet_csv_filename = 'tweets.csv'
         self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
         # TODO: erro ao criar o arquivo não dispara exceção. Experimentar mover para o init de TwitterStream
+        self._name_social_media = 'twitter'
+        self._media_ids = self._get_media_ids()
+        
 
     def on_status(self, status):
         """
         status: tweepy.models.status - objeto twitter
         """
+        
+        # não armazena posts de medias
+        if status.author.id in self._media_ids:
+            return
+        
         # init
         tweet = dict()
 
@@ -123,6 +131,11 @@ class TwitterStreamListener(tweepy.StreamListener):
         #     print()
 
         self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
+    
+    
+    def _get_media_ids(self):
+        self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
+        return [media[2] for media in self._media_accounts]
 
 
 class TwitterStream(StreamInterface):
@@ -196,7 +209,7 @@ class TwitterAPI(object):
         
         self._connect()
         
-        for id_social_media_account, screen_name, initial_load in self._media_accounts:
+        for id_social_media_account, screen_name, _, initial_load in self._media_accounts:
             if not initial_load:
                 self._logger.info('Updating data from {}'.format(screen_name))
                 self._update_data(id_social_media_account, screen_name, pattern)
@@ -239,7 +252,6 @@ class TwitterAPI(object):
             datetime_limit (datetime, optional): Datetime limite do post que deve \
                 ser recuperado. Defaults to None.
         """
-        print('type: ', type(pattern))
         
         try:
             tweets = list()

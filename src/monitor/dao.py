@@ -109,7 +109,7 @@ class MonitorDAO(object):
             
             
     def get_media_accounts(self, name_social_media):
-        sql_string = 'select sma.id_social_media_account, sma.screen_name, \
+        sql_string = 'select sma.id_social_media_account, sma.screen_name, sma.id_account_social_media, \
                         CASE WHEN count(p.*) > 0 THEN false ELSE true END as initial_load \
                       from detectenv.owner o inner join detectenv.social_media_account sma on \
                                                   sma.id_owner = o.id_owner \
@@ -121,7 +121,7 @@ class MonitorDAO(object):
                               (select sm.id_social_media \
                                from detectenv.social_media sm \
                                where upper(sm.name_social_media) = upper(%s)) \
-                      group by sma.id_social_media_account, sma.screen_name;'
+                      group by sma.id_social_media_account, sma.screen_name, sma.id_account_social_media;'
 
         with DatabaseWrapper() as db:
             return db.query(sql_string, (name_social_media,))
