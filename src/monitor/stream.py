@@ -218,19 +218,19 @@ class TwitterAPI(object):
         
         try:
             for id_social_media_account, screen_name in self._media_accounts:
+                tweets = list()
                 for status in tweepy.Cursor(self._api.user_timeline, 
                                             id=screen_name, 
-                                            tweet_mode='extended').items(20):
+                                            tweet_mode='extended').items(300):  # TODO: parametrizar a qtd items?
                     # print(status)
                     tweet = self._process_status(status, id_social_media_account)
-                    text_post = self._normalize_text(tweet['post']['text_post']).lower()
+                    text_post = self._normalize_text(tweet['text_post']).lower()
                     if pattern.search(text_post):
-                        post = tweet['post']
-                        for key, value in post.items():
-                            print(key, '{}: {}'.format(type(value), value))
-                        print('---------------------------------------')
-                        break
-                        # self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
+                        tweets.append(tweet)
+                        
+                if len(tweets):
+                    self._dao.write_in_pkl(tweets)
+                    
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(self._media_accounts[0]))
             raise
@@ -243,40 +243,39 @@ class TwitterAPI(object):
         
         # init
         tweet = dict()
-        tweet['post'] = dict()
 
         # post
-        tweet['post']['id_social_media_account'] = id_social_media_account
-        tweet['post']['id_post_social_media'] = status.id
+        tweet['id_social_media_account'] = id_social_media_account
+        tweet['id_post_social_media'] = status.id
         
         if hasattr(status, "retweeted_status"):  # Checa se é retweet
-            tweet['post']['parent_id_post_social_media'] = status.retweeted_status.id
+            tweet['parent_id_post_social_media'] = status.retweeted_status.id
         else:
-            tweet['post']['parent_id_post_social_media'] = None
+            tweet['parent_id_post_social_media'] = None
 
-        tweet['post']['text_post'] = ''
-        tweet['post']['num_likes'] = 0
-        tweet['post']['num_shares'] = 0
+        tweet['text_post'] = ''
+        tweet['num_likes'] = 0
+        tweet['num_shares'] = 0
         if hasattr(status, "retweeted_status"):  # Checa se é retweet
             try:
-                tweet['post']['text_post'] = status.retweeted_status.extended_tweet["full_text"]
+                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
             except AttributeError:
-                tweet['post']['text_post'] = status.retweeted_status.full_text
+                tweet['text_post'] = status.retweeted_status.full_text
             finally:
-                tweet['post']['num_likes'] = status.retweeted_status.favorite_count
-                tweet['post']['num_shares'] = status.retweeted_status.retweet_count
+                tweet['num_likes'] = status.retweeted_status.favorite_count
+                tweet['num_shares'] = status.retweeted_status.retweet_count
         else:
             try:
-                tweet['post']['text_post'] = status.extended_tweet["full_text"]
+                tweet['text_post'] = status.extended_tweet["full_text"]
             except AttributeError:
-                tweet['post']['text_post'] = status.full_text
+                tweet['text_post'] = status.full_text
 
         # processa o texto da mensagem.
-        tweet['post']['text_post'] = tweet['post']['text_post'].replace("\n", " ")
+        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
         
         # demais atributos
-        tweet['post']['num_likes'] = status.favorite_count or tweet['num_likes']
-        tweet['post']['num_shares'] = status.retweet_count or tweet['num_shares']
-        tweet['post']['datetime_post'] = status.created_at
+        tweet['num_likes'] = status.favorite_count or tweet['num_likes']
+        tweet['num_shares'] = status.retweet_count or tweet['num_shares']
+        tweet['datetime_post'] = status.created_at
 
         return tweet
