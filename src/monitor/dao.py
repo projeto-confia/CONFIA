@@ -1,5 +1,6 @@
 from src.orm.db_wrapper import DatabaseWrapper
 import csv, os
+import pickle as pkl
 
 class MonitorDAO(object):
     """
@@ -13,6 +14,8 @@ class MonitorDAO(object):
         
         self._tweet_csv_filename = 'tweets.csv'
         self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
+        self._tweet_pkl_filename = 'tweets.pkl'
+        self._tweet_pkl_path = os.path.join("src", "data", self._tweet_pkl_filename)
         self._id_social_media = None
 
 
@@ -92,6 +95,17 @@ class MonitorDAO(object):
         with open(file_path, mode='a') as f:
             writer = csv.DictWriter(f, data.keys(), delimiter=';')
             writer.writerow(data)
+            
+            
+    def write_in_pkl(self, data_list):
+        """Persist a list of objects within a pickle file
+
+        Args:
+            data_list (list): list of objects (list, dict, tuple, etc) that will be persisted
+        """
+        with open(self._tweet_pkl_path, 'ab') as f:
+            for data in data_list:
+                pkl.dump(data, f)
             
             
     def get_media_accounts(self, name_social_media):
