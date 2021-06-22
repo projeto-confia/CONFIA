@@ -221,7 +221,7 @@ class TwitterAPI(object):
                 tweets = list()
                 for status in tweepy.Cursor(self._api.user_timeline, 
                                             id=screen_name, 
-                                            tweet_mode='extended').items(300):  # TODO: parametrizar a qtd items?
+                                            tweet_mode='extended').items(1000):  # TODO: parametrizar a qtd items?
                     # print(status)
                     tweet = self._process_status(status, id_social_media_account)
                     text_post = self._normalize_text(tweet['text_post']).lower()
@@ -232,7 +232,7 @@ class TwitterAPI(object):
                     self._dao.write_in_pkl(tweets)
                     
         except:
-            self._logger.error('Exception while trying colect twitter statuses from {}'.format(self._media_accounts[0]))
+            self._logger.error('Exception while trying colect twitter statuses from {}'.format(screen_name))
             raise
         
         
