@@ -1,3 +1,4 @@
+import re
 import tweepy
 import abc
 import time
@@ -7,6 +8,7 @@ import logging
 import src.monitor.authconfig as cfg
 from src.config import Config as config
 from src.monitor.dao import MonitorDAO
+from unicodedata import normalize
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -169,3 +171,153 @@ class TwitterStream(StreamInterface):
         """
         self._logger.info('Persisting data...')
         self._dao.insert_posts()
+
+
+class TwitterAPI(object):
+    
+    def __init__(self):
+        self._logger = logging.getLogger(config.LOGGING.NAME)
+        self._tokens = cfg.tokens
+        self._search_tags = config.MONITOR.SEARCH_TAGS
+        self._api = None
+        self._dao = MonitorDAO()
+        self._name_social_media = 'twitter'
+        self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
+        self._logger.info("Twitter API initialized")
+
+    
+    def run(self):
+        
+        # remover acentos, aplicar lower e transformar a tag list em set
+        tags = set(map(str.lower, map(self._normalize_text, self._search_tags)))
+        # regex pattern from tag list
+        regex_string = '|'.join(tags)
+        pattern = re.compile(regex_string)
+        
+        self._connect()
+        
+        for id_social_media_account, screen_name, initial_load in self._media_accounts:
+            if not initial_load:
+                self._logger.info('Updating data from {}'.format(screen_name))
+                self._update_data(id_social_media_account, screen_name, pattern)
+            else:
+                self._logger.info('Fetching data from {}'.format(screen_name))
+                self._fetch_data(id_social_media_account, screen_name, pattern, items=1000)  # TODO: parametrizar a qtd items?
+        
+        self._logger.info('Persisting data')
+        self._persist_data()
+            
+        # TODO: implementar e chamar método disconnect()
+            
+        
+    def _connect(self):
+        if not self._api:
+            try:
+                auth = tweepy.OAuthHandler(self._tokens['consumer_key'], self._tokens['consumer_secret'])
+                auth.set_access_token(self._tokens['access_token'], self._tokens['access_token_secret'])
+                self._api = tweepy.API(auth)
+            except:
+                self._logger.error('Unable to connect to Twitter API.')
+                raise
+            
+    
+    # TODO: implementar
+    def _disconnect(self):
+        pass
+
+
+    def _fetch_data(self, id_social_media_account, screen_name, pattern, items=0, datetime_limit=None):
+        """Recupera tweets da timeline da media e armazena em arquivo
+
+        Args:
+            id_social_media_account (int): Id da conta da media na rede social
+            screen_name (str): Screen name da conta na rede social
+            pattern (re.Pattern): Objeto Pattern do módulo re
+            items (int, optional): Quantidade de posts a serem recuperados. \
+                Se 0 for passado, todos os posts serão recuperados. \
+                Defaults to 0.
+            datetime_limit (datetime, optional): Datetime limite do post que deve \
+                ser recuperado. Defaults to None.
+        """
+        print('type: ', type(pattern))
+        
+        try:
+            tweets = list()
+            for status in tweepy.Cursor(self._api.user_timeline, 
+                                        id=screen_name, 
+                                        tweet_mode='extended').items(items):
+                tweet = self._process_status(status, id_social_media_account)
+                text_post = self._normalize_text(tweet['text_post']).lower()
+                if datetime_limit and tweet['datetime_post'] <= datetime_limit:
+                    break
+                
+                if pattern.search(text_post):
+                    tweets.append(tweet)
+                    
+            if len(tweets):
+                self._dao.write_in_pkl(tweets)
+                    
+        except:
+            self._logger.error('Exception while trying colect twitter statuses from {}'.format(screen_name))
+            raise
+        
+    
+    def _update_data(self, id_social_media_account, screen_name, pattern):
+        # recupera o último datetime no banco
+        last_post_datetime = self._dao.get_last_media_post(id_social_media_account)
+        
+        # recupera os posts mais recentes da media
+        self._fetch_data(id_social_media_account, screen_name, pattern, datetime_limit=last_post_datetime)
+    
+    
+    def _persist_data(self):
+        self._dao.insert_posts_from_pkl()
+        
+        
+    def _process_status(self, status, id_social_media_account):
+        """
+        status: tweepy.models.status - objeto twitter
+        """
+        
+        # init
+        tweet = dict()
+
+        # post
+        tweet['id_social_media_account'] = id_social_media_account
+        tweet['id_post_social_media'] = status.id
+        
+        if hasattr(status, "retweeted_status"):  # Checa se é retweet
+            tweet['parent_id_post_social_media'] = status.retweeted_status.id
+        else:
+            tweet['parent_id_post_social_media'] = None
+
+        tweet['text_post'] = ''
+        tweet['num_likes'] = 0
+        tweet['num_shares'] = 0
+        if hasattr(status, "retweeted_status"):  # Checa se é retweet
+            try:
+                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
+            except AttributeError:
+                tweet['text_post'] = status.retweeted_status.full_text
+            finally:
+                tweet['num_likes'] = status.retweeted_status.favorite_count
+                tweet['num_shares'] = status.retweeted_status.retweet_count
+        else:
+            try:
+                tweet['text_post'] = status.extended_tweet["full_text"]
+            except AttributeError:
+                tweet['text_post'] = status.full_text
+
+        # processa o texto da mensagem.
+        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
+        
+        # demais atributos
+        tweet['num_likes'] = status.favorite_count or tweet['num_likes']
+        tweet['num_shares'] = status.retweet_count or tweet['num_shares']
+        tweet['datetime_post'] = status.created_at
+
+        return tweet
+    
+    
+    def _normalize_text(self, text):
+        return normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
