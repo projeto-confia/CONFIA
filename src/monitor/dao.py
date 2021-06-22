@@ -1,5 +1,6 @@
 from src.orm.db_wrapper import DatabaseWrapper
 import csv, os
+import pickle as pkl
 
 class MonitorDAO(object):
     """
@@ -13,6 +14,8 @@ class MonitorDAO(object):
         
         self._tweet_csv_filename = 'tweets.csv'
         self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
+        self._tweet_pkl_filename = 'tweets.pkl'
+        self._tweet_pkl_path = os.path.join("src", "data", self._tweet_pkl_filename)
         self._id_social_media = None
 
 
@@ -92,8 +95,114 @@ class MonitorDAO(object):
         with open(file_path, mode='a') as f:
             writer = csv.DictWriter(f, data.keys(), delimiter=';')
             writer.writerow(data)
+            
+            
+    def write_in_pkl(self, data_list):
+        """Persist a list of objects within a pickle file
+
+        Args:
+            data_list (list): list of objects (list, dict, tuple, etc) that will be persisted
+        """
+        with open(self._tweet_pkl_path, 'ab') as f:
+            for data in data_list:
+                pkl.dump(data, f)
+            
+            
+    def get_media_accounts(self, name_social_media):
+        sql_string = 'select sma.id_social_media_account, sma.screen_name, \
+                        CASE WHEN count(p.*) > 0 THEN false ELSE true END as initial_load \
+                      from detectenv.owner o inner join detectenv.social_media_account sma on \
+                                                  sma.id_owner = o.id_owner \
+                                             left join detectenv.post p on \
+							                      p.id_social_media_account = sma.id_social_media_account \
+                      where o.is_media \
+                          and o.is_media_activated \
+                          and sma.id_social_media = \
+                              (select sm.id_social_media \
+                               from detectenv.social_media sm \
+                               where upper(sm.name_social_media) = upper(%s)) \
+                      group by sma.id_social_media_account, sma.screen_name;'
+
+        with DatabaseWrapper() as db:
+            return db.query(sql_string, (name_social_media,))
+    
+    
+    def insert_posts_from_pkl(self):
+        """Carrega o arquivo pickle e persiste os dados no banco
+        """
+        
+        if not os.path.exists(self._tweet_pkl_path):
+            return
+        
+        data = self._load_pkl(self._tweet_pkl_path)
+        
+        # inicia a transação
+        try:
+            with DatabaseWrapper() as db:
+                for tweet in data:
+                    news_data = {'text_news': tweet['text_post'],
+                                 'datetime_publication': tweet['datetime_post'],
+                                 'ground_truth_label': False}
+                    # consulta se a notícia já possui registro no banco
+                    id_news = self._get_id_news(news_data, db)
+                    if not id_news:
+                        # insere a notícia e recupera o id
+                        id_news = self._insert_record('detectenv.news',
+                                                      news_data,
+                                                      'id_news',
+                                                      db)
+                    # insere o tweet
+                    tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
+                    tweet['id_news'] = id_news
+                    self._insert_record('detectenv.post',
+                                        tweet,
+                                        'id_post',
+                                        db)
+            # deleta o arquivo pickle
+            os.remove(self._tweet_pkl_path)
+        except:
+            raise
+        
+        
+    def get_last_media_post(self, id_social_media_account):
+        """Recupera o maior datetime de publicação de post
+
+        Args:
+            id_social_media_account (int): Id da conta da media na rede social
+
+        Returns:
+            datetime: Maior datetime de publicação armazenado no banco
+        """
+        sql_string = "SELECT MAX(p.datetime_post) \
+                      FROM detectenv.post p \
+                      WHERE p.id_social_media_account = %s;"
+        try:
+            with DatabaseWrapper() as db:
+                record = db.query(sql_string, params=(id_social_media_account,))
+                return record[0][0]
+        except:
+            raise
 
 
+    def _load_pkl(self, filepath):
+        """Recupera os dados de um arquivo pickle.
+
+        Args:
+            filepath (str): File path do arquivo pickle
+
+        Returns:
+            list: Lista de objetos do arquivo pickle
+        """
+        data = []
+        with open(filepath, 'rb') as f:
+            try:
+                while True:
+                    data.append(pkl.load(f))
+            except EOFError:
+                pass
+        return data
+        
+        
     def _load_csv_to_dict(self, file_path, fieldnames, delimiter=','):
         """
         Carrega um arquivo csv
