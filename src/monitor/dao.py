@@ -121,8 +121,64 @@ class MonitorDAO(object):
 
         with DatabaseWrapper() as db:
             return db.query(sql_string, (name_social_media,))
+    
+    
+    def insert_posts_from_pkl(self):
+        """Carrega o arquivo pickle e persiste os dados no banco
+        """
+        
+        if not os.path.exists(self._tweet_pkl_path):
+            return
+        
+        data = self._load_pkl(self._tweet_pkl_path)
+        
+        # inicia a transação
+        try:
+            with DatabaseWrapper() as db:
+                for tweet in data:
+                    news_data = {'text_news': tweet['text_post'],
+                                 'datetime_publication': tweet['datetime_post'],
+                                 'ground_truth_label': False}
+                    # consulta se a notícia já possui registro no banco
+                    id_news = self._get_id_news(news_data, db)
+                    if not id_news:
+                        # insere a notícia e recupera o id
+                        id_news = self._insert_record('detectenv.news',
+                                                      news_data,
+                                                      'id_news',
+                                                      db)
+                    # insere o tweet
+                    tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
+                    tweet['id_news'] = id_news
+                    self._insert_record('detectenv.post',
+                                        tweet,
+                                        'id_post',
+                                        db)
+            # deleta o arquivo pickle
+            os.remove(self._tweet_pkl_path)
+        except:
+            raise
 
 
+    def _load_pkl(self, filepath):
+        """Recupera os dados de um arquivo pickle.
+
+        Args:
+            filepath (str): File path do arquivo pickle
+
+        Returns:
+            list: Lista de objetos do arquivo pickle
+        """
+        data = []
+        with open(filepath, 'rb') as f:
+            try:
+                while True:
+                    data.append(pkl.load(f))
+            except EOFError:
+                pass
+        return data
+        
+        
     def _load_csv_to_dict(self, file_path, fieldnames, delimiter=','):
         """
         Carrega um arquivo csv
