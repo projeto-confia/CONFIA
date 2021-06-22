@@ -218,6 +218,7 @@ class TwitterAPI(object):
         
         try:
             for id_social_media_account, screen_name in self._media_accounts:
+                self._logger.info('Fetching {}'.format(screen_name))
                 tweets = list()
                 for status in tweepy.Cursor(self._api.user_timeline, 
                                             id=screen_name, 
@@ -234,6 +235,11 @@ class TwitterAPI(object):
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(screen_name))
             raise
+    
+    
+    def persist_data(self):
+        self._logger.info('Persisting data')
+        self._dao.insert_posts_from_pkl()
         
         
     def _process_status(self, status, id_social_media_account):
