@@ -183,9 +183,34 @@ class TwitterAPI(object):
         self._dao = MonitorDAO()
         self._name_social_media = 'twitter'
         self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
+        self._logger.info("Twitter API initialized")
+
+    
+    def run(self):
         
+        # remover acentos, aplicar lower e transformar a tag list em set
+        tags = set(map(str.lower, map(self._normalize_text, self._search_tags)))
+        # regex pattern from tag list
+        regex_string = '|'.join(tags)
+        pattern = re.compile(regex_string)
         
-    def connect(self):
+        self._connect()
+        
+        for id_social_media_account, screen_name, initial_load in self._media_accounts:
+            if not initial_load:
+                self._logger.info('Updating data from {}'.format(screen_name))
+                # self._update_data()
+            else:
+                self._logger.info('Fetching data from {}'.format(screen_name))
+                self._fetch_data(id_social_media_account, screen_name, pattern)
+        
+        self._logger.info('Persisting data')
+        self._persist_data()
+            
+        # TODO: implementar e chamar método disconnect()
+            
+        
+    def _connect(self):
         if not self._api:
             try:
                 auth = tweepy.OAuthHandler(self._tokens['consumer_key'], self._tokens['consumer_secret'])
@@ -197,48 +222,32 @@ class TwitterAPI(object):
             
     
     # TODO: implementar
-    def disconnect(self):
+    def _disconnect(self):
         pass
-    
-    
-    def _normalize_text(self, text):
-        return normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
 
 
-    def fetch_data(self):
-        
-        # remover acentos, aplicar lower e transformar a tag list em set
-        tags = set(map(str.lower, map(self._normalize_text, self._search_tags)))
-        
-        # regex pattern from tag list
-        regex_string = '|'.join(tags)
-        pattern = re.compile(regex_string)
-        
-        self.connect()
+    def _fetch_data(self, id_social_media_account, screen_name, pattern):
         
         try:
-            for id_social_media_account, screen_name in self._media_accounts:
-                self._logger.info('Fetching {}'.format(screen_name))
-                tweets = list()
-                for status in tweepy.Cursor(self._api.user_timeline, 
-                                            id=screen_name, 
-                                            tweet_mode='extended').items(1000):  # TODO: parametrizar a qtd items?
-                    # print(status)
-                    tweet = self._process_status(status, id_social_media_account)
-                    text_post = self._normalize_text(tweet['text_post']).lower()
-                    if pattern.search(text_post):
-                        tweets.append(tweet)
-                        
-                if len(tweets):
-                    self._dao.write_in_pkl(tweets)
+            tweets = list()
+            for status in tweepy.Cursor(self._api.user_timeline, 
+                                        id=screen_name, 
+                                        tweet_mode='extended').items(1000):  # TODO: parametrizar a qtd items?
+                # print(status)
+                tweet = self._process_status(status, id_social_media_account)
+                text_post = self._normalize_text(tweet['text_post']).lower()
+                if pattern.search(text_post):
+                    tweets.append(tweet)
+                    
+            if len(tweets):
+                self._dao.write_in_pkl(tweets)
                     
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(screen_name))
             raise
     
     
-    def persist_data(self):
-        self._logger.info('Persisting data')
+    def _persist_data(self):
         self._dao.insert_posts_from_pkl()
         
         
@@ -285,3 +294,7 @@ class TwitterAPI(object):
         tweet['datetime_post'] = status.created_at
 
         return tweet
+    
+    
+    def _normalize_text(self, text):
+        return normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
