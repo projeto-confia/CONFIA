@@ -20,7 +20,7 @@ def init_log(verbose=False):
     if verbose:
         stream_format = logging.Formatter('%(levelname)s - %(message)s')
         stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.INFO)
+        stream_handler.setLevel(logging.NOTSET)
         stream_handler.setFormatter(stream_format)
         logger.addHandler(stream_handler)
 

@@ -3,12 +3,13 @@ import logging
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
 from src.orm.dao import DAO
+from src.config import Config as config
+import logging
 
 class ICS:
 
     def __init__(self, laplace_smoothing=0.01, omega=0.5):
-        self.__logger     = logging.getLogger()
-        self.__logger.setLevel(logging.INFO)
+        self.__logger     = logging.getLogger(config.LOGGING.NAME)
         self.__dao        = DAO()
         self.__users      = self.__dao.read_query_to_dataframe("select * from detectenv.social_media_account;")
         self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where classification_outcome is not null;")
@@ -21,46 +22,52 @@ class ICS:
 
         # se não tem amostras rotuladas no dataset, retorna uma exceção
         if len(news) == 0:
-            raise Exception("Não há notícias rotuladas para realizar o treinamento do ICS.")
+            self.__logger.info('Não há notícias rotuladas para realizar o treinamento do ICS.')
+            return 0
         
-        # divide 'self.__news_users' em treino e teste.
-        labels = news["ground_truth_label"]
-        self.__X_train_news, self.__X_test_news, _, _ = train_test_split(news, labels, test_size=test_size, stratify=labels)
+        else:
+            # divide 'self.__news_users' em treino e teste.
+            labels = news["ground_truth_label"]
+            self.__X_train_news, self.__X_test_news, _, _ = train_test_split(news, labels, test_size=test_size, stratify=labels)
 
-        # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
-        self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
+            # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
+            self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
 
-        self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
-        # print(self.__test_news_users)
+            self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
+            # print(self.__test_news_users)
 
-        # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
-        try:
-            self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
-        except:
-            raise Exception("Não há notícias rotuladas como 'não fake (0)' para realizar o treinamento do ICS.")
-        try:
-            self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
-        except:
-            raise Exception("Não há notícias rotuladas como 'fake (1)' para realizar o treinamento do ICS.")
+            # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
+            try:
+                self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
+            except:
+                self.__logger.info("Não há notícias rotuladas como 'não fake (0)' para realizar o treinamento do ICS.")
+                return 0
+            try:
+                self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
+            except:
+                self.__logger.info("Não há notícias rotuladas como 'fake (1)' para realizar o treinamento do ICS.")
+                return 0
+                
+            # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
+            self.__train_news_users = self.__train_news_users[self.__train_news_users["id_social_media_account"].isin(self.__test_news_users["id_social_media_account"])]
 
-        # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
-        self.__train_news_users = self.__train_news_users[self.__train_news_users["id_social_media_account"].isin(self.__test_news_users["id_social_media_account"])]
+            # inicializa os parâmetros dos usuários.
+            totR            = 0
+            totF            = 0
+            alphaN          = totR + self.__smoothing
+            umAlphaN        = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
+            betaN           = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
+            umBetaN         = totF + self.__smoothing
+            probAlphaN      = alphaN / (alphaN + umAlphaN)
+            probUmAlphaN    = 1 - probAlphaN
+            probBetaN       = betaN / (betaN + umBetaN)
+            probUmBetaN     = 1 - probBetaN
+            self.__users["probAlphaN"]    = probAlphaN
+            self.__users["probUmAlphaN"]  = probUmAlphaN
+            self.__users["probBetaN"]     = probBetaN
+            self.__users["probUmBetaN"]   = probUmBetaN    
 
-        # inicializa os parâmetros dos usuários.
-        totR            = 0
-        totF            = 0
-        alphaN          = totR + self.__smoothing
-        umAlphaN        = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
-        betaN           = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
-        umBetaN         = totF + self.__smoothing
-        probAlphaN      = alphaN / (alphaN + umAlphaN)
-        probUmAlphaN    = 1 - probAlphaN
-        probBetaN       = betaN / (betaN + umBetaN)
-        probUmBetaN     = 1 - probBetaN
-        self.__users["probAlphaN"]    = probAlphaN
-        self.__users["probUmAlphaN"]  = probUmAlphaN
-        self.__users["probBetaN"]     = probBetaN
-        self.__users["probUmBetaN"]   = probUmBetaN    
+            return 1
 
     def __assess(self):
         """
@@ -95,52 +102,53 @@ class ICS:
 
         # mostra os resultados da matriz de confusão e acurácia.
         gt = self.__X_test_news["ground_truth_label"].tolist()
-        print(f"Desempenho do ICS no conjunto de teste:\nMatriz de confusão:\n{confusion_matrix(gt, predicted_labels)}")
-        print(f"Acurácia: {accuracy_score(gt, predicted_labels)}")
+        self.__logger.info(f"Desempenho do ICS no conjunto de teste:\nMatriz de confusão:\n{confusion_matrix(gt, predicted_labels)}")
+        self.__logger.info(f"Acurácia: {accuracy_score(gt, predicted_labels)}")
 
     def fit(self, test_size = 0.3):
         """
         Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
         """
-        self._fit_initialization(test_size)
-        
-        i = 0
-        users_unique = self.__train_news_users["id_social_media_account"].unique()
-        total = len(users_unique)
-        
-        for userId in users_unique:   
-            i = i + 1
-            print("", end="Progresso do treinamento: {0:.2f}%\r".format(float((i / total) * 100)), flush=True)
+        if self._fit_initialization(test_size) == 1:
+            i = 0
+            users_unique = self.__train_news_users["id_social_media_account"].unique()
+            total = len(users_unique)
             
-            # obtém os labels das notícias compartilhadas por cada usuário.
-            newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_social_media_account"] == userId])
+            for userId in users_unique:   
+                i = i + 1
+                print("", end="Progresso do treinamento: {0:.2f}%\r".format(float((i / total) * 100)), flush=True)
+                
+                # obtém os labels das notícias compartilhadas por cada usuário.
+                newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_social_media_account"] == userId])
+                
+                # calcula a matriz de opinião para cada usuário.
+                totR        = newsSharedByUser.count(0)
+                totF        = newsSharedByUser.count(1)
+                alphaN      = totR + self.__smoothing
+                umAlphaN    = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
+                betaN       = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
+                umBetaN     = totF + self.__smoothing
+
+                # calcula as probabilidades para cada usuário.
+                probAlphaN      = alphaN / (alphaN + umAlphaN)
+                probUmAlphaN    = 1 - probAlphaN
+                probBetaN       = betaN / (betaN + umBetaN)
+                probUmBetaN     = 1 - probBetaN
+                self.__users.loc[self.__users["id_social_media_account"] == userId, "probAlphaN"]   = probAlphaN
+                self.__users.loc[self.__users["id_social_media_account"] == userId, "probBetaN"]    = probBetaN
+                self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmAlphaN"] = probUmAlphaN
+                self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
             
-            # calcula a matriz de opinião para cada usuário.
-            totR        = newsSharedByUser.count(0)
-            totF        = newsSharedByUser.count(1)
-            alphaN      = totR + self.__smoothing
-            umAlphaN    = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
-            betaN       = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
-            umBetaN     = totF + self.__smoothing
-
-            # calcula as probabilidades para cada usuário.
-            probAlphaN      = alphaN / (alphaN + umAlphaN)
-            probUmAlphaN    = 1 - probAlphaN
-            probBetaN       = betaN / (betaN + umBetaN)
-            probUmBetaN     = 1 - probBetaN
-            self.__users.loc[self.__users["id_social_media_account"] == userId, "probAlphaN"]   = probAlphaN
-            self.__users.loc[self.__users["id_social_media_account"] == userId, "probBetaN"]    = probBetaN
-            self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmAlphaN"] = probUmAlphaN
-            self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
-
-        self.__assess()   
+            self.__assess()   
        
-        self.__logger.info("\nSalvando os parâmetros de usuário no banco de dados...")
-        try:
-            self.__dao.insert_update_user_accounts_db(self.__users)
-            self.__logger.info("\nParâmetros dos usuários salvos com sucesso!\n")
-        except Exception as e:
-            raise Exception(f"Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.\n{e.args}")
+            self.__logger.info("Salvando os parâmetros de usuário no banco de dados...")
+            try:
+                self.__dao.insert_update_user_accounts_db(self.__users)
+                self.__logger.info("Parâmetros dos usuários salvos com sucesso!\n")
+            except Exception as e:
+                raise Exception(f"Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.\n{e.args}")
+        else:
+            self.__logger.info("Não foi possível treinar o ICS.")
 
     def predict(self, id_news):
         """
