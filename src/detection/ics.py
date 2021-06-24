@@ -28,13 +28,16 @@ class ICS:
         else:
             # divide 'self.__news_users' em treino e teste.
             labels = news["ground_truth_label"]
-            self.__X_train_news, self.__X_test_news, _, _ = train_test_split(news, labels, test_size=test_size, stratify=labels)
+            try:
+                self.__X_train_news, self.__X_test_news, _, _ = train_test_split(news, labels, test_size=test_size, stratify=labels)
+            except ValueError:
+                self.__logger.info("Não há amostras rotuladas o suficiente para treinar o ICS.")
+                return 0
 
-            # # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
+            # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
             self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
 
             self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
-            # print(self.__test_news_users)
 
             # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
             try:
