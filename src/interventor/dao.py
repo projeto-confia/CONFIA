@@ -98,3 +98,17 @@ class InterventorDAO(object):
         
     def has_excel_file(self):
         return os.path.exists(self._excel_filepath_to_send)
+    
+    
+    def get_days_of_week_window(self, agency):
+        
+        sql_string = "select ta.days_of_week \
+                    from detectenv.trusted_agency ta \
+                    where upper(ta.name_agency) = upper(%s);"
+        
+        try:
+            with DatabaseWrapper() as db:
+                record = db.query(sql_string, (agency,))
+            return record[0][0].split(',')
+        except:
+            raise
