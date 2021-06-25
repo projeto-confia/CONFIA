@@ -2,6 +2,11 @@ from src.interventor.dao import InterventorDAO
 import logging
 from src.config import Config as config
 from datetime import datetime
+import smtplib, ssl
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each ACF
@@ -64,6 +69,7 @@ class Interventor(object):
         
         # TODO: criar módulo python para envio e leitura de e-mail
         self._logger.info("Sending selected news to agency...")
+        self._send_mail(self._dao.get_email_from_agency('boatos.org'))
         
         # Registro no banco de dados
         self._logger.info('Persisting sent data...')
@@ -84,3 +90,49 @@ class Interventor(object):
             bool: True se o texto consta na base de dados, False caso contrário
         """
         return False
+    
+    
+    def _send_mail(self, receiver_email):
+        
+        port = 465  # For SSL
+        smtp_server = "smtp.gmail.com"
+        
+        subject = "[PROJETO CONFIA] - supostas fakes news"
+        body = "Este é um e-mail automático enviado pelo ambiente AUTOMATA."
+
+        # Create a multipart message and set headers
+        message = MIMEMultipart()
+        message["From"] = config.EMAIL.ACCOUNT
+        message["To"] = receiver_email
+        message["Subject"] = subject
+        # message["Bcc"] = receiver_email  # Recommended for mass emails
+
+        # Add body to email
+        message.attach(MIMEText(body, "plain"))
+
+        filename = self._dao.excel_filepath_to_send  # In same directory as script
+
+        # Open file in binary mode
+        with open(filename, "rb") as attachment:
+            # Add file as application/octet-stream
+            # Email client can usually download this automatically as attachment
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment.read())
+
+        # Encode file in ASCII characters to send by email    
+        encoders.encode_base64(part)
+
+        # Add header as key/value pair to attachment part
+        part.add_header(
+            "Content-Disposition",
+            f"attachment; filename= {filename}",
+        )
+
+        # Add attachment to message and convert message to string
+        message.attach(part)
+        text = message.as_string()
+
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(config.EMAIL.ACCOUNT, config.EMAIL.PASSWORD)
+            server.sendmail(config.EMAIL.ACCOUNT, receiver_email, text)
