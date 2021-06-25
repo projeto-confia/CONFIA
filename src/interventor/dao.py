@@ -1,4 +1,4 @@
-import os
+import os, shutil
 import pandas as pd
 import xlsxwriter
 from datetime import datetime
@@ -8,7 +8,8 @@ from src.orm.db_wrapper import DatabaseWrapper
 class InterventorDAO(object):
     
     def __init__(self):
-        self._excel_file_path = os.path.join('src', 'data', 'confia.xlsx')
+        self._excel_filepath_to_send = os.path.join('src', 'data', 'acf', 'to_send', 'confia.xlsx')
+        self._excel_filepath_sent = os.path.join('src', 'data', 'acf', 'to_send', 'sent')
         self._workbook = None
     
     
@@ -54,7 +55,7 @@ class InterventorDAO(object):
     def get_workbook(self):
         try:
             if not self._workbook:
-                workbook = xlsxwriter.Workbook(self._excel_file_path)
+                workbook = xlsxwriter.Workbook(self._excel_filepath_to_send)
                 bold = workbook.add_format({'bold': True})
                 text_wrap = workbook.add_format({'text_wrap': True})
                 worksheet = workbook.add_worksheet('planilha1')
@@ -75,7 +76,7 @@ class InterventorDAO(object):
     def persist_excel_in_db(self):
         
         try:
-            df = pd.read_excel(self._excel_file_path, 'planilha1', engine='openpyxl')
+            df = pd.read_excel(self._excel_filepath_to_send, 'planilha1', engine='openpyxl')
             ids = df['Id'].tolist()
             # TODO: datetime deve ser do envio do e-mail
             dt = datetime.now()
@@ -89,11 +90,11 @@ class InterventorDAO(object):
                 for tup in args:
                     db.execute(sql_string, tup)
                     
-            os.remove(self._excel_file_path)
+            shutil.move(self._excel_filepath_to_send, os.path.join(self._excel_filepath_sent, '{}.xlsx'.format(datetime.now())))
             
         except:
             raise
         
         
     def has_excel_file(self):
-        return os.path.exists(self._excel_file_path)
+        return os.path.exists(self._excel_filepath_to_send)
