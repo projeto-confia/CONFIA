@@ -93,3 +93,7 @@ class InterventorDAO(object):
             
         except:
             raise
+        
+        
+    def has_excel_file(self):
+        return os.path.exists(self._excel_file_path)

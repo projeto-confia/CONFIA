@@ -8,7 +8,6 @@ class Interventor(object):
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = InterventorDAO()
-        self._has_news_to_be_checked = False
         self._logger.info("Interventor initialized.")
     
     
@@ -33,11 +32,9 @@ class Interventor(object):
             self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 1, text_news)
         self._dao.close_workbook()
         
-        self._has_news_to_be_checked = bool(row)
-            
 
     def send_news_to_agency(self):
-        if not self._has_news_to_be_checked:
+        if not self._dao.has_excel_file():
             self._logger.info('There were no news selected to send.')
             return
         
@@ -51,8 +48,6 @@ class Interventor(object):
         # TODO: implementar controle de inconsistencia
         # Arquivo enviado, registros não persistidos e vice-versa
         
-        self._has_news_to_be_checked = False
-    
             
     # TODO: implementar usando o algoritmo de deduplicação
     def _is_news_in_fca_data(self, text_news):
