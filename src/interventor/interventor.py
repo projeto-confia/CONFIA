@@ -1,8 +1,10 @@
 from src.interventor.dao import InterventorDAO
 import logging
 from src.config import Config as config
+from datetime import datetime
 
 
+# TODO: refactor to interface and concrete classes, one concrete for each ACF
 class Interventor(object):
     
     def __init__(self):
@@ -12,8 +14,25 @@ class Interventor(object):
         
         
     def run(self):
-        self._select_news_to_be_checked()
-        self._send_news_to_agency()
+        if self._is_within_time_window('boatos.org'):
+            self._select_news_to_be_checked()
+            self._send_news_to_agency()
+        
+        
+    def _is_within_time_window(self, agency):
+        """Return True if hour and day of week is permitted to agency, False otherwise
+
+        Args:
+            agency (str): Name of agency
+
+        Returns:
+            boll: True if is in time window, False otherwise
+        """
+        days_of_week_window = self._dao.get_days_of_week_window(agency)
+        days_of_week_window = list(map(str.upper, days_of_week_window))
+        today_week = datetime.now().strftime('%A').upper()
+        today_hour = datetime.now().hour
+        return today_week in days_of_week_window and today_hour > 17  # TODO: parameterize time
     
     
     def _select_news_to_be_checked(self):
