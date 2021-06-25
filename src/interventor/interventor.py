@@ -9,9 +9,14 @@ class Interventor(object):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = InterventorDAO()
         self._logger.info("Interventor initialized.")
+        
+        
+    def run(self):
+        self._select_news_to_be_checked()
+        self._send_news_to_agency()
     
     
-    def select_news_to_be_checked(self):
+    def _select_news_to_be_checked(self):
         """Armazena em arquivo excel as notícias a serem enviadas à ACF
         """
         
@@ -33,7 +38,7 @@ class Interventor(object):
         self._dao.close_workbook()
         
 
-    def send_news_to_agency(self):
+    def _send_news_to_agency(self):
         if not self._dao.has_excel_file():
             self._logger.info('There were no news selected to send.')
             return
