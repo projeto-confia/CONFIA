@@ -15,9 +15,7 @@ class InterventorFacade(object):
     def run(self):
         try:
             self._logger.info('Running Interventor...')
-            interventor = Interventor()
-            interventor.select_news_to_be_checked()
-            interventor.send_news_to_agency()
+            Interventor().run()
             self._logger.info('Interventor finished.')
         except:
             raise
