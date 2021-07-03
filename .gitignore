@@ -149,6 +149,7 @@ data/
 !data/acf/received/processed/.gitkeep
 !data/acf/to_send/.gitkeep
 !data/acf/to_send/sent/.gitkeep
+!data/acf/to_curator/.gitkeep
 
 # vscode stuff
 .vscode
