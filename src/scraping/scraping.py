@@ -22,9 +22,8 @@ class ScrapingBoatosOrg(Scraping):
     
     def __init__(self):
         super().__init__()
-        # TODO: o método abaixo está buscando o count do id_agency
-        # refatorar, usando o método já existente no DAO (get_id_agency)
-        self.initial_load = False if self._dao.get_num_storaged_articles() else True
+        self._name_agency = 'Boatos.org'
+        self.initial_load = False if self._dao.get_num_storaged_articles(self._name_agency) else True
         self._logger.info("Scraping Boatos Org initialized.")
         
     
