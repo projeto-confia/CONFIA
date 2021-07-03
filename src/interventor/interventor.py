@@ -63,6 +63,10 @@ class Interventor(object):
             self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 1, text_news)
         self._dao.close_workbook()
         
+        if config.INTERVENTOR.CURATOR:
+            # TODO: changes to SMTP logging
+            self._send_curator_mail()
+        
 
     def _send_news_to_agency(self):
         if not self._dao.has_excel_file():
@@ -138,3 +142,29 @@ class Interventor(object):
         with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
             server.login(config.EMAIL.ACCOUNT, config.EMAIL.PASSWORD)
             server.sendmail(config.EMAIL.ACCOUNT, receiver_email, text)
+
+
+    def _send_curator_mail(self):
+        
+        port = 465  # For SSL
+        smtp_server = "smtp.gmail.com"
+        
+        subject = "[PROJETO CONFIA] - has news to be curated"
+        body = "Este é um e-mail automático enviado pelo ambiente AUTOMATA."
+
+        # Create a multipart message and set headers
+        message = MIMEMultipart()
+        message["From"] = config.EMAIL.ACCOUNT
+        message["To"] = config.EMAIL.ACCOUNT
+        message["Subject"] = subject
+        # message["Bcc"] = receiver_email  # Recommended for mass emails
+
+        # Add body to email
+        message.attach(MIMEText(body, "plain"))
+
+        text = message.as_string()
+
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(config.EMAIL.ACCOUNT, config.EMAIL.PASSWORD)
+            server.sendmail(config.EMAIL.ACCOUNT, config.EMAIL.ACCOUNT, text)
