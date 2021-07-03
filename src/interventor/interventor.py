@@ -14,12 +14,14 @@ class Interventor(object):
     
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._dao = InterventorDAO()
+        self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
         self._logger.info("Interventor initialized.")
         
         
     def run(self):
         if self._is_within_time_window('boatos.org'):
+            if config.INTERVENTOR.CURATOR:
+                self._send_news_to_agency()  # send possible curated news
             self._select_news_to_be_checked()
             self._send_news_to_agency()
         
@@ -37,7 +39,7 @@ class Interventor(object):
         days_of_week_window = list(map(str.upper, days_of_week_window))
         today_week = datetime.now().strftime('%A').upper()
         today_hour = datetime.now().hour
-        return today_week in days_of_week_window and today_hour > 17  # TODO: parameterize time
+        return today_week in days_of_week_window and today_hour > 16  # TODO: parameterize time
     
     
     def _select_news_to_be_checked(self):

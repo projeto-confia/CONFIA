@@ -7,10 +7,11 @@ from src.orm.db_wrapper import DatabaseWrapper
 
 class InterventorDAO(object):
     
-    def __init__(self):
+    def __init__(self, curator):
         self.excel_filepath_to_send = os.path.join('src', 'data', 'acf', 'to_send', 'confia.xlsx')
         self._excel_filepath_sent = os.path.join('src', 'data', 'acf', 'to_send', 'sent')
-        self._excel_filepath_to_curator = os.path.join('src', 'data', 'acf', 'to_curator')
+        self._excel_filepath_to_curator = os.path.join('src', 'data', 'acf', 'to_curator', 'confia.xlsx')
+        self._curator = curator
         self._workbook = None
     
     
@@ -56,7 +57,8 @@ class InterventorDAO(object):
     def get_workbook(self):
         try:
             if not self._workbook:
-                workbook = xlsxwriter.Workbook(self.excel_filepath_to_send)
+                path = self.excel_filepath_to_send if not self._curator else self._excel_filepath_to_curator
+                workbook = xlsxwriter.Workbook(path)
                 bold = workbook.add_format({'bold': True})
                 text_wrap = workbook.add_format({'text_wrap': True})
                 worksheet = workbook.add_worksheet('planilha1')
