@@ -10,6 +10,7 @@ class InterventorDAO(object):
     def __init__(self):
         self.excel_filepath_to_send = os.path.join('src', 'data', 'acf', 'to_send', 'confia.xlsx')
         self._excel_filepath_sent = os.path.join('src', 'data', 'acf', 'to_send', 'sent')
+        self._excel_filepath_to_curator = os.path.join('src', 'data', 'acf', 'to_curator')
         self._workbook = None
     
     
