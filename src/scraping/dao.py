@@ -93,12 +93,15 @@ class ScrapingDAO(object):
             raise
         
         
-    def get_num_storaged_articles(self):
-        sql_string = "SELECT COUNT(ag.id_trusted_agency) FROM detectenv.trusted_agency ag;"
+    def get_num_storaged_articles(self, name_agency):
+        sql_string = "SELECT COUNT(an.id_news_checked) \
+                        FROM detectenv.trusted_agency a inner join detectenv.agency_news_checked an \
+                            on an.id_trusted_agency = a.id_trusted_agency \
+                        WHERE upper(a.name_agency) = upper(%s);"
         try:
             with DatabaseWrapper() as db:
-                record = db.query(sql_string)
-            return 0 if not len(record) else record[0][0]
+                record = db.query(sql_string, (name_agency,))
+            return record[0][0]
         except:
             raise
             
