@@ -52,9 +52,16 @@ class DAO:
     
     def insert_update_user_accounts_db(self, users):
         i = 1
+        aux = -1
         total = len(users.index)
+
         for _, row in users.iterrows():
-            print("", end="Inserindo/atualizando conta de usuário {0} de {1} ({2:.2f}%)...\r".format(i, total, float((i / total) * 100)), flush=True)
+            progress = float((i / total) * 100)
+            
+            if aux != int(progress): 
+                aux = int(progress)            
+                if aux % 10 == 0 and aux > 0:
+                    yield f"Progresso de inserção/atualização de contas de usuário: {aux}%"
 
             id_social_media             = 2 # TODO: mudar isso quando começarmos a trabalhar com outras redes sociais.
             id_owner                    = row["id_owner"]
@@ -71,6 +78,8 @@ class DAO:
             self.__db.execute("DO $$ BEGIN PERFORM detectenv.insert_update_social_media_account(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); END $$;", args)
             self.__db.commit()
             i = i + 1
+        
+        yield "Processo de inserção/atualização de contas de usuários concluído."
 
     def insert_post_db(self, posts):
         from datetime import datetime

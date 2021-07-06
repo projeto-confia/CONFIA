@@ -1,10 +1,10 @@
+from re import S
 import pandas as pd
 import logging
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
 from src.orm.dao import DAO
 from src.config import Config as config
-import logging
 
 class ICS:
 
@@ -116,10 +116,17 @@ class ICS:
             i = 0
             users_unique = self.__train_news_users["id_social_media_account"].unique()
             total = len(users_unique)
+            aux = -1
             
             for userId in users_unique:   
                 i = i + 1
-                print("", end="Progresso do treinamento: {0:.2f}%\r".format(float((i / total) * 100)), flush=True)
+                progress = float((i / total) * 100)
+                
+                if aux != int(progress): 
+                    aux = int(progress)
+                
+                    if aux % 20 == 0 and aux > 0:
+                        self.__logger.info(f"Progresso do treinamento: {aux}%")
                 
                 # obtém os labels das notícias compartilhadas por cada usuário.
                 newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_social_media_account"] == userId])
@@ -142,11 +149,14 @@ class ICS:
                 self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmAlphaN"] = probUmAlphaN
                 self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
             
+            self.__logger.info("Treinamento concluído.")
             self.__assess()   
        
             self.__logger.info("Salvando os parâmetros de usuário no banco de dados...")
             try:
-                self.__dao.insert_update_user_accounts_db(self.__users)
+                for msg in self.__dao.insert_update_user_accounts_db(self.__users):
+                    self.__logger.info(msg)
+                    
                 self.__logger.info("Parâmetros dos usuários salvos com sucesso!\n")
             except Exception as e:
                 raise Exception(f"Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.\n{e.args}")
