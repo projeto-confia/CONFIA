@@ -49,6 +49,4 @@ class Detector:
 
     def predict_news(self, id_news):
         label, prob = self.__ics.predict(id_news)
-        
-        self.__logger.info(f"Notícia {id_news} legítima com probabilidade de {round(prob * 100, 3)}% de acordo com o ICS.") if label == 0 else self.__logger.info(f"Notícia {id_news} falsa com probabilidade de {round(prob * 100, 3)}% de acordo com o ICS.")
         return label, prob
