@@ -13,8 +13,6 @@ class ICS:
         self.__dao        = DAO()
         self.__users      = self.__dao.read_query_to_dataframe("select * from detectenv.social_media_account;")
         self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where classification_outcome is not null;")
-        self.__news.loc[self.__news.id_news == 1070, 'classification_outcome'] = False
-        self.__news.loc[self.__news.id_news == 1070, 'prob_classification'] = 0.95444788995200
         self.__news_users = self.__dao.read_query_to_dataframe("select * from detectenv.post;")
         self.__smoothing  = laplace_smoothing
         self.__omega      = omega
