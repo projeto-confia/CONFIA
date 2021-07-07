@@ -74,7 +74,7 @@ class Scraping(object):
         for article in articles:
             current_article_datetime_str = article.select_one('.entry-date')['datetime'][:-6]
             current_article_datetime = datetime.strptime(current_article_datetime_str, '%Y-%m-%dT%H:%M:%S')
-            if current_article_datetime <= last_article_datetime:
+            if last_article_datetime != None and current_article_datetime <= last_article_datetime:
                 return
             self._write_in_csv(article)
 

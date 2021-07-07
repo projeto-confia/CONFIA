@@ -13,9 +13,23 @@ class ICS:
         self.__dao        = DAO()
         self.__users      = self.__dao.read_query_to_dataframe("select * from detectenv.social_media_account;")
         self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news where classification_outcome is not null;")
+        self.__news.loc[self.__news.id_news == 1070, 'classification_outcome'] = False
+        self.__news.loc[self.__news.id_news == 1070, 'prob_classification'] = 0.95444788995200
         self.__news_users = self.__dao.read_query_to_dataframe("select * from detectenv.post;")
         self.__smoothing  = laplace_smoothing
         self.__omega      = omega
+
+        # consulta os id's das contas de veículos de imprensa (usa 'id_owner' != null para isso).
+        press_media_accounts = self.__dao.read_query_to_dataframe("select id_social_media_account from detectenv.social_media_account where id_owner is not null;")
+        
+        press_media_accounts = list(press_media_accounts['id_social_media_account'])
+        press_media_news = self.__news_users[self.__news_users.id_social_media_account.isin(press_media_accounts)]
+
+        # remove as contas dos veículos de imprensa de self.__news
+        if len(self.__news) > 0:
+            self.__users = self.__users[~self.__users.id_social_media_account.isin(press_media_accounts)]
+            self.__news_users = self.__news_users[~self.__news_users.id_social_media_account.isin(press_media_accounts)]
+            self.__news = self.__news[~self.__news['id_news'].isin(list(press_media_news['id_news']))]
 
     def _fit_initialization(self, test_size = 0.3):
         news = self.__news[self.__news['ground_truth_label'].notnull()]
@@ -156,7 +170,7 @@ class ICS:
             try:
                 for msg in self.__dao.insert_update_user_accounts_db(self.__users):
                     self.__logger.info(msg)
-                    
+
                 self.__logger.info("Parâmetros dos usuários salvos com sucesso!\n")
             except Exception as e:
                 raise Exception(f"Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.\n{e.args}")
