@@ -3,11 +3,13 @@ import csv, os
 import pickle as pkl
 
 class MonitorDAO(object):
-    """
-    docstring
+    """Funcionalidades DAO voltadas para o módulo de monitoramento. 
+
+    Args:
+        batch_size (int): o tamanho do batch de notícias que será lida do banco de dados para a memória. 
     """
 
-    def __init__(self):
+    def __init__(self, batch_size = 500):
         self._tweet_csv_header = ['name_social_media', 'id_account_social_media', 'screen_name',
                                   'date_creation', 'blue_badge', 'id_post_social_media', 
                                   'parent_id_post_social_media', 'text_post', 'num_likes', 'num_shares', 'datetime_post']
@@ -17,6 +19,7 @@ class MonitorDAO(object):
         self._tweet_pkl_filename = 'tweets.pkl'
         self._tweet_pkl_path = os.path.join("src", "data", self._tweet_pkl_filename)
         self._id_social_media = None
+        self._batch_size = batch_size
 
 
     def insert_posts(self):
@@ -32,8 +35,15 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
-                for post in data:
+                total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
+                batches = self._get_news_batches(total_news_db, db)
+                i = 0
 
+                for batch in batches:
+                    print(f"BATCH {i+1} -> {batch}\n\n")
+                    i = i + 1
+                
+                for post in data:
                     # separa os dados por tabela
                     social_media_data = {k:post[k] for k in list(self._tweet_csv_header[:1])}
                     account_data = {k:post[k] for k in list(self._tweet_csv_header[1:5])}
@@ -89,7 +99,6 @@ class MonitorDAO(object):
 
         except:
             raise
-
 
     def write_in_csv_from_dict(self, data, file_path):
         with open(file_path, mode='a') as f:
@@ -305,6 +314,26 @@ class MonitorDAO(object):
         return 0 if not len(record) else record[0][0]
 
 
+    def _get_news_batches(self, total_news, db):
+        """Retorna um conjunto (batch) de textos de notícias do banco de dados.
+
+        Args:
+            total_news (int): o total de notícias armazenadas no banco de dados;
+            db (DatabaseWrapper): o objeto de conexão com o banco de dados.
+        """
+        offset = 0
+        limit = 0
+
+        while limit <= total_news:
+            offset = limit
+            limit = limit + self._batch_size
+
+            if limit > total_news:
+                limit = total_news
+
+            yield db.query("select text_news from detectenv.news order by datetime_publication desc limit %s offset %s;", (limit, offset,))
+            if limit == total_news: return
+
     def _get_id_news(self, news_data, db):
         """
         Recupera o id da notícia
@@ -323,8 +352,8 @@ class MonitorDAO(object):
             id se já está registrado, 0 caso contrário
         """
 
-        sql_string = "SELECT id_news from detectenv.news where upper(text_news) = upper(%s);"
-        arg = news_data['text_news']
-        record = db.query(sql_string, (arg,))
-        # print('id_news', record)
-        return 0 if not len(record) else record[0][0]
+        # sql_string = "SELECT id_news from detectenv.news where upper(text_news) = upper(%s);"
+        # arg = news_data['text_news']
+        # record = db.query(sql_string, (arg,))
+        # # print('id_news', record)
+        # return 0 if not len(record) else record[0][0]

@@ -1,5 +1,5 @@
-from confia.utils.deduplication import DuplicationAnalyzer
-from confia.orm.dao import DAO
+from src.utils.deduplication import DuplicationAnalyzer
+from src.orm.dao import DAO
 import random
 import time
 

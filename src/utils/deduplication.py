@@ -1,4 +1,4 @@
-from confia.utils.text_preprocessing import TextPreprocessing
+from src.utils.text_preprocessing import TextPreprocessing
 from fuzzywuzzy import fuzz
 
 class DuplicationAnalyzer:
