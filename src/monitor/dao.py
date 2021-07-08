@@ -1,4 +1,5 @@
 from src.orm.db_wrapper import DatabaseWrapper
+from src.utils.text_preprocessing import TextPreprocessing
 import csv, os
 import pickle as pkl
 
@@ -20,6 +21,8 @@ class MonitorDAO(object):
         self._tweet_pkl_path = os.path.join("src", "data", self._tweet_pkl_filename)
         self._id_social_media = None
         self._batch_size = batch_size
+        self._cleaned_news_path = os.path.join('src', 'data', 'news_cleaned.txt')
+        self._text_processor = TextPreprocessing()
 
 
     def insert_posts(self):
@@ -35,13 +38,11 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
-                total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
+                total_news_db = db.query("select count(*) from detectenv.news;")[0][0]                    
                 batches = self._get_news_batches(total_news_db, db)
-                i = 0
 
                 for batch in batches:
-                    print(f"BATCH {i+1} -> {batch}\n\n")
-                    i = i + 1
+                    self._write_cleaned_news_batches(batch)
                 
                 for post in data:
                     # separa os dados por tabela
@@ -310,8 +311,19 @@ class MonitorDAO(object):
         sql_string = "SELECT id_social_media from detectenv.social_media where upper(name_social_media) = upper(%s);"
         arg = sm_data['name_social_media']
         record = db.query(sql_string, (arg,))
-        # print('id_social_media', record)
+
         return 0 if not len(record) else record[0][0]
+
+    def _write_cleaned_news_batches(self, batch):
+        file_path = os.path.join('src', 'data', 'news_cleaned.txt')
+        try:
+            with open(file_path, 'a+') as file:
+                for message in batch:
+                    message_cleaned = self._text_processor.text_cleaning(message[0])
+                    file.write(message_cleaned + '\n')
+
+        except Exception as e:
+            raise Exception("Ocorreu um erro ao salvar as notícias em arquivo.\n", e.args)
 
 
     def _get_news_batches(self, total_news, db):
@@ -323,15 +335,23 @@ class MonitorDAO(object):
         """
         offset = 0
         limit = 0
+        write_total_news = True
 
         while limit <= total_news:
-            offset = limit
-            limit = limit + self._batch_size
+            
+            if write_total_news == True:
+                write_total_news = False
+                yield [[str(total_news)]] # coloca a quantidade de notícias no início do arquivo.
 
-            if limit > total_news:
-                limit = total_news
+            else:
+                offset = limit
+                limit = limit + self._batch_size
 
-            yield db.query("select text_news from detectenv.news order by datetime_publication desc limit %s offset %s;", (limit, offset,))
+                if limit > total_news:
+                    limit = total_news
+
+                yield db.query("select text_news from detectenv.news order by datetime_publication desc limit %s offset %s;", (limit, offset,))
+            
             if limit == total_news: return
 
     def _get_id_news(self, news_data, db):
