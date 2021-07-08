@@ -39,11 +39,7 @@ class TextPreprocessing:
         text_cleaned = re.sub(r" #\w+\b(?!\s+\w+)", '', text_cleaned, flags=re.MULTILINE)
         text_cleaned = text_cleaned.replace('#', '')
         text_cleaned = re.sub("(@[A-Za-z0-9_]+)", "", text_cleaned, flags=re.MULTILINE)
-        # text_cleaned = "".join([char.lower() for char in text_cleaned if char not in self.__stopwords])
         text_cleaned = re.sub('\s+', ' ', text_cleaned).strip()
-
-        # remove dígitos
-        # tweet = re.sub(r"\d", "", tweet)
         return text_cleaned.lower()
 
     def translate(self, tweet):
