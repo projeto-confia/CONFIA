@@ -52,19 +52,18 @@ class MonitorDAO(object):
                         for batch in batches:
                             self._write_cleaned_news_batches(batch, file)
 
-                        # atualiza a quantidade de notícias salvas no BD no arquivo.
-                        try:
-                            with open(file_path, 'a+') as file_updated:
-                                file.seek(initial_pos)
-                                file.readline()
-                                file_updated.write(str(total_news_db))
-                                shutil.copyfileobj(file, file_updated)
-
-                        except Exception as e:
-                            raise Exception("Ocorreu um erro ao atualizar a quantidade de notícias no arquivo.", e.args)
-
                 except Exception as e:
                     raise Exception("Ocorreu um erro ao salvar as notícias em arquivo.", e.args)
+
+                # atualiza o número de notícias presentes no arquivo
+                source_fp = open(file_path, 'r')
+                target_fp = open(file_path, 'w')
+                first_row = True
+                for row in source_fp:
+                    if first_row:
+                        row = str(total_news_db)
+                        first_row = False
+                    target_fp.write(row + os.linesep)
                 
                 for post in data:
                     # separa os dados por tabela
