@@ -10,7 +10,6 @@ import re
 import string
 import re
 
-
 class TextPreprocessing:
 
     def __init__(self, threshold = 70, install_nltk_packages=False):
@@ -43,6 +42,7 @@ class TextPreprocessing:
         text_cleaned = re.sub("(@[A-Za-z0-9_]+)", "", text_cleaned, flags=re.MULTILINE)
         text_cleaned = re.sub('\s+', ' ', text_cleaned).strip()
         text_cleaned = re.sub(emoji.get_emoji_regexp(), r"", text_cleaned)
+        text_cleaned = text_cleaned.replace('\n', ' ')
         
         return text_cleaned.lower()
 

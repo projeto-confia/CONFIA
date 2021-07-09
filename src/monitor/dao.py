@@ -38,32 +38,7 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
-                try:
-                    file_path = os.path.join('src', 'data', 'news_cleaned.txt')
-                    
-                    with open(file_path, 'a+') as file:
-                        initial_pos = file.tell()
-                        old_total_news_db = 0 if file.readline() == '' else int(file.readline())
-                        file.seek(initial_pos)
-
-                        total_news_db = db.query("select count(*) from detectenv.news;")[0][0]                    
-                        batches = self._get_news_batches(total_news_db, old_total_news_db, db)
-
-                        for batch in batches:
-                            self._write_cleaned_news_batches(batch, file)
-
-                except Exception as e:
-                    raise Exception("Ocorreu um erro ao salvar as notícias em arquivo.", e.args)
-
-                # atualiza o número de notícias presentes no arquivo
-                source_fp = open(file_path, 'r')
-                target_fp = open(file_path, 'w')
-                first_row = True
-                for row in source_fp:
-                    if first_row:
-                        row = str(total_news_db)
-                        first_row = False
-                    target_fp.write(row + os.linesep)
+                total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
                 
                 for post in data:
                     # separa os dados por tabela
@@ -115,6 +90,8 @@ class MonitorDAO(object):
                                         post_data,
                                         'id_post',
                                         db)
+                
+                self._save_news_cleaned_file(db, total_news_db, os.path.join('src', 'data', 'news_cleaned.txt'))
 
             # deleta o arquivo csv ou registra no log (e-mail) caso negativo
             os.remove(self._tweet_csv_path)
@@ -335,40 +312,28 @@ class MonitorDAO(object):
 
         return 0 if not len(record) else record[0][0]
 
-    def _write_cleaned_news_batches(self, batch, file_obj):
-        for message in batch:
-            message_cleaned = self._text_processor.text_cleaning(message[0])
-            file_obj.write(message_cleaned + '\n')
 
-
-    def _get_news_batches(self, total_news, old_total_news, db):
-        """Retorna um conjunto (batch) de textos de notícias do banco de dados.
+    def _save_news_cleaned_file(self, db, total_news_db, file_path):
+        """Limpa e salva as notícias armazenadas no banco de dados em um arquivo texto.
 
         Args:
-            total_news (int): o total de notícias atualmente armazenadas no banco de dados;
-            old_total_news (int): o último total de notícias registrado no arquivo;
-            db (DatabaseWrapper): o objeto de conexão com o banco de dados.
+            db (DatabaseWrapper): instância do banco de dados.
+            file_path (string): o caminho do arquivo que armazenará as notícias processadas.
         """
-        offset = old_total_news
-        limit = old_total_news
-        write_total_news = True
-
-        while limit <= total_news:
-            
-            if write_total_news == True:
-                write_total_news = False
-                yield [[str(total_news)]] # coloca a quantidade de notícias no início do arquivo.
-
+        try:
+            if os.path.exists(file_path):     
+                current_news_db = db.query("select count(*) from detectenv.news;")[0][0]       
+                news = db.query("select text_news from detectenv.news offset %s;", (total_news_db,))
             else:
-                offset = limit
-                limit = limit + self._batch_size
-
-                if limit > total_news:
-                    limit = total_news
-
-                yield db.query("select text_news from detectenv.news order by datetime_publication desc limit %s offset %s;", (limit, offset,))
+                news = db.query("select text_news from detectenv.news order by datetime_publication desc;")
             
-            if limit == total_news: return
+            with open(file_path, 'a+') as file:
+                for message in news:
+                    message_cleaned = self._text_processor.text_cleaning(message[0])
+                    file.write(message_cleaned + '\n')
+        
+        except Exception as e:
+            raise Exception("Ocorreu um erro ao salvar as notícias no arquivo de texto.", e.args)
 
     def _get_id_news(self, news_data, db):
         """
