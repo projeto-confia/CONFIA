@@ -1,6 +1,6 @@
 from src.orm.db_wrapper import DatabaseWrapper
 from src.utils.text_preprocessing import TextPreprocessing
-import csv, os
+import csv, os, shutil
 import pickle as pkl
 
 class MonitorDAO(object):
@@ -38,11 +38,33 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
-                total_news_db = db.query("select count(*) from detectenv.news;")[0][0]                    
-                batches = self._get_news_batches(total_news_db, db)
+                try:
+                    file_path = os.path.join('src', 'data', 'news_cleaned.txt')
+                    
+                    with open(file_path, 'a+') as file:
+                        initial_pos = file.tell()
+                        old_total_news_db = 0 if file.readline() == '' else int(file.readline())
+                        file.seek(initial_pos)
 
-                for batch in batches:
-                    self._write_cleaned_news_batches(batch)
+                        total_news_db = db.query("select count(*) from detectenv.news;")[0][0]                    
+                        batches = self._get_news_batches(total_news_db, old_total_news_db, db)
+
+                        for batch in batches:
+                            self._write_cleaned_news_batches(batch, file)
+
+                        # atualiza a quantidade de notícias salvas no BD no arquivo.
+                        try:
+                            with open(file_path, 'a+') as file_updated:
+                                file.seek(initial_pos)
+                                file.readline()
+                                file_updated.write(str(total_news_db))
+                                shutil.copyfileobj(file, file_updated)
+
+                        except Exception as e:
+                            raise Exception("Ocorreu um erro ao atualizar a quantidade de notícias no arquivo.", e.args)
+
+                except Exception as e:
+                    raise Exception("Ocorreu um erro ao salvar as notícias em arquivo.", e.args)
                 
                 for post in data:
                     # separa os dados por tabela
@@ -314,27 +336,22 @@ class MonitorDAO(object):
 
         return 0 if not len(record) else record[0][0]
 
-    def _write_cleaned_news_batches(self, batch):
-        file_path = os.path.join('src', 'data', 'news_cleaned.txt')
-        try:
-            with open(file_path, 'a+') as file:
-                for message in batch:
-                    message_cleaned = self._text_processor.text_cleaning(message[0])
-                    file.write(message_cleaned + '\n')
-
-        except Exception as e:
-            raise Exception("Ocorreu um erro ao salvar as notícias em arquivo.\n", e.args)
+    def _write_cleaned_news_batches(self, batch, file_obj):
+        for message in batch:
+            message_cleaned = self._text_processor.text_cleaning(message[0])
+            file_obj.write(message_cleaned + '\n')
 
 
-    def _get_news_batches(self, total_news, db):
+    def _get_news_batches(self, total_news, old_total_news, db):
         """Retorna um conjunto (batch) de textos de notícias do banco de dados.
 
         Args:
-            total_news (int): o total de notícias armazenadas no banco de dados;
+            total_news (int): o total de notícias atualmente armazenadas no banco de dados;
+            old_total_news (int): o último total de notícias registrado no arquivo;
             db (DatabaseWrapper): o objeto de conexão com o banco de dados.
         """
-        offset = 0
-        limit = 0
+        offset = old_total_news
+        limit = old_total_news
         write_total_news = True
 
         while limit <= total_news:
