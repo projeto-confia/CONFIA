@@ -317,12 +317,12 @@ class MonitorDAO(object):
         """Limpa e salva as notícias armazenadas no banco de dados em um arquivo texto.
 
         Args:
-            db (DatabaseWrapper): instância do banco de dados.
+            db (DatabaseWrapper): instância do banco de dados;
+            total_new_db (int): o total de notícias armazenadas no banco de dados antes do streaming;
             file_path (string): o caminho do arquivo que armazenará as notícias processadas.
         """
         try:
             if os.path.exists(file_path):     
-                current_news_db = db.query("select count(*) from detectenv.news;")[0][0]       
                 news = db.query("select text_news from detectenv.news offset %s;", (total_news_db,))
             else:
                 news = db.query("select text_news from detectenv.news order by datetime_publication desc;")
