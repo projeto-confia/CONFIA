@@ -14,7 +14,6 @@ class FactCheckManager(object):
         
     def run(self):
         self.process_agency_feed()
-        self.persist_data()
     
     
     def process_agency_feed(self):
@@ -35,7 +34,3 @@ class FactCheckManager(object):
         # update filtered records into database
         self._logger.info('Updating data...')
         self._dao.update_checked_news_in_db(fakenews_ids)
-        
-    
-    def persist_data(self):
-        self._logger.info('Persisting data...')
