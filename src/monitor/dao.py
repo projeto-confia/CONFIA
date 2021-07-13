@@ -1,5 +1,8 @@
+import itertools
+from operator import ne
 from src.orm.db_wrapper import DatabaseWrapper
 from src.utils.text_preprocessing import TextPreprocessing
+from concurrent import futures
 import multiprocessing as mp
 import csv, os, math
 import pickle as pkl
@@ -42,9 +45,6 @@ class MonitorDAO(object):
         try:
             with DatabaseWrapper() as db:
                 total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
-
-
-                quit()
                 
                 for post in data:
                     # separa os dados por tabela
@@ -78,6 +78,12 @@ class MonitorDAO(object):
                                                                       'id_social_media_account',
                                                                       db)
 
+                    # pool = mp.Pool(mp.cpu_count)
+                    # jobs = []
+
+                    # for batch in self._get_indices_batches_news_file(total_news_db):
+                    #     pass
+
                     # consulta se a notícia já possui registro no banco
                     id_news = self._is_news_in_db(news_data, db)
                     if not id_news:
@@ -104,6 +110,35 @@ class MonitorDAO(object):
 
         except:
             raise
+
+    def _is_news_in_db(self, news_data, batch):
+        """
+        Verifica se a notícia em 'news_data' já está presente no banco de dados.
+
+        Parâmetros
+        -----------
+        news_data: dict
+            Dicionário contendo os dados da notícia
+
+        batch: list
+            Lista com os índices das linhas das noticías tratadas e armazenadas no arquivo de texto.
+
+        Retorno
+        ----------
+        id: int
+            id se já está registrado, -1 caso contrário.
+        """
+
+        news_data_cleaned = self._text_processor.text_cleaning(news_data["text_news"])
+        results = []
+
+        with open(self._cleaned_news_path) as file:
+            results = [self._text_processor.check_duplications(news_data_cleaned, news) for news in list(itertools.islice(file, batch[0], batch[1]))]
+        try:
+            return results.index(True) + batch[0]
+        except ValueError:
+            return -1
+
 
     def write_in_csv_from_dict(self, data, file_path):
         with open(file_path, mode='a') as f:
@@ -142,6 +177,7 @@ class MonitorDAO(object):
     
     
     def insert_posts_from_pkl(self):
+        
         """Carrega o arquivo pickle e persiste os dados no banco
         """
         
@@ -153,10 +189,19 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
+
+                total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
+
+                for batch in self._get_indices_batches_news_file(total_news_db):
+                    news_data = {'text_news': "dinamarca vai desenterrar milhões de visons abatidos por mutação da covid19"}
+                    print(self._is_news_in_db(news_data, batch))
+                quit()
+
                 for tweet in data:
                     news_data = {'text_news': tweet['text_post'],
                                  'datetime_publication': tweet['datetime_post'],
-                                 'ground_truth_label': False}
+                                 'ground_truth_label': False}                  
+
                     # consulta se a notícia já possui registro no banco
                     id_news = self._is_news_in_db(news_data, db)
                     if not id_news:
@@ -165,6 +210,7 @@ class MonitorDAO(object):
                                                       news_data,
                                                       'id_news',
                                                       db)
+
                     # insere o tweet
                     tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
                     tweet['id_news'] = id_news
@@ -341,33 +387,6 @@ class MonitorDAO(object):
         except Exception as e:
             raise Exception("Ocorreu um erro ao salvar as notícias no arquivo de texto.", e.args)
 
-    def _is_news_in_db(self, news_data, batch_indices):
-        """
-        Verifica se a notícia em 'news_data' já está presente no banco de dados.
-
-        Parâmetros
-        -----------
-        news_data: dict
-            Dicionário contendo os dados da notícia
-
-        batch_indices: list
-            Lista com os índices das linhas das noticías tratadas e armazenadas no arquivo de texto.
-
-        Retorno
-        ----------
-        id: int
-            id se já está registrado, 0 caso contrário.
-        """
-        pass
-
-    def _read_news_file_in_parallel(self):
-        # https://www.blopig.com/blog/2016/08/processing-large-files-using-python/
-        # https://stackoverflow.com/questions/19086106/how-to-utilize-all-cores-with-python-multiprocessing
-        # https://stackoverflow.com/questions/37245402/how-can-i-read-lines-in-a-interval-in-python
-
-
-        pass
-
         # sql_string = "SELECT id_news from detectenv.news where upper(text_news) = upper(%s);"
         # arg = news_data['text_news']
         # record = db.query(sql_string, (arg,))
@@ -383,7 +402,7 @@ class MonitorDAO(object):
         Yields:
             list: uma lista contendo os índices pertencentes ao intervalo (batch).
         """
-        intervals = np.linspace(1, total_news_db, num=math.ceil(total_news_db/self._batch_size), dtype=int)
+        intervals = np.linspace(0, total_news_db-1, num=math.ceil(total_news_db/self._batch_size), dtype=int)
 
         for i in range(len(intervals)-1):
             yield [intervals[i], intervals[i+1]-1] if i < len(intervals)-2 else [intervals[i], intervals[i+1]]
