@@ -26,3 +26,24 @@ class FactCheckManagerDAO(object):
         df['Checagem'] = df['Checagem'].str.lower()
         
         return df[df['Checagem'] == 'fake']['Id'].tolist()
+    
+    
+    def update_checked_news_in_db(self, fakenews_ids):
+
+        # TODO: if some id record doesn't exist in the database table, register occurrence in the log
+        
+        try:
+            dt = datetime.now()
+            str_fakenews_ids = ', '.join(map(str, fakenews_ids))
+            args = (dt, True, str_fakenews_ids)
+            
+            sql_string = "UPDATE detectenv.checking_outcome \
+                            SET datetime_outcome = %s, \
+                            is_fake = %s \
+                            WHERE id_news in (%s);"
+
+            with DatabaseWrapper() as db:
+                db.execute(sql_string, args)
+
+        except:
+            raise
