@@ -45,5 +45,7 @@ class FactCheckManagerDAO(object):
             with DatabaseWrapper() as db:
                 db.execute(sql_string, args)
 
+            shutil.move(self.excel_filepath_received, os.path.join(self._excel_filepath_processed, '{}.xlsx'.format(datetime.now())))
+            
         except:
             raise
