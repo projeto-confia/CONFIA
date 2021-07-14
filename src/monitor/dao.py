@@ -16,7 +16,7 @@ class MonitorDAO(object):
         batch_size (int): o tamanho do batch que será lida do arquivo de texto de notícias recuperado do banco de dados para comparação (deduplicação). 
     """
 
-    def __init__(self, batch_size = 128):
+    def __init__(self):
 
         self._tweet_csv_header = ['name_social_media', 'id_account_social_media', 'screen_name',
                                   'date_creation', 'blue_badge', 'id_post_social_media', 
@@ -151,6 +151,8 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
+                total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
+
                 for tweet in data:
                     news_data = {'text_news': tweet['text_post'],
                                  'datetime_publication': tweet['datetime_post'],
@@ -172,11 +174,13 @@ class MonitorDAO(object):
                                         tweet,
                                         'id_post',
                                         db)
+                    
+                    self._save_cleaned_news_in_file(db, total_news_db, os.path.join('src', 'data', 'news_cleaned.txt'))
+
             # deleta o arquivo pickle
             os.remove(self._tweet_pkl_path)
         except:
-            raise
-        
+            raise        
         
     def get_last_media_post(self, id_social_media_account):
         """Recupera o maior datetime de publicação de post
@@ -328,6 +332,8 @@ class MonitorDAO(object):
             file_path (string): o caminho do arquivo que armazenará as notícias processadas.
         """
         try:
+            text_processor = TextPreprocessing()
+
             if os.path.exists(file_path):     
                 news = db.query("select text_news from detectenv.news offset %s;", (total_news_db,))
             else:
@@ -335,11 +341,14 @@ class MonitorDAO(object):
             
             with open(file_path, 'a+') as file:
                 for message in news:
-                    message_cleaned = self._text_processor.text_cleaning(message[0])
+                    message_cleaned = text_processor.text_cleaning(message[0])
                     file.write(message_cleaned + '\n')
         
         except Exception as e:
             raise Exception("Ocorreu um erro ao salvar as notícias no arquivo de texto.", e.args)
+        
+        finally:
+            del text_processor
 
         # sql_string = "SELECT id_news from detectenv.news where upper(text_news) = upper(%s);"
         # arg = news_data['text_news']
@@ -404,12 +413,14 @@ def _is_news_in_db(news_data, batch):
     text_processor = TextPreprocessing()
     news_data_cleaned = text_processor.text_cleaning(news_data["text_news"])
     results = []
-
-    with open(os.path.join('src', 'data', 'news_cleaned.txt')) as file:
-        results = [text_processor.check_duplications(news_data_cleaned, news) for news in list(itertools.islice(file, batch[0], batch[1]))]
-        try:
-            return results.index(True) + batch[0]
-        except ValueError:
-            return -1
-        finally:
-            del text_processor
+    try:
+        with open(os.path.join('src', 'data', 'news_cleaned.txt')) as file:
+            results = [text_processor.check_duplications(news_data_cleaned, news) for news in list(itertools.islice(file, batch[0], batch[1]))]
+            try:
+                return results.index(True) + batch[0]
+            except ValueError:
+                return -1
+            finally:
+                del text_processor
+    except:
+        return -1
