@@ -76,7 +76,7 @@ class MonitorDAO(object):
                                                                       db)
 
                     # consulta se a notícia já possui registro no banco
-                    id_news = read_cleaned_news_file_in_parallel(news_data, db)
+                    id_news = read_cleaned_news_file_in_parallel(news_data, total_news_db)
                     
                     if id_news == -1:
                         # insere a notícia e recupera o id
@@ -162,7 +162,7 @@ class MonitorDAO(object):
                                  'ground_truth_label': False}                  
 
                     # consulta se a notícia já possui registro no banco
-                    id_news = read_cleaned_news_file_in_parallel(news_data, db)
+                    id_news = read_cleaned_news_file_in_parallel(news_data, total_news_db)
                     if id_news == -1:
                         # insere a notícia e recupera o id
                         id_news = self._insert_record('detectenv.news',
@@ -358,18 +358,17 @@ class MonitorDAO(object):
         # # print('id_news', record)
         # return 0 if not len(record) else record[0][0]
 
-def read_cleaned_news_file_in_parallel(news_data, db):
+def read_cleaned_news_file_in_parallel(news_data, total_news_db):
     """Lê o arquivo de notícias processadas recuperadas do BD em paralelo e retorna o índice da notícia deduplicada.
 
     Args:
         news_data (dict): dicionário contendo os dados da notícia oriunda do streaming.
-        db (DatabaseWrapper): objeto de conexão com o banco de dados.
+        total_news_db (int): quantidade atual de notícias no BD.
 
     Returns:
         indice (int): o índice da notícia duplicada no arquivo de texto.
     """
     pool = mp.Pool(mp.cpu_count())
-    total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
     results = []
 
     for batch in _get_indices_batches_news_file(total_news_db, batch_size=128):
