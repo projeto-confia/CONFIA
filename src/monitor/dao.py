@@ -77,6 +77,7 @@ class MonitorDAO(object):
 
                     # consulta se a notícia já possui registro no banco
                     id_news = read_cleaned_news_file_in_parallel(news_data, db)
+                    
                     if id_news == -1:
                         # insere a notícia e recupera o id
                         id_news = self._insert_record('detectenv.news',
@@ -86,9 +87,11 @@ class MonitorDAO(object):
 
                     # insere o post
                     post_data['id_social_media_account'] = id_social_media_account
-                    post_data['id_news'] = id_news
+                    post_data['id_news'] = int(id_news)
+                    
                     if not post_data['parent_id_post_social_media']:
                         post_data['parent_id_post_social_media'] = None
+                    
                     self._insert_record('detectenv.post',
                                         post_data,
                                         'id_post',
@@ -268,7 +271,6 @@ class MonitorDAO(object):
                                                                             cols, 
                                                                             values_placeholder, 
                                                                             returning)
-        # print(sql_string)
         db.execute(sql_string, list(data.values()))
         return db.fetchone()[0]
 
