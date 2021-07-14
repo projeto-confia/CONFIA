@@ -1,5 +1,6 @@
 import itertools
 from operator import ne
+from joblib.parallel import cpu_count
 from src.orm.db_wrapper import DatabaseWrapper
 from src.utils.text_preprocessing import TextPreprocessing
 from concurrent import futures
@@ -26,10 +27,6 @@ class MonitorDAO(object):
         self._tweet_pkl_filename = 'tweets.pkl'
         self._tweet_pkl_path = os.path.join("src", "data", self._tweet_pkl_filename)
         self._id_social_media = None
-        self._batch_size = batch_size
-        self._cleaned_news_path = os.path.join('src', 'data', 'news_cleaned.txt')
-        self._text_processor = TextPreprocessing()
-        mp.Pool()
 
     def insert_posts(self):
         """
@@ -78,15 +75,9 @@ class MonitorDAO(object):
                                                                       'id_social_media_account',
                                                                       db)
 
-                    # pool = mp.Pool(mp.cpu_count)
-                    # jobs = []
-
-                    # for batch in self._get_indices_batches_news_file(total_news_db):
-                    #     pass
-
                     # consulta se a notícia já possui registro no banco
-                    id_news = self._is_news_in_db(news_data, db)
-                    if not id_news:
+                    id_news = read_cleaned_news_file_in_parallel(news_data, db)
+                    if id_news == -1:
                         # insere a notícia e recupera o id
                         id_news = self._insert_record('detectenv.news',
                                                       news_data,
@@ -110,35 +101,6 @@ class MonitorDAO(object):
 
         except:
             raise
-
-    def _is_news_in_db(self, news_data, batch):
-        """
-        Verifica se a notícia em 'news_data' já está presente no banco de dados.
-
-        Parâmetros
-        -----------
-        news_data: dict
-            Dicionário contendo os dados da notícia
-
-        batch: list
-            Lista com os índices das linhas das noticías tratadas e armazenadas no arquivo de texto.
-
-        Retorno
-        ----------
-        id: int
-            id se já está registrado, -1 caso contrário.
-        """
-
-        news_data_cleaned = self._text_processor.text_cleaning(news_data["text_news"])
-        results = []
-
-        with open(self._cleaned_news_path) as file:
-            results = [self._text_processor.check_duplications(news_data_cleaned, news) for news in list(itertools.islice(file, batch[0], batch[1]))]
-        try:
-            return results.index(True) + batch[0]
-        except ValueError:
-            return -1
-
 
     def write_in_csv_from_dict(self, data, file_path):
         with open(file_path, mode='a') as f:
@@ -189,22 +151,14 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
-
-                total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
-
-                for batch in self._get_indices_batches_news_file(total_news_db):
-                    news_data = {'text_news': "dinamarca vai desenterrar milhões de visons abatidos por mutação da covid19"}
-                    print(self._is_news_in_db(news_data, batch))
-                quit()
-
                 for tweet in data:
                     news_data = {'text_news': tweet['text_post'],
                                  'datetime_publication': tweet['datetime_post'],
                                  'ground_truth_label': False}                  
 
                     # consulta se a notícia já possui registro no banco
-                    id_news = self._is_news_in_db(news_data, db)
-                    if not id_news:
+                    id_news = read_cleaned_news_file_in_parallel(news_data, db)
+                    if id_news == -1:
                         # insere a notícia e recupera o id
                         id_news = self._insert_record('detectenv.news',
                                                       news_data,
@@ -377,7 +331,7 @@ class MonitorDAO(object):
             if os.path.exists(file_path):     
                 news = db.query("select text_news from detectenv.news offset %s;", (total_news_db,))
             else:
-                news = db.query("select text_news from detectenv.news order by datetime_publication desc;")
+                news = db.query("select text_news from detectenv.news;")
             
             with open(file_path, 'a+') as file:
                 for message in news:
@@ -392,17 +346,70 @@ class MonitorDAO(object):
         # record = db.query(sql_string, (arg,))
         # # print('id_news', record)
         # return 0 if not len(record) else record[0][0]
-    
-    def _get_indices_batches_news_file(self, total_news_db):
-        """Calcula os índices dos batches que representam as linhas que serão lidas em paralelo do arquivo de notícias.
 
-        Args:
-            total_news_db (int): o número total de notícias presentes no banco de dados.
+def read_cleaned_news_file_in_parallel(news_data, db):
+    """Lê o arquivo de notícias processadas recuperadas do BD em paralelo e retorna o índice da notícia deduplicada.
 
-        Yields:
-            list: uma lista contendo os índices pertencentes ao intervalo (batch).
-        """
-        intervals = np.linspace(0, total_news_db-1, num=math.ceil(total_news_db/self._batch_size), dtype=int)
+    Args:
+        news_data (dict): dicionário contendo os dados da notícia oriunda do streaming.
+        db (DatabaseWrapper): objeto de conexão com o banco de dados.
 
-        for i in range(len(intervals)-1):
-            yield [intervals[i], intervals[i+1]-1] if i < len(intervals)-2 else [intervals[i], intervals[i+1]]
+    Returns:
+        indice (int): o índice da notícia duplicada no arquivo de texto.
+    """
+    pool = mp.Pool(mp.cpu_count())
+    total_news_db = db.query("select count(*) from detectenv.news;")[0][0]
+    results = []
+
+    for batch in _get_indices_batches_news_file(total_news_db, batch_size=128):
+        results.append(pool.apply_async(_is_news_in_db, (news_data, batch,)))
+
+    pool.close()
+    pool.join()
+    return sorted([result.get() for result in results])[-1]
+
+
+def _get_indices_batches_news_file(total_news_db, batch_size = 128):
+    """Calcula os índices dos batches que representam as linhas que serão lidas em paralelo do arquivo de notícias.
+
+    Args:
+        total_news_db (int): o número total de notícias presentes no banco de dados.
+        batch_size (int): o tamanho do batch de notícias.
+
+    Yields:
+        list: uma lista contendo os índices pertencentes ao intervalo (batch).
+    """
+    intervals = np.linspace(0, total_news_db-1, num=math.ceil(total_news_db/batch_size), dtype=int)
+
+    for i in range(len(intervals)-1):
+        yield [intervals[i], intervals[i+1]-1] if i < len(intervals)-2 else [intervals[i], intervals[i+1]]
+
+def _is_news_in_db(news_data, batch):
+    """
+    Verifica se a notícia em 'news_data' já está presente no banco de dados.
+
+    Parâmetros
+    -----------
+    news_data: dict
+        Dicionário contendo os dados da notícia.
+
+    batch: list
+        Lista com os índices das linhas das noticías tratadas e armazenadas no arquivo de texto.
+
+    Retorno
+    ----------
+    results: list
+        id se já está registrado, -1 caso contrário.
+    """
+    text_processor = TextPreprocessing()
+    news_data_cleaned = text_processor.text_cleaning(news_data["text_news"])
+    results = []
+
+    with open(os.path.join('src', 'data', 'news_cleaned.txt')) as file:
+        results = [text_processor.check_duplications(news_data_cleaned, news) for news in list(itertools.islice(file, batch[0], batch[1]))]
+        try:
+            return results.index(True) + batch[0]
+        except ValueError:
+            return -1
+        finally:
+            del text_processor
