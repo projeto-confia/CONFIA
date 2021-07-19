@@ -24,13 +24,13 @@ class FactCheckManager(object):
             return
         
         self._logger.info('Processing feed from agency...')
-        fakenews_ids = self._dao.get_fakenews_ids_from_excel()
+        checked_fakenews = self._dao.get_checked_fakenews_from_excel()
 
         # if has no records, stop process
-        if not fakenews_ids:
+        if not checked_fakenews:
             self._logger.info('No labeled fake news.')
             return
         
         # update filtered records into database
         self._logger.info('Updating data...')
-        self._dao.update_checked_news_in_db(fakenews_ids)
+        self._dao.update_checked_news_in_db(checked_fakenews)
