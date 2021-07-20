@@ -26,11 +26,18 @@ class FactCheckManager(object):
         self._logger.info('Processing feed from agency...')
         checked_fakenews = self._dao.get_checked_fakenews_from_excel()
 
-        # if has no records, stop process
-        if not checked_fakenews:
-            self._logger.info('No labeled fake news.')
-            return
+        # TODO: move dao.shutil.move() method to out of update_checked_news_in_db(). Alter logical test below to:
+        # if checked_fakenews:
+        #     update_checked_news_in_db(checked_fakenews)
+        # 
+        # self._dao.archive_excel_file()  # transfer excel file from received to processed folder, regardless checked_fakenews value.
         
-        # update filtered records into database
-        self._logger.info('Updating data...')
-        self._dao.update_checked_news_in_db(checked_fakenews)
+        if checked_fakenews:
+            # update filtered records into database
+            self._logger.info('Updating data...')
+            self._dao.update_checked_news_in_db(checked_fakenews)
+        else:
+            self._logger.info('No labeled fake news.')
+            
+        self._logger.info('Storing excel file...')
+        self._dao.store_excel_file()
