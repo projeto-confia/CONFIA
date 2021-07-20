@@ -62,8 +62,9 @@ class FactCheckManagerDAO(object):
                     db.execute(sql_string_1, args)
                     
                 db.execute(sql_string_2, (fakenews_ids,))
-                
-            shutil.move(self.excel_filepath_received, os.path.join(self._excel_filepath_processed, '{}.xlsx'.format(datetime.now())))
-            
         except:
             raise
+        
+        
+    def store_excel_file(self):
+        shutil.move(self.excel_filepath_received, os.path.join(self._excel_filepath_processed, '{}.xlsx'.format(datetime.now())))
