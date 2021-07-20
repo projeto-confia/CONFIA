@@ -1,6 +1,6 @@
 from src.engine.engine import Engine
 from src.config import Config as config
-import logging
+import logging, logging.handlers
 
 
 def init_log(verbose=False):
@@ -15,7 +15,16 @@ def init_log(verbose=False):
     file_handler.setFormatter(file_format)
     logger.addHandler(file_handler)
     
-    # TODO: acrescentar handler smtp
+    # smtp handler
+    smtp_handler = logging.handlers.SMTPHandler(mailhost=('smtp.gmail.com', 587),
+                                                fromaddr=config.EMAIL.ACCOUNT,
+                                                toaddrs=config.EMAIL.ACCOUNT,
+                                                subject='Log Alert',
+                                                credentials=(config.EMAIL.ACCOUNT, config.EMAIL.PASSWORD),
+                                                secure=())
+    smtp_handler.setLevel(logging.WARNING)
+    smtp_handler.setFormatter(file_format)
+    logger.addHandler(smtp_handler)
     
     if verbose:
         stream_format = logging.Formatter('%(levelname)s - %(message)s')
