@@ -37,5 +37,5 @@ class Config(object):
 
     # e-mail account
     class EMAIL(object):
-        EMAIL = 'account_name@server.com'
+        ACCOUNT = 'account_name@server.com'
         PASSWORD = 'there_is_no_spoon'
