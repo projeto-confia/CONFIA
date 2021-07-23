@@ -27,6 +27,7 @@ class MonitorDAO(object):
         self._tweet_pkl_filename = 'tweets.pkl'
         self._tweet_pkl_path = os.path.join("src", "data", self._tweet_pkl_filename)
         self._id_social_media = None
+        self._text_processor = TextPreprocessing()
 
     def insert_posts(self):
         """
@@ -274,7 +275,6 @@ class MonitorDAO(object):
         db.execute(sql_string, list(data.values()))
         return db.fetchone()[0]
 
-
     # TODO: refatorar para função genéria _get_id_record
     def _get_id_social_media_account(self, ac_data, db):
         """
@@ -323,40 +323,59 @@ class MonitorDAO(object):
         record = db.query(sql_string, (arg,))
 
         return 0 if not len(record) else record[0][0]
+    
+    def clean_and_save_text_news(self):
+        
+        with DatabaseWrapper() as db:
+            no_cleaned_news = self._get_no_cleaned_text_news(db)
+
+            if no_cleaned_news != False:
+                for news in no_cleaned_news:
+                    news_aux = [news[0], news[1]]
+                    news_aux[1] = self._text_processor.text_cleaning(news[1])
+                    self._update_no_cleaned_news_with_cleaned_text(news_aux, db)
+                return True
+
+            return False
+
+    def _get_no_cleaned_text_news(self, db):
+        sql_string = "select id_news, text_news from detectenv.news where text_news_cleaned is null;"
+        no_cleaned_news = db.query(sql_string)
+        return False if not len(no_cleaned_news) else no_cleaned_news
+
+    def _update_no_cleaned_news_with_cleaned_text(self, news, db):
+        sql_string = "update detectenv.news set text_news_cleaned = %s where id_news = %s;"
+        db.execute(sql_string, (news[1], news[0],))
+        db.commit()
 
 
-    def _save_cleaned_news_in_file(self, db, total_news_db, file_path):
-        """Limpa e salva as notícias armazenadas no banco de dados em um arquivo texto.
+    # def _save_cleaned_news_in_file(self, db, total_news_db, file_path):
+    #     """Limpa e salva as notícias armazenadas no banco de dados em um arquivo texto.
 
-        Args:
-            db (DatabaseWrapper): instância do banco de dados;
-            total_new_db (int): o total de notícias armazenadas no banco de dados antes do streaming;
-            file_path (string): o caminho do arquivo que armazenará as notícias processadas.
-        """
-        try:
-            text_processor = TextPreprocessing()
+    #     Args:
+    #         db (DatabaseWrapper): instância do banco de dados;
+    #         total_new_db (int): o total de notícias armazenadas no banco de dados antes do streaming;
+    #         file_path (string): o caminho do arquivo que armazenará as notícias processadas.
+    #     """
+    #     try:
+    #         text_processor = TextPreprocessing()
 
-            if os.path.exists(file_path):     
-                news = db.query("select text_news from detectenv.news offset %s;", (total_news_db,))
-            else:
-                news = db.query("select text_news from detectenv.news;")
+    #         if os.path.exists(file_path):     
+    #             news = db.query("select text_news from detectenv.news offset %s;", (total_news_db,))
+    #         else:
+    #             news = db.query("select text_news from detectenv.news;")
             
-            with open(file_path, 'a+') as file:
-                for message in news:
-                    message_cleaned = text_processor.text_cleaning(message[0])
-                    file.write(message_cleaned + '\n')
+    #         with open(file_path, 'a+') as file:
+    #             for message in news:
+    #                 message_cleaned = text_processor.text_cleaning(message[0])
+    #                 file.write(message_cleaned + '\n')
         
-        except Exception as e:
-            raise Exception("Ocorreu um erro ao salvar as notícias no arquivo de texto.", e.args)
+    #     except Exception as e:
+    #         raise Exception("Ocorreu um erro ao salvar as notícias no arquivo de texto.", e.args)
         
-        finally:
-            del text_processor
+    #     finally:
+    #         del text_processor
 
-        # sql_string = "SELECT id_news from detectenv.news where upper(text_news) = upper(%s);"
-        # arg = news_data['text_news']
-        # record = db.query(sql_string, (arg,))
-        # # print('id_news', record)
-        # return 0 if not len(record) else record[0][0]
 
 def read_cleaned_news_file_in_parallel(news_data, total_news_db):
     """Lê o arquivo de notícias processadas recuperadas do BD em paralelo e retorna o índice da notícia deduplicada.
@@ -378,7 +397,6 @@ def read_cleaned_news_file_in_parallel(news_data, total_news_db):
     pool.join()
     return sorted([result.get() for result in results])[-1]
 
-
 def _get_indices_batches_news_file(total_news_db, batch_size = 128):
     """Calcula os índices dos batches que representam as linhas que serão lidas em paralelo do arquivo de notícias.
 
@@ -395,6 +413,7 @@ def _get_indices_batches_news_file(total_news_db, batch_size = 128):
         yield [intervals[i], intervals[i+1]-1] if i < len(intervals)-2 else [intervals[i], intervals[i+1]]
 
 def _is_news_in_db(news_data, batch):
+    # MEXER AQUI
     """
     Verifica se a notícia em 'news_data' já está presente no banco de dados.
 
