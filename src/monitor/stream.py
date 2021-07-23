@@ -173,10 +173,10 @@ class TwitterStream(StreamInterface):
     
     def process_data(self):
         """
-        docstring
+        Limpa as notícias capturadas via streaming e persiste os textos processados na coluna 'text_news_cleaned' da tabela 'detectenv.news'.
         """
         self._logger.info("Tratando notícias capturadas via streaming...")
-        
+
         if self._dao.clean_and_save_text_news():
             self._logger.info("Notícias capturadas via streaming tratadas com sucesso.")  
         else:
@@ -224,8 +224,7 @@ class TwitterAPI(object):
         self._logger.info('Persisting data')
         self._persist_data()
             
-        # TODO: implementar e chamar método disconnect()
-            
+        # TODO: implementar e chamar método disconnect()            
         
     def _connect(self):
         if not self._api:
