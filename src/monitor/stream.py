@@ -9,6 +9,7 @@ import src.monitor.authconfig as cfg
 from src.config import Config as config
 from src.monitor.dao import MonitorDAO
 from unicodedata import normalize
+from src.apis.twitter import TwitterAPI
 
 
 class StreamInterface(metaclass=abc.ABCMeta):
@@ -186,17 +187,16 @@ class TwitterStream(StreamInterface):
         self._dao.insert_posts()
 
 
-class TwitterAPI(object):
+class TwitterMediaCollector(object):
     
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._tokens = cfg.tokens
         self._search_tags = config.MONITOR.SEARCH_TAGS
-        self._api = None
+        self._twitter_api = TwitterAPI()
         self._dao = MonitorDAO()
         self._name_social_media = 'twitter'
         self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
-        self._logger.info("Twitter API initialized")
+        self._logger.info("Twitter Media Collector initialized")
 
     
     def run(self):
@@ -207,15 +207,13 @@ class TwitterAPI(object):
         regex_string = '|'.join(tags)
         pattern = re.compile(regex_string)
         
-        self._connect()
-        
         for id_social_media_account, screen_name, _, initial_load in self._media_accounts:
             if not initial_load:
                 self._logger.info('Updating data from {}'.format(screen_name))
                 self._update_data(id_social_media_account, screen_name, pattern)
             else:
                 self._logger.info('Fetching data from {}'.format(screen_name))
-                self._fetch_data(id_social_media_account, screen_name, pattern, items=1000)  # TODO: parametrizar a qtd items?
+                self._fetch_data(id_social_media_account, screen_name, pattern, limit=1000)  # TODO: parametrizar limit?
         
         self._logger.info('Persisting data')
         self._persist_data()
@@ -223,31 +221,15 @@ class TwitterAPI(object):
         # TODO: implementar e chamar método disconnect()
             
         
-    def _connect(self):
-        if not self._api:
-            try:
-                auth = tweepy.OAuthHandler(self._tokens['consumer_key'], self._tokens['consumer_secret'])
-                auth.set_access_token(self._tokens['access_token'], self._tokens['access_token_secret'])
-                self._api = tweepy.API(auth)
-            except:
-                self._logger.error('Unable to connect to Twitter API.')
-                raise
-            
-    
-    # TODO: implementar
-    def _disconnect(self):
-        pass
-
-
-    def _fetch_data(self, id_social_media_account, screen_name, pattern, items=0, datetime_limit=None):
+    def _fetch_data(self, id_social_media_account, screen_name, pattern, limit=0, datetime_limit=None):
         """Recupera tweets da timeline da media e armazena em arquivo
 
         Args:
             id_social_media_account (int): Id da conta da media na rede social
             screen_name (str): Screen name da conta na rede social
             pattern (re.Pattern): Objeto Pattern do módulo re
-            items (int, optional): Quantidade de posts a serem recuperados. \
-                Se 0 for passado, todos os posts serão recuperados. \
+            limit (int, optional): Quantidade de posts a serem recuperados. \
+                Se 0 for passado, serão recuperados os 20 posts mais recentes. \
                 Defaults to 0.
             datetime_limit (datetime, optional): Datetime limite do post que deve \
                 ser recuperado. Defaults to None.
@@ -255,9 +237,7 @@ class TwitterAPI(object):
         
         try:
             tweets = list()
-            for status in tweepy.Cursor(self._api.user_timeline, 
-                                        id=screen_name, 
-                                        tweet_mode='extended').items(items):
+            for status in self._twitter_api.fetch_timeline(screen_name=screen_name, limit=limit):
                 tweet = self._process_status(status, id_social_media_account)
                 text_post = self._normalize_text(tweet['text_post']).lower()
                 if datetime_limit and tweet['datetime_post'] <= datetime_limit:
