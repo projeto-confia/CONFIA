@@ -88,5 +88,7 @@ class TextPreprocessing:
 
         Returns:
             bool: retorna 'True' se os textos são semelhantes; falso se não.
+            int: o valor da semelhança entre os dois textos.
         """
-        return fuzz.token_sort_ratio(news1_cleaned, news2_cleaned) >= self._threshold
+        value = fuzz.token_sort_ratio(news1_cleaned, news2_cleaned)
+        return value >= self._threshold, value

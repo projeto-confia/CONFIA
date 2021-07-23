@@ -14,10 +14,10 @@ class MonitorFacade(object):
     def run(self):
         try:
             self._logger.info('Running Monitor...')
-            # TwitterAPI().run()
+            TwitterAPI().run()
             twitter_stream = TwitterStream()
-            # twitter_stream.collect_data()
-            # twitter_stream.persist_data()
+            twitter_stream.collect_data()
+            twitter_stream.persist_data()
             twitter_stream.process_data()
             self._logger.info('Monitor finished.')
         except:
