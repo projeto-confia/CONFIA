@@ -175,8 +175,12 @@ class TwitterStream(StreamInterface):
         """
         docstring
         """
-        pass
-
+        self._logger.info("Tratando notícias capturadas via streaming...")
+        
+        if self._dao.clean_and_save_text_news():
+            self._logger.info("Notícias capturadas via streaming tratadas com sucesso.")  
+        else:
+             self._logger.info("Nenhuma nova notícia para ser tratada.")
     
     def persist_data(self):
         """
