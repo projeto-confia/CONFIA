@@ -1,3 +1,4 @@
+from src.apis import twitter
 from src.interventor.dao import InterventorDAO
 import logging
 from src.config import Config as config
@@ -7,6 +8,7 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from src.apis.twitter import TwitterAPI
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each ACF
@@ -15,6 +17,7 @@ class Interventor(object):
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
+        self._twitter_api = TwitterAPI()
         self._logger.info("Interventor initialized.")
         
         
@@ -56,16 +59,17 @@ class Interventor(object):
         
         row = 0
         for id_news, text_news in candidate_news:
-            if self._is_news_in_fca_data(text_news):
+            is_news_in_fca, fca_url = self._check_news_in_fca_data(text_news)
+            if is_news_in_fca:
+                self._post_alert(text_news, checked=True, checker='Boatos.org', url=fca_url)
                 continue
             row += 1
             self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 0, id_news)
             self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 1, text_news)
-        self._dao.close_workbook()
-        
-        if config.INTERVENTOR.CURATOR:
-            # TODO: changes to SMTP logging
-            self._send_curator_mail()
+        if row > 0:
+            self._dao.close_workbook()
+            if config.INTERVENTOR.CURATOR:
+                self._send_curator_mail()
         
 
     def _send_news_to_agency(self):
@@ -86,16 +90,28 @@ class Interventor(object):
         
             
     # TODO: implementar usando o algoritmo de deduplicação
-    def _is_news_in_fca_data(self, text_news):
-        """Checa se text_news existe na base de dados da ACF
+    def _check_news_in_fca_data(self, text_news):
+        """Check if text_news exists into FCA data
         
         Args:
-            text_news (str): Texto da notícia
+            text_news (str): Text of the news
 
         Returns:
-            bool: True se o texto consta na base de dados, False caso contrário
+            bool: True if text_news exists into FCA data, False otherwise,
+            str: If exists, the referencing url within FCA web page.
         """
-        return False
+        
+        return True, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
+    
+    
+    def _post_alert(self, text_news, checked, checker, url=None):
+        if checked:
+            header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
+        else:
+            header = 'ATENÇÃO: a seguinte notícia foi detectada como suposta fakenews'
+            
+        text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url if url else '')
+        self._twitter_api.tweet(text_tweet)
     
     
     def _send_mail(self, receiver_email):
