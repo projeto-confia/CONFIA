@@ -53,3 +53,7 @@ class TwitterAPI(object):
                 return cursor.pages(limit)
         except:
             raise
+        
+        
+    def tweet(self, text_tweet):
+        self._api.update_status(text_tweet)
