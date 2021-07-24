@@ -78,9 +78,10 @@ class MonitorDAO(object):
                                                                       db)
 
                     # consulta se a notícia já possui registro no banco
-                    id_news = read_cleaned_news_file_in_parallel(news_data, total_news_db)
+                    news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, total_news_db)
+                    print(news_data["text_news"], news_with_biggest_score)
                     
-                    if not id_news:
+                    if not news_with_biggest_score[2]:
                         # insere a notícia e recupera o id
                         id_news = self._insert_record('detectenv.news',
                                                       news_data,
@@ -162,15 +163,16 @@ class MonitorDAO(object):
                                  'ground_truth_label': False}                  
 
                     # consulta se a notícia já possui registro no banco
-                    id_news, value, _ = read_cleaned_news_file_in_parallel(news_data, total_news_db)
-                    if not id_news:
+                    news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, total_news_db)
+                    
+                    if not news_with_biggest_score[2]:
                         # insere a notícia e recupera o id
                         id_news = self._insert_record('detectenv.news',
                                                       news_data,
                                                       'id_news',
                                                       db)
                     else:
-                        print(f"Notícia {news_data['text_news']} similar a noticia {id_news} no BD com valor de {value}.")
+                        print(f"Notícia {news_data['text_news']} similar à noticia {id_news} no BD com valor de {news_with_biggest_score[1]}.")
 
                     # insere o tweet
                     tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
@@ -347,7 +349,7 @@ class MonitorDAO(object):
         db.execute(sql_string, (news[1], news[0],))
         db.commit()
 
-def read_cleaned_news_file_in_parallel(news_data, total_news_db):
+def read_cleaned_news_db_in_parallel(news_data, total_news_db):
     """Lê o arquivo de notícias processadas recuperadas do BD em paralelo e retorna o índice da notícia deduplicada.
 
     Args:
@@ -366,8 +368,7 @@ def read_cleaned_news_file_in_parallel(news_data, total_news_db):
     pool.close()
     pool.join()
     
-    ans = sorted([result.get() for result in results], key=itemgetter(1))[-1]
-    return False if not ans[2] else ans
+    return sorted([result.get() for result in results], key=itemgetter(1))[-1]
 
 def _get_indices_batches_news_db(total_news_db, batch_size = 128):
     """Calcula os índices dos batches que representam as notícias da tabela 'detectenv.news'.
