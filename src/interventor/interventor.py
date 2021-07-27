@@ -1,13 +1,10 @@
+from email.mime import text
 from src.interventor.dao import InterventorDAO
 import logging
 from src.config import Config as config
 from datetime import datetime
-import smtplib, ssl
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from src.apis.twitter import TwitterAPI
+from src.utils.email import EmailAPI
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each ACF
@@ -17,6 +14,7 @@ class Interventor(object):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
         self._twitter_api = TwitterAPI()
+        self._email_api = EmailAPI()
         self._logger.info("Interventor initialized.")
         
         
@@ -76,9 +74,8 @@ class Interventor(object):
             self._logger.info('There were no news selected to send.')
             return
         
-        # TODO: criar módulo python para envio e leitura de e-mail
         self._logger.info("Sending selected news to agency...")
-        self._send_mail(self._dao.get_email_from_agency('boatos.org'))
+        self._send_request_mail_to_acf(self._dao.get_email_from_agency('boatos.org'))
         
         # Registro no banco de dados
         self._logger.info('Persisting sent data...')
@@ -100,7 +97,8 @@ class Interventor(object):
             str: If exists, the referencing url within FCA web page.
         """
         
-        return True, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
+        # return True, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
+        return False, None
     
     
     def _post_alert(self, text_news, checked, checker, url=None):
@@ -113,73 +111,21 @@ class Interventor(object):
         self._twitter_api.tweet(text_tweet)
     
     
-    def _send_mail(self, receiver_email):
+    def _send_request_mail_to_acf(self, acf_email):
         
-        port = 465  # For SSL
-        smtp_server = "smtp.gmail.com"
+        text_subject  = 'Supostas fakenews'
         
-        subject = "[PROJETO CONFIA] - supostas fakes news"
-        body = "Este é um e-mail automático enviado pelo ambiente AUTOMATA."
-
-        # Create a multipart message and set headers
-        message = MIMEMultipart()
-        message["From"] = config.EMAIL.ACCOUNT
-        message["To"] = receiver_email
-        message["Subject"] = subject
-        # message["Bcc"] = receiver_email  # Recommended for mass emails
-
-        # Add body to email
-        message.attach(MIMEText(body, "plain"))
-
-        filename = self._dao.excel_filepath_to_send  # In same directory as script
-
-        # Open file in binary mode
-        with open(filename, "rb") as attachment:
-            # Add file as application/octet-stream
-            # Email client can usually download this automatically as attachment
-            part = MIMEBase("application", "octet-stream")
-            part.set_payload(attachment.read())
-
-        # Encode file in ASCII characters to send by email    
-        encoders.encode_base64(part)
-
-        # Add header as key/value pair to attachment part
-        part.add_header(
-            "Content-Disposition",
-            f"attachment; filename= {filename}",
-        )
-
-        # Add attachment to message and convert message to string
-        message.attach(part)
-        text = message.as_string()
-
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-            server.login(config.EMAIL.ACCOUNT, config.EMAIL.PASSWORD)
-            server.sendmail(config.EMAIL.ACCOUNT, receiver_email, text)
+        text_message  = 'Olá colaborador,\n\n'
+        text_message += 'Anexo encontra-se o arquivo Excel com as notícias detectadas pelo AUTOMATA como supostas fakenews.\n\n'
+        text_message += 'Agradecemos desde já por sua participação.'
+        
+        self._email_api.send(to_list=[acf_email], 
+                             text_subject=text_subject, 
+                             text_message=text_message, 
+                             attach_list=[self._dao.excel_filepath_to_send])
 
 
     def _send_curator_mail(self):
         
-        port = 465  # For SSL
-        smtp_server = "smtp.gmail.com"
-        
-        subject = "[PROJETO CONFIA] - has news to be curated"
-        body = "Este é um e-mail automático enviado pelo ambiente AUTOMATA."
-
-        # Create a multipart message and set headers
-        message = MIMEMultipart()
-        message["From"] = config.EMAIL.ACCOUNT
-        message["To"] = config.EMAIL.ACCOUNT
-        message["Subject"] = subject
-        # message["Bcc"] = receiver_email  # Recommended for mass emails
-
-        # Add body to email
-        message.attach(MIMEText(body, "plain"))
-
-        text = message.as_string()
-
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-            server.login(config.EMAIL.ACCOUNT, config.EMAIL.PASSWORD)
-            server.sendmail(config.EMAIL.ACCOUNT, config.EMAIL.ACCOUNT, text)
+        self._email_api.send(to_list=[config.EMAIL.ACCOUNT],
+                             text_subject='Has news to be curated.')
