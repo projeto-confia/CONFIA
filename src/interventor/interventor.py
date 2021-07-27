@@ -1,4 +1,3 @@
-from src.apis import twitter
 from src.interventor.dao import InterventorDAO
 import logging
 from src.config import Config as config
