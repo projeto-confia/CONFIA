@@ -16,6 +16,16 @@ class EmailAPI(object):
         
         
     def send(self, to_list, text_subject, text_message=None, attach_list=None, cc_list=None, bcc_list=None):
+        """Sends an email using gmail account
+
+        Args:
+            to_list (list): list of recipients
+            text_subject (str): text to be added to email subject field
+            text_message (str, optional): text to be added to email body. Defaults to None.
+            attach_list (list, optional): list of path to files to be attached. Defaults to None.
+            cc_list (list, optional): list of Carbon Copy recipients. Defaults to None.
+            bcc_list (list, optional): list of Blind Carbon Copy recipients. Defaults to None.
+        """
         
         subject = '[PROJETO CONFIA] - '
         subject += text_subject
