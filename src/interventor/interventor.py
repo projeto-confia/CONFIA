@@ -58,7 +58,9 @@ class Interventor(object):
         for id_news, text_news in candidate_news:
             is_news_in_fca, fca_url = self._check_news_in_fca_data(text_news)
             if is_news_in_fca:
-                self._post_alert(text_news, checked=True, checker='Boatos.org', url=fca_url)
+                if config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
+                    # TODO: build method to register current news as fake in database
+                    self._post_alert(text_news, checked=True, checker='Boatos.org', url=fca_url)
                 continue
             row += 1
             self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 0, id_news)
@@ -97,11 +99,12 @@ class Interventor(object):
             str: If exists, the referencing url within FCA web page.
         """
         
-        # return True, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
-        return False, None
+        return True, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
+        # return False, None
     
     
     def _post_alert(self, text_news, checked, checker, url=None):
+        self._logger.info('Posting alert on social media...')
         if checked:
             header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
         else:
