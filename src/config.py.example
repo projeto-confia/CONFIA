@@ -34,6 +34,7 @@ class Config(object):
         PROB_CLASSIF_THRESHOLD = 0.9
         NUM_NEWS_TO_SELECT = 4
         CURATOR = True
+        SOCIAL_MEDIA_ALERT_ACTIVATE = False
 
     # e-mail account
     class EMAIL(object):
