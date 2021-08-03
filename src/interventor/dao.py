@@ -133,3 +133,22 @@ class InterventorDAO(object):
             return record[0][0]
         except:
             raise
+
+
+    def register_fca_similar_news(self, id_news, id_news_checked):
+        
+        sql_string_1 = "INSERT INTO detectenv.similarity_checking_outcome \
+                        (id_news, id_news_checked) \
+                        VALUES (%s,%s);"
+                        
+        sql_string_2 = "UPDATE detectenv.news \
+                        SET ground_truth_label = true \
+                        WHERE id_news = %s;"
+
+        
+        try:
+            with DatabaseWrapper() as db:
+                db.execute(sql_string_1, (id_news, id_news_checked))
+                db.execute(sql_string_2, (id_news, ))
+        except:
+            raise

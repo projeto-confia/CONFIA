@@ -1,4 +1,4 @@
-from src.monitor.stream import TwitterAPI, TwitterStream
+from src.monitor.stream import TwitterMediaCollector, TwitterStream
 import logging
 from src.config import Config as config
 
@@ -14,7 +14,7 @@ class MonitorFacade(object):
     def run(self):
         try:
             self._logger.info('Running Monitor...')
-            TwitterAPI().run()
+            TwitterMediaCollector().run()
             twitter_stream = TwitterStream()
             twitter_stream.collect_data()
             twitter_stream.persist_data()
