@@ -56,10 +56,10 @@ class Interventor(object):
         
         row = 0
         for id_news, text_news in candidate_news:
-            is_news_in_fca, fca_url = self._check_news_in_fca_data(text_news)
-            if is_news_in_fca:
+            id_news_checked, fca_url = self._check_news_in_fca_data(text_news)
+            if id_news_checked:
+                self._dao.register_fca_similar_news(id_news, id_news_checked)
                 if config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
-                    # TODO: build method to register current news as fake in database
                     self._post_alert(text_news, checked=True, checker='Boatos.org', url=fca_url)
                 continue
             row += 1
@@ -95,12 +95,12 @@ class Interventor(object):
             text_news (str): Text of the news
 
         Returns:
-            bool: True if text_news exists into FCA data, False otherwise,
-            str: If exists, the referencing url within FCA web page.
+            int: id_news_checked if text_news exists into FCA data, 0 otherwise,
+            str: The referencing url within FCA web page if exists, empty string otherwise.
         """
         
-        return True, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
-        # return False, None
+        return 1, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
+        # return 0, ''
     
     
     def _post_alert(self, text_news, checked, checker, url=None):
