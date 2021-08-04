@@ -82,7 +82,7 @@ class MonitorDAO(object):
 
                     # consulta se a notícia já possui registro no banco
 
-                    if len(self._id_text_news_cleaned):
+                    if len(self._id_text_news_cleaned): # verifica se a tabela 'detectenv.news' está vazia.
                         news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
                     
                     if not news_with_biggest_score[2]:
@@ -171,7 +171,7 @@ class MonitorDAO(object):
                     # consulta se a notícia já possui registro no banco
                     id_news = -1
 
-                    if len(self._id_text_news_cleaned):
+                    if len(self._id_text_news_cleaned): # verifica se a tabela 'detectenv.news' está vazia.
                         news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
                     
                     if not news_with_biggest_score[2]:
@@ -432,25 +432,3 @@ def _is_news_in_db(news_data, cleaned_news_db, batch):
 
     finally:
         del text_processor
-
-    # try: 
-    #     text_processor = TextPreprocessing()
-
-    #     with DatabaseWrapper() as db:
-    #         sql_string = "select id_news, text_news_cleaned from detectenv.news offset %s limit %s;"
-    #         news_data_cleaned = text_processor.text_cleaning(news_data["text_news"])
-
-    #         text_news_batch = db.query(sql_string, params=(int(batch[0]), int(batch[1]),))  
-    #         results = []
-
-    #         for id_news, text_news_cleaned in text_news_batch:
-    #             ans, value = text_processor.check_duplications(news_data_cleaned, text_news_cleaned)
-    #             results.append([id_news, value, ans])
-
-    #         results_sorted = sorted(results, key=itemgetter(1), reverse=True) # ordena o valor da semelhança por ordem decrescente.
-    #         return results_sorted[0] 
-    # except Exception as e:
-    #     return -1
-
-    # finally:
-    #     del text_processor
