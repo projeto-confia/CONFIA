@@ -18,7 +18,7 @@ class FactCheckManagerDAO(object):
     def get_checked_fakenews_from_excel(self):
         # load excel file content with pandas
         df = pd.read_excel(self.excel_filepath_received, 
-                           dtype={'Id': int, 'Checagem': str, 'Link': str},
+                           dtype={'Id': int, 'Texto': str, 'Checagem': str, 'Link': str},
                            na_filter = False)
         
         # remove accidental blank spaces
@@ -28,12 +28,16 @@ class FactCheckManagerDAO(object):
         # filter only checked records
         df = df[df['Checagem'].notnull()]
         
-        # assure value "fake" and return ids
+        # assure value "fake"
         df['Checagem'] = df['Checagem'].str.lower()
+        
+        # filter only fake records, drop column 'Checagem'
+        df = df[df['Checagem'] == 'fake']
+        df.drop(columns=['Checagem'], inplace=True)
         
         # return dict
         df.set_index('Id', inplace=True)
-        return df[df['Checagem'] == 'fake']['Link'].to_dict()
+        return df.to_dict(orient='index')
     
     
     def update_checked_news_in_db(self, checked_fakenews):
@@ -57,7 +61,8 @@ class FactCheckManagerDAO(object):
                             WHERE id_news IN %s;"
                             
             with DatabaseWrapper() as db:
-                for id_news, link in checked_fakenews.items():
+                for id_news, v in checked_fakenews.items():
+                    _, link = v.values()
                     args = (dt, True, link, id_news)
                     db.execute(sql_string_1, args)
                     

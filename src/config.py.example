@@ -36,6 +36,9 @@ class Config(object):
         CURATOR = True
         SOCIAL_MEDIA_ALERT_ACTIVATE = False
 
+    class FCMANAGER(object):
+        SOCIAL_MEDIA_ALERT_ACTIVATE = False
+
     # e-mail account
     class EMAIL(object):
         ACCOUNT = 'account_name@server.com'
