@@ -21,7 +21,6 @@ class Detector:
         try:
             # verificando se usuários com reputação (i.e. usuários cujos parâmetros 'prob' diferente de 0.5) compartilharam alguma nova notícia.
             news_shared_by_users_with_params_ics = self.__dao.get_news_shared_by_users_with_params_ics()
-            print(news_shared_by_users_with_params_ics)
 
             if len(news_shared_by_users_with_params_ics) == 0:
                 self.__logger.info("Nenhuma nova notícia compartilhada por usuários reputados.")
