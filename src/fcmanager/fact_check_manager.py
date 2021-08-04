@@ -45,8 +45,7 @@ class FactCheckManager(object):
         self._logger.info('Posting alert on social media...')
         header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
 
-        # TODO: define strategy to fit tweet text according twitter limit rules            
-        header = ''
-            
+        # TODO: define strategy to fit tweet text according twitter limit rule of 280 characters
+        
         text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url if url else '')
         self._twitter_api.tweet(text_tweet)
