@@ -37,3 +37,9 @@ class Config(object):
         WINDOW_SIZE = 7
         PROB_CLASSIF_THRESHOLD = 0.9
         NUM_NEWS_TO_SELECT = 4
+        CURATOR = True
+
+    # e-mail account
+    class EMAIL(object):
+        EMAIL = 'account_name@server.com'
+        PASSWORD = 'there_is_no_spoon'
