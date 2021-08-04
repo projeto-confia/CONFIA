@@ -47,6 +47,8 @@ class MonitorDAO(object):
         try:
             with DatabaseWrapper() as db:                
                 for post in data:
+                    news_with_biggest_score = [-1, -1, False]
+                    
                     # separa os dados por tabela
                     social_media_data = {k:post[k] for k in list(self._tweet_csv_header[:1])}
                     account_data = {k:post[k] for k in list(self._tweet_csv_header[1:5])}
@@ -79,8 +81,9 @@ class MonitorDAO(object):
                                                                       db)
 
                     # consulta se a notícia já possui registro no banco
-                    news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
-                    # print(news_data["text_news"], news_with_biggest_score)
+
+                    if len(self._id_text_news_cleaned):
+                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
                     
                     if not news_with_biggest_score[2]:
                         # insere a notícia e recupera o id
@@ -88,6 +91,8 @@ class MonitorDAO(object):
                                                       news_data,
                                                       'id_news',
                                                       db)
+                    else:
+                        id_news = news_with_biggest_score[0]
 
                     # insere o post
                     post_data['id_social_media_account'] = id_social_media_account
@@ -156,14 +161,18 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
-                for tweet in data:
+               
+                for tweet in data:                    
+                    news_with_biggest_score = [-1, -1, False]
                     news_data = {'text_news': tweet['text_post'],
                                  'datetime_publication': tweet['datetime_post'],
                                  'ground_truth_label': False}                  
 
                     # consulta se a notícia já possui registro no banco
-                    news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
                     id_news = -1
+
+                    if len(self._id_text_news_cleaned):
+                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
                     
                     if not news_with_biggest_score[2]:
                         # insere a notícia e recupera o id
@@ -173,11 +182,10 @@ class MonitorDAO(object):
                                                       db)
                     else:
                         id_news = news_with_biggest_score[0]
-                        # print(f"\nNotícia {news_data['text_news']} similar à noticia {id_news} no BD com valor de {news_with_biggest_score[1]}.\n")
                     
                     # insere o tweet
                     tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
-                    tweet['id_news'] = id_news
+                    tweet['id_news'] = int(id_news)
                     self._insert_record('detectenv.post',
                                         tweet,
                                         'id_post',

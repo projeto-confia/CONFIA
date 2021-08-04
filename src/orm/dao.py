@@ -7,23 +7,6 @@ class DAO:
 
     def __init__(self):
         self.__db = DatabaseWrapper()
-     
-    def insert_news_db(self):
-        from datetime import datetime
-
-        news = pd.read_csv("confia/data/news.csv", sep=";")
-        news["ground_truth_label"] = [0 if newsId <= 300 else 1 for newsId in news["newsId"]]
-        
-        for _, row in news.iterrows():
-            id_news     = int(row["newsId"])
-            id_original = str(row["idOriginal"])
-            text_news   = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-            date_time   = str(datetime.now())
-            gt_label    = bool(row["ground_truth_label"])
-
-            args = (id_news, text_news, date_time, None, gt_label, id_original)
-            self.__db.execute("INSERT INTO detectenv.news (id_news, text_news, datetime_publication, classification_outcome, ground_truth_label) VALUES (%s, %s, %s, %s, %s);", args)
-            self.__db.commit()
 
     def update_news_labels(self, id_news, classification_outcome, ground_truth_label, prob_label):
         """
