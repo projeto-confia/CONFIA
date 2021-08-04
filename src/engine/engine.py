@@ -47,16 +47,16 @@ class Engine(object):
             self._logger.info('Running process...')
             self.engine_status = config.STATUS.RUNNING
             
-            if config.ENGINE.MONITOR_ACTIVATED:
-                MonitorFacade().run()
+            if config.ENGINE.SCRAPING_ACTIVATED:
+                ScrapingFacade().run()
             if config.ENGINE.FACT_CHECK_MANAGER_ACTIVATED:
                 FactCheckManagerFacade().run()
+            if config.ENGINE.MONITOR_ACTIVATED:
+                MonitorFacade().run()
             if config.ENGINE.DETECTOR_ACTIVATED:
                 DetectorFacade().run()
             if config.ENGINE.INTERVENTOR_ACTIVATED:
                 InterventorFacade().run()
-            if config.ENGINE.SCRAPING_ACTIVATED:
-                ScrapingFacade().run()
             
             self.engine_status = config.STATUS.STOPPED
             self._logger.info('Process finished.')
