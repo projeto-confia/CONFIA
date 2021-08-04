@@ -1,6 +1,7 @@
 import logging
 from src.config import Config as config
 from src.fcmanager.dao import FactCheckManagerDAO
+from src.apis.twitter import TwitterAPI
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each ACF
@@ -9,6 +10,7 @@ class FactCheckManager(object):
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = FactCheckManagerDAO()
+        self._twitter_api = TwitterAPI()
         self._logger.info('FactCheckManager initialized.')
         
         
@@ -24,12 +26,29 @@ class FactCheckManager(object):
         
         self._logger.info('Processing feed from agency...')
         checked_fakenews = self._dao.get_checked_fakenews_from_excel()
-
+        
         if checked_fakenews:
             self._logger.info('Updating data...')
             self._dao.update_checked_news_in_db(checked_fakenews)
+            for v in checked_fakenews.values():
+                text_news, link = v.values()
+                self._post_alert(text_news, True, 'Boatos.org', link)
         else:
             self._logger.info('No labeled fake news.')
             
         self._logger.info('Storing excel file...')
         self._dao.store_excel_file()
+
+
+    def _post_alert(self, text_news, checked, checker, url=None):
+        self._logger.info('Posting alert on social media...')
+        if checked:
+            header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
+        else:
+            header = 'ATENÇÃO: a seguinte notícia foi detectada como suposta fakenews'
+
+        # TODO: define strategy to fit tweet text according twitter limit rules            
+        header = ''
+            
+        text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url if url else '')
+        self._twitter_api.tweet(text_tweet)
