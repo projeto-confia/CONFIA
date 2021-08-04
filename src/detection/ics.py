@@ -183,30 +183,29 @@ class ICS:
         """
         Classifica uma notícia usando o ICS.
         """
+        usersWhichSharedTheNews = self.__dao.get_users_which_shared_the_news(id_news)
 
-        if not len(self.__news_press_media.loc[self.__news_press_media["id_news"] == id_news]):
-            usersWhichSharedTheNews = self.__dao.get_users_which_shared_the_news(id_news)
+        productAlphaN    = 1.0
+        productUmAlphaN  = 1.0
+        productBetaN     = 1.0
+        productUmBetaN   = 1.0
+        
+        for _, row in usersWhichSharedTheNews.iterrows():
+            productAlphaN   = productAlphaN  * row["probalphan"]
+            productUmBetaN  = productUmBetaN * row["probumbetan"]
+                
+        # inferência bayesiana
+        reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
+        reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
 
-            productAlphaN    = 1.0
-            productUmAlphaN  = 1.0
-            productBetaN     = 1.0
-            productUmBetaN   = 1.0
-            
-            for _, row in usersWhichSharedTheNews.iterrows():
-                productAlphaN   = productAlphaN  * row["probalphan"]
-                productUmBetaN  = productUmBetaN * row["probumbetan"]
-                    
-            # inferência bayesiana
-            reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
-            reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
-
-            # calculando o grau de probabilidade da predição.
-            total = reputation_news_tn + reputation_news_fn
-            prob = 0
-            
-            if reputation_news_tn >= reputation_news_fn:
-                prob = reputation_news_tn / total
-                return 0, prob # notícia classificada como legítima.
-            else:
-                prob = reputation_news_fn / total
-                return 1, prob # notícia classificada como fake.
+        # calculando o grau de probabilidade da predição.
+        total = reputation_news_tn + reputation_news_fn
+        prob = 0
+        
+        if reputation_news_tn >= reputation_news_fn:
+            prob = reputation_news_tn / total
+            return 0, prob # notícia classificada como legítima.
+        else:
+            prob = reputation_news_fn / total
+            return 1, prob # notícia classificada como fake.
+        
