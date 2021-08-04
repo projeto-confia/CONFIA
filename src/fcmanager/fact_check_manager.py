@@ -33,7 +33,7 @@ class FactCheckManager(object):
             if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
                 for v in checked_fakenews.values():
                     text_news, link = v.values()
-                    self._post_alert(text_news, True, 'Boatos.org', link)
+                    self._post_alert(text_news, 'Boatos.org', link)
         else:
             self._logger.info('No labeled fake news.')
             
@@ -41,12 +41,9 @@ class FactCheckManager(object):
         self._dao.store_excel_file()
 
 
-    def _post_alert(self, text_news, checked, checker, url=None):
+    def _post_alert(self, text_news, checker, url=None):
         self._logger.info('Posting alert on social media...')
-        if checked:
-            header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
-        else:
-            header = 'ATENÇÃO: a seguinte notícia foi detectada como suposta fakenews'
+        header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
 
         # TODO: define strategy to fit tweet text according twitter limit rules            
         header = ''
