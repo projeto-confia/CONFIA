@@ -21,12 +21,6 @@ class ICS:
         self._press_media_accounts = self.__dao.read_query_to_dataframe("select id_social_media_account from detectenv.social_media_account where id_owner is not null;")
         self._press_media_accounts = list(self._press_media_accounts['id_social_media_account'])
 
-        # # remove as contas dos veículos de imprensa de self.__news
-        # if len(self.__news) > 0:
-        #     self.__users = self.__users[~self.__users.id_social_media_account.isin(press_media_accounts)]
-        #     self.__news_users = self.__news_users[~self.__news_users.id_social_media_account.isin(press_media_accounts)]
-        #     self.__news = self.__news[~self.__news['id_news'].isin(list(press_media_news['id_news']))]
-
     def _fit_initialization(self, test_size = 0.3):
         news = self.__news[self.__news['ground_truth_label'].notnull()]
 
@@ -40,7 +34,6 @@ class ICS:
             # remove as contas dos veículos de imprensa do treino.
             self.__users = self.__users[~self.__users.id_social_media_account.isin(self._press_media_accounts)]
             self.__news_users = self.__news_users[~self.__news_users.id_social_media_account.isin(self._press_media_accounts)]
-            self.__news_press_media = self.__news[self.__news['ground_truth_label'].notnull()]
             self.__news = self.__news[self.__news['ground_truth_label'].isnull()]
 
             labels = news["ground_truth_label"]
