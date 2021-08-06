@@ -15,9 +15,7 @@ class FactCheckManagerFacade(object):
     def run(self):
         try:
             self._logger.info('Running FactCheckManager...')
-            fact_check_manager = FactCheckManager()
-            fact_check_manager.process_agency_feed()
-            fact_check_manager.persist_data()
+            FactCheckManager().run()
             self._logger.info('FactCheckManager finished.')
         except:
             raise
