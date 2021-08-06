@@ -63,8 +63,12 @@ class InterventorDAO(object):
                 text_wrap = workbook.add_format({'text_wrap': True})
                 worksheet = workbook.add_worksheet('planilha1')
                 worksheet.set_column(1, 1, 100, text_wrap)
+                worksheet.set_column(2, 2, 20, text_wrap)
+                worksheet.set_column(3, 3, 100, text_wrap)
                 worksheet.write(0, 0, 'Id', bold)
                 worksheet.write(0, 1, 'Texto', bold)
+                worksheet.write(0, 2, 'Checagem', bold)
+                worksheet.write(0, 3, 'Link', bold)
                 self._workbook = workbook
             return self._workbook
         except:
@@ -127,5 +131,24 @@ class InterventorDAO(object):
             with DatabaseWrapper() as db:
                 record = db.query(sql_string, (agency,))
             return record[0][0]
+        except:
+            raise
+
+
+    def register_fca_similar_news(self, id_news, id_news_checked):
+        
+        sql_string_1 = "INSERT INTO detectenv.similarity_checking_outcome \
+                        (id_news, id_news_checked) \
+                        VALUES (%s,%s);"
+                        
+        sql_string_2 = "UPDATE detectenv.news \
+                        SET ground_truth_label = true \
+                        WHERE id_news = %s;"
+
+        
+        try:
+            with DatabaseWrapper() as db:
+                db.execute(sql_string_1, (id_news, id_news_checked))
+                db.execute(sql_string_2, (id_news, ))
         except:
             raise
