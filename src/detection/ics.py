@@ -18,7 +18,11 @@ class ICS:
         self.__omega      = omega
 
         # consulta os id's das contas de veículos de imprensa (usa 'id_owner' != null para isso).
-        self._press_media_accounts = self.__dao.read_query_to_dataframe("select id_social_media_account from detectenv.social_media_account where id_owner is not null;")
+        self._press_media_accounts = self.__dao.read_query_to_dataframe("select tbl.id_social_media_account, tbl.id_owner from \
+                                    (select * from detectenv.social_media_account where id_owner is not null) tbl, detectenv.owner \
+                                    where tbl.id_owner = detectenv.owner.id_owner \
+                                    and detectenv.owner.is_media = true and detectenv.owner.is_media_activated = true;")
+                                    
         self._press_media_accounts = list(self._press_media_accounts['id_social_media_account'])
 
     def _fit_initialization(self, test_size = 0.3):
