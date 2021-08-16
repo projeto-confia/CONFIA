@@ -152,3 +152,38 @@ class InterventorDAO(object):
                 db.execute(sql_string_2, (id_news, ))
         except:
             raise
+
+
+    def register_log_alert(self, id_news, status):
+        """Register log alert in database
+
+        Args:
+            id_news (int): Primary key of news
+            status (str): Type of alert. Admitted values are 'similar' or 'detected'
+        """
+        try:
+            if status not in ('similar', 'detected'):
+                raise
+            action_type_name = 'alert_similar' if status == 'similar' else 'alert_detected'
+            dt = datetime.now()
+            sql_string = "INSERT INTO detectenv.action_log \
+                        (id_action, id_news, datetime_log, description_log) \
+                        VALUES ((SELECT act.id_action \
+                                FROM detectenv.action_type act \
+                                WHERE upper(act.name_action) = upper(%s)), \
+                                %s, %s, 'alerta registrado no twitter');"
+                                
+            with DatabaseWrapper() as db:
+                db.execute(sql_string, (action_type_name, id_news, dt))
+        except:
+            raise
+
+
+    def get_news_from_excel(self):
+        try:
+            df = pd.read_excel(self.excel_filepath_to_send, 'planilha1', engine='openpyxl')
+            df.drop(columns=['Checagem', 'Link'], inplace=True)
+            df.set_index('Id', inplace=True)
+            return df.to_dict(orient='index')
+        except:
+            raise
