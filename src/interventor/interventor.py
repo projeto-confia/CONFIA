@@ -39,7 +39,7 @@ class Interventor(object):
         days_of_week_window = list(map(str.upper, days_of_week_window))
         today_week = datetime.now().strftime('%A').upper()
         today_hour = datetime.now().hour
-        return today_week in days_of_week_window and today_hour > 16  # TODO: parameterize time
+        return today_week in days_of_week_window and today_hour > 17  # TODO: parameterize time
     
     
     def _select_news_to_be_checked(self):
@@ -58,9 +58,11 @@ class Interventor(object):
         for id_news, text_news in candidate_news:
             id_news_checked, fca_url = self._check_news_in_fca_data(text_news)
             if id_news_checked:
+                self._logger.info(f'Persisting id news {id_news} as similar...')
                 self._dao.register_fca_similar_news(id_news, id_news_checked)
                 if config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
-                    self._post_alert(text_news, checked=True, checker='Boatos.org', url=fca_url)
+                    self._post_alert(text_news, similar=True, agency='Boatos.org', url_agency=fca_url)
+                self._dao.register_log_alert(id_news, status='similar')
                 continue
             row += 1
             self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 0, id_news)
@@ -79,9 +81,17 @@ class Interventor(object):
         self._logger.info("Sending selected news to agency...")
         self._send_request_mail_to_acf(self._dao.get_email_from_agency('boatos.org'))
         
-        # Registro no banco de dados
+        news = self._dao.get_news_from_excel()
+        
         self._logger.info('Persisting sent data...')
         self._dao.persist_excel_in_db()
+        
+        if config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
+            for text_news in news.values():
+                self._post_alert(text_news, similar=False)
+                
+        for id_news in news.keys():
+            self._dao.register_log_alert(id_news, status='detected')
         
         # TODO: implementar controle de inconsistencia
         # Arquivo enviado, registros não persistidos e vice-versa
@@ -99,18 +109,18 @@ class Interventor(object):
             str: The referencing url within FCA web page if exists, empty string otherwise.
         """
         
-        return 1, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
-        # return 0, ''
+        # return 1, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
+        return 0, ''
     
     
-    def _post_alert(self, text_news, checked, checker, url=None):
+    def _post_alert(self, text_news, similar, agency, url_agency=None):
         self._logger.info('Posting alert on social media...')
-        if checked:
-            header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
+        if similar:
+            header = f'ATENÇÃO! A seguinte notícia que vem sendo veiculada é similar à uma fakenews confirmada pela agência {agency}:'
         else:
-            header = 'ATENÇÃO: a seguinte notícia foi detectada como suposta fakenews'
+            header = 'ATENÇÃO! A seguinte notícia foi detectada como possível fakenews:'
             
-        text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url if url else '')
+        text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url_agency if url_agency else '')
         self._twitter_api.tweet(text_tweet)
     
     
@@ -119,7 +129,7 @@ class Interventor(object):
         text_subject  = 'Supostas fakenews'
         
         text_message  = 'Olá colaborador,\n\n'
-        text_message += 'Anexo encontra-se o arquivo Excel com as notícias detectadas pelo AUTOMATA como supostas fakenews.\n\n'
+        text_message += 'Anexo encontra-se o arquivo Excel com as notícias detectadas pelo AUTOMATA como possíveis fakenews.\n\n'
         text_message += 'Agradecemos desde já por sua participação.'
         
         self._email_api.send(to_list=[acf_email], 

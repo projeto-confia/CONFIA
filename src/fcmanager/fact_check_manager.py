@@ -30,10 +30,12 @@ class FactCheckManager(object):
         if checked_fakenews:
             self._logger.info('Updating data...')
             self._dao.update_checked_news_in_db(checked_fakenews)
-            if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
-                for v in checked_fakenews.values():
+            for id_news, v in checked_fakenews.items():
+                if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
                     text_news, link = v.values()
                     self._post_alert(text_news, 'Boatos.org', link)
+                self._logger.info('Registering log alert...')
+                self._dao.register_log_alert(id_news)  # log even if not published on social media network
         else:
             self._logger.info('No labeled fake news.')
             
