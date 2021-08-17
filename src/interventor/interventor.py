@@ -1,144 +1,149 @@
-from email.mime import text
-from src.interventor.dao import InterventorDAO
 import logging
-from src.config import Config as config
 from datetime import datetime
+from src.config import Config as config
+from src.interventor.dao import InterventorDAO
 from src.apis.twitter import TwitterAPI
 from src.utils.email import EmailAPI
 
 
-# TODO: refactor to interface and concrete classes, one concrete for each ACF
+# TODO: refactor to interface and concrete classes, one concrete for each FCA
 class Interventor(object):
     
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
         self._twitter_api = TwitterAPI()
         self._email_api = EmailAPI()
+        self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
         self._logger.info("Interventor initialized.")
         
         
     def run(self):
-        if self._is_within_time_window('boatos.org'):
-            if config.INTERVENTOR.CURATOR:
-                self._send_news_to_agency()  # send possible curated news
-            self._select_news_to_be_checked()
-            self._send_news_to_agency()
+        self._process_news()
+        self._process_curatorship()
         
         
-    def _is_within_time_window(self, agency):
-        """Return True if hour and day of week is permitted to agency, False otherwise
-
-        Args:
-            agency (str): Name of agency
-
-        Returns:
-            boll: True if is in time window, False otherwise
-        """
-        days_of_week_window = self._dao.get_days_of_week_window(agency)
-        days_of_week_window = list(map(str.upper, days_of_week_window))
-        today_week = datetime.now().strftime('%A').upper()
-        today_hour = datetime.now().hour
-        return today_week in days_of_week_window and today_hour > 17  # TODO: parameterize time
-    
-    
-    def _select_news_to_be_checked(self):
-        """Armazena em arquivo excel as notícias a serem enviadas à ACF
-        """
-        
-        self._logger.info("Selecting news to be checked...")
-        
-        candidate_news = self._dao.select_candidate_news_to_be_checked(window_size=config.INTERVENTOR.WINDOW_SIZE,
-                                                                       prob_classif_threshold=config.INTERVENTOR.PROB_CLASSIF_THRESHOLD,
-                                                                       num_records=config.INTERVENTOR.NUM_NEWS_TO_SELECT)
-        if not len(candidate_news):
+    def _process_news(self):
+        candidates = self._select_news_to_be_verified()
+        if not candidates:
             return
-        
-        row = 0
-        for id_news, text_news in candidate_news:
-            id_news_checked, fca_url = self._check_news_in_fca_data(text_news)
-            if id_news_checked:
-                self._logger.info(f'Persisting id news {id_news} as similar...')
-                self._dao.register_fca_similar_news(id_news, id_news_checked)
-                if config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
-                    self._post_alert(text_news, similar=True, agency='Boatos.org', url_agency=fca_url)
-                self._dao.register_log_alert(id_news, status='similar')
-                continue
-            row += 1
-            self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 0, id_news)
-            self._dao.get_workbook().get_worksheet_by_name('planilha1').write(row, 1, text_news)
-        if row > 0:
-            self._dao.close_workbook()
-            if config.INTERVENTOR.CURATOR:
-                self._send_curator_mail()
-        
-
-    def _send_news_to_agency(self):
-        if not self._dao.has_excel_file():
-            self._logger.info('There were no news selected to send.')
+        if config.INTERVENTOR.CURATOR:
+            self._persist_news_to_curatorship(candidates)
             return
-        
-        self._logger.info("Sending selected news to agency...")
-        self._send_request_mail_to_acf(self._dao.get_email_from_agency('boatos.org'))
-        
-        news = self._dao.get_news_from_excel()
-        
-        self._logger.info('Persisting sent data...')
-        self._dao.persist_excel_in_db()
-        
-        if config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
-            for text_news in news.values():
-                self._post_alert(text_news, similar=False)
+        self._persist_news(candidates)
                 
-        for id_news in news.keys():
-            self._dao.register_log_alert(id_news, status='detected')
+                
+    def _select_news_to_be_verified(self):
+        """Select news according environments variables
         
-        # TODO: implementar controle de inconsistencia
-        # Arquivo enviado, registros não persistidos e vice-versa
-        
-            
-    # TODO: implementar usando o algoritmo de deduplicação
-    def _check_news_in_fca_data(self, text_news):
-        """Check if text_news exists into FCA data
-        
-        Args:
-            text_news (str): Text of the news
-
         Returns:
-            int: id_news_checked if text_news exists into FCA data, 0 otherwise,
-            str: The referencing url within FCA web page if exists, empty string otherwise.
+            list: list of candidate news to be verified
+        """
+        pass
+    
+    
+    def _persist_news_to_curatorship(self, news):
+        similars, candidates_to_check = self._split_similar_news(news)
+        self._persist_similars_to_curatorship(similars)
+        self._persist_candidates_to_check_to_curatorship(candidates_to_check)
+        
+        
+    def _split_similar_news(self, news):
+        """Split news list in two: list of similars and list of not similars
+        
+        Identify records on news list that is similar to early published by FCA.
+        Add FCA id news to those identified as similar.
+
+        Args:
+            news (list): list of news
+        
+        Returns:
+            tuple: (list of similars, list of not similars)
+        """
+        pass
+    
+    
+    def _persist_similars_to_curatorship(self, similars):
+        """Persist list of similar news to be curated
+
+        Args:
+            similars (list): list of similar news
+        """
+        pass
+
+
+    def _persist_candidates_to_check_to_curatorship(self, candidates_to_check):
+        """Persist list of candidate news to be check to be curated
+
+        Args:
+            candidates (list): list of candidate news to be check
+        """
+        pass
+    
+    
+    def _persist_news(self, news):
+        similars, candidates_to_check = self._split_similar_news(news)
+        self._process_similars(similars)
+        self._process_candidates_to_check(candidates_to_check)
+        
+        
+    def _process_similars(self, similars):
+        self._persist_similar_news(similars)
+        self._create_alert_job(similars, alert_type='similar')
+    
+        
+    def _process_candidates_to_check(self, candidates_to_check):
+        file_id = self._build_excel(candidates_to_check)
+        self._create_send_job(file_id)
+        self._create_alert_job(candidates_to_check, alert_type='detected')
+    
+    
+    def _build_excel(self, candidates_to_check):
+        """Build an excel file to be sent to FCA
+
+        Args:
+            candidates_to_check (list): list of candidate news to be check
+            
+        Returns:
+            int: id of excel file that has been created
+        """
+        pass
+
+
+    def _persist_similar_news(self, similars):
+        """Persist similar news list into database
+
+        Args:
+            similars (list): list of similar news
+        """
+        pass
+    
+    
+    def _create_alert_job(self, news, alert_type):
+        """Add alerts in social media tasks into jobs queue
+
+        Args:
+            news (list): list of news
+            alert_type (str): {'similar', 'detected'} type of alert.
         """
         
-        # return 1, 'https://www.boatos.org/saude/ser-infectado-covid-19-protege-7-vezes-mais-que-tomar-qualquer-vacina.html'
-        return 0, ''
+        assert alert_type in ('similar', 'detected')
+        # TODO: build specific module in utils package to register jobs
+        pass
     
     
-    def _post_alert(self, text_news, similar, agency, url_agency=None):
-        self._logger.info('Posting alert on social media...')
-        if similar:
-            header = f'ATENÇÃO! A seguinte notícia que vem sendo veiculada é similar à uma fakenews confirmada pela agência {agency}:'
-        else:
-            header = 'ATENÇÃO! A seguinte notícia foi detectada como possível fakenews:'
-            
-        text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url_agency if url_agency else '')
-        self._twitter_api.tweet(text_tweet)
+    def _create_send_job(self, file_id):
+        pass
     
     
-    def _send_request_mail_to_acf(self, acf_email):
+    def _process_curatorship(self):
+        while (curations := self._get_curations()):
+            self._persist_news(curations)
+    
+    
+    def _get_curations(self):
+        """Get records already curated but not processed
         
-        text_subject  = 'Supostas fakenews'
-        
-        text_message  = 'Olá colaborador,\n\n'
-        text_message += 'Anexo encontra-se o arquivo Excel com as notícias detectadas pelo AUTOMATA como possíveis fakenews.\n\n'
-        text_message += 'Agradecemos desde já por sua participação.'
-        
-        self._email_api.send(to_list=[acf_email], 
-                             text_subject=text_subject, 
-                             text_message=text_message, 
-                             attach_list=[self._dao.excel_filepath_to_send])
-
-
-    def _send_curator_mail(self):
-        
-        self._email_api.send(to_list=[config.EMAIL.ACCOUNT],
-                             text_subject='Has news to be curated.')
+        Returns:
+            list: list of curations
+        """
+        pass
