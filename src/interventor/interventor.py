@@ -23,7 +23,10 @@ class Interventor(object):
         
         
     def _process_news(self):
-        candidates = self._select_news_to_be_verified()
+        self._logger.info('Selecting news to be verified...')
+        candidates = self._dao.select_news_to_be_verified(window_size=config.INTERVENTOR.WINDOW_SIZE,
+                                                          prob_classif_threshold=config.INTERVENTOR.PROB_CLASSIF_THRESHOLD,
+                                                          num_records=config.INTERVENTOR.NUM_NEWS_TO_SELECT)
         if not candidates:
             return
         if config.INTERVENTOR.CURATOR:
