@@ -15,13 +15,13 @@ class InterventorDAO(object):
         self._workbook = None
     
     
-    def select_candidate_news_to_be_checked(self, 
-                                            window_size=7, 
-                                            prob_classif_threshold=0.9, 
-                                            num_records=4):
-        """Select candidate news to be send to Fact Check Agencys
+    def select_news_to_be_verified(self,
+                                   window_size=7,
+                                   prob_classif_threshold=0.9,
+                                   num_records=4):
+        """Select news to be verified
         
-        Candidate news will be query in database according function parameters.
+        News will be query in database according function parameters.
         The query will sort records by num_shares, prob_classification.
         The top num_records will be returned.
 
@@ -31,7 +31,7 @@ class InterventorDAO(object):
             num_records (int, optional): Num of records to get. Defaults to 4.
 
         Returns:
-            list: list of candidates
+            list: list of news
         """
         
         sql_string =   "select n.id_news, n.text_news \
