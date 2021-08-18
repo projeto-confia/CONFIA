@@ -69,20 +69,50 @@ class InterventorDAO(object):
         
         
     def persist_similar_news(self, similars):
-        
         sql_string_1 = "INSERT INTO detectenv.similarity_checking_outcome \
                         (id_news, id_news_checked) \
                         VALUES (%s,%s);"
-                        
         sql_string_2 = "UPDATE detectenv.news \
                         SET ground_truth_label = true \
                         WHERE id_news = %s;"
-        
         try:
             with DatabaseWrapper() as db:
                 for id_news, _, id_news_checked in similars:
                     db.execute(sql_string_1, (id_news, id_news_checked))
                     db.execute(sql_string_2, (id_news, ))
+        except:
+            raise
+        
+        
+    def persist_candidates_to_check(self, candidates_id, id_trusted_agency):
+        sql_string = "INSERT INTO detectenv.checking_outcome \
+                        (id_news, id_trusted_agency) \
+                        VALUES (%s,%s);"
+        try:
+            with DatabaseWrapper() as db:
+                for id_news in candidates_id:
+                    db.execute(sql_string, (id_news, id_trusted_agency))
+        except:
+            raise
+        
+        
+    def get_data_from_agency(self, agency_name):
+        """Get Trusted Agency data
+
+        Args:
+            agency_name (str): Name of trusted agency
+
+        Returns:
+            tuple: Trusted Agency data like (id, email, name, days_of_week)
+        """
+        
+        sql_string = "select ta.id_trusted_agency, ta.email_agency, ta.name_agency, ta.days_of_week \
+                    from detectenv.trusted_agency ta \
+                    where upper(ta.name_agency) = upper(%s);"
+        try:
+            with DatabaseWrapper() as db:
+                record = db.query(sql_string, (agency_name,))
+            return record[0]
         except:
             raise
         
@@ -190,20 +220,6 @@ class InterventorDAO(object):
             raise
         
         
-    def get_email_from_agency(self, agency):
-        
-        sql_string = "select ta.email_agency \
-                    from detectenv.trusted_agency ta \
-                    where upper(ta.name_agency) = upper(%s);"
-        
-        try:
-            with DatabaseWrapper() as db:
-                record = db.query(sql_string, (agency,))
-            return record[0][0]
-        except:
-            raise
-
-
     def register_log_alert(self, id_news, status):
         """Register log alert in database
 
