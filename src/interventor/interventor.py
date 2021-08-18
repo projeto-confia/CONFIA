@@ -28,6 +28,7 @@ class Interventor(object):
                                                           prob_classif_threshold=config.INTERVENTOR.PROB_CLASSIF_THRESHOLD,
                                                           num_records=config.INTERVENTOR.NUM_NEWS_TO_SELECT)
         if not candidates:
+            self._logger.info('No news to be verified.')
             return
         if config.INTERVENTOR.CURATOR:
             self._persist_news_to_curatorship(candidates)
@@ -36,6 +37,7 @@ class Interventor(object):
                 
                 
     def _persist_news_to_curatorship(self, news):
+        self._logger.info('Persisting news to curatorship...')
         similars, candidates_to_check = self._split_similar_news(news)
         candidates_to_check = [c + (None,) for c in candidates_to_check]
         self._dao.persist_to_curatorship(similars + candidates_to_check)
@@ -66,18 +68,29 @@ class Interventor(object):
     
     
     def _persist_news(self, news):
+        """Process and persist selected classified fakenews
+        
+        News must be a list of tuples like (id_news, text_news)
+
+        Args:
+            news (list): list of tuples like (id_news, text_news)
+        """
+        
+        self._logger.info('Processing news...')
         similars, candidates_to_check = self._split_similar_news(news)
         self._process_similars(similars)
         self._process_candidates_to_check(candidates_to_check)
         
         
     def _process_similars(self, similars):
+        self._logger.info('Processing similar news...')
         self._dao.persist_similar_news(similars)
         # TODO: implement create alert job function
         # self._create_alert_job(similars, alert_type='similar')
     
         
     def _process_candidates_to_check(self, candidates_to_check):
+        self._logger.info('Processing news to be checked...')
         # TODO: implement functions
         # file_id = self._build_excel(candidates_to_check)
         # self._create_send_job(file_id)
@@ -115,14 +128,13 @@ class Interventor(object):
     
     
     def _process_curatorship(self):
-        while (curations := self._get_curations()):
-            self._persist_news(curations)
-    
-    
-    def _get_curations(self):
-        """Get records already curated but not processed
-        
-        Returns:
-            list: list of curations
-        """
-        pass
+        self._logger.info('Verifying curated news...')
+        while (curations := self._dao.get_curations()):
+            curations_id = [curation[4] for curation in curations]
+            similars = [curation[:3] for curation in curations if curation[3]]
+            candidates_to_check = [curation[:3] for curation in curations if not curation[3]]
+            if similars:
+                self._process_similars(similars)
+            if candidates_to_check:
+                self._process_candidates_to_check(candidates_to_check)
+            self._dao.close_curations(tuple(curations_id))

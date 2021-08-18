@@ -83,7 +83,43 @@ class InterventorDAO(object):
                     db.execute(sql_string_2, (id_news, ))
         except:
             raise
-    
+        
+        
+    def get_curations(self):
+        """Get curations already curated but not processed
+
+        Returns:
+            list: list of tuples like (id_news, text_news, id_news_checked, is_similar, id_curatorship)
+        """
+        
+        sql_string = "SELECT cur.id_news, n.text_news, cur.id_news_checked, cur.is_similar, cur.id_curatorship \
+                        FROM detectenv.curatorship cur inner join detectenv.news n on cur.id_news = n.id_news \
+                        WHERE not cur.is_processed \
+                            and cur.is_curated"
+        try:
+            with DatabaseWrapper() as db:
+                records = db.query(sql_string)
+            return records
+        except:
+            raise
+
+
+    def close_curations(self, curations_id):
+        """Set curations records as processed
+
+        Args:
+            curations_id (tuple): tuple of int. Ids of curatorship
+        """
+        
+        sql_string = "UPDATE detectenv.curatorship \
+                        SET is_processed = true \
+                        WHERE id_curatorship in %s;"
+        try:
+            with DatabaseWrapper() as db:
+                db.execute(sql_string, (curations_id, ))
+        except:
+            raise
+        
     
     def get_workbook(self):
         try:
