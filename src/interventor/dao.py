@@ -35,12 +35,14 @@ class InterventorDAO(object):
         """
         
         sql_string =   "select n.id_news, n.text_news \
-                        from detectenv.news n left join detectenv.checking_outcome co on co.id_news = n.id_news \
-                                            inner join detectenv.post p on p.id_news = n.id_news \
+                        from detectenv.news n inner join detectenv.post p on p.id_news = n.id_news \
+                                            left join detectenv.checking_outcome co on co.id_news = n.id_news \
+                                            left join detectenv.curatorship cur on cur.id_news = n.id_news \
                         where n.datetime_publication > current_date - interval '" + str(window_size) + "' day \
                             and n.ground_truth_label is null \
                             and n.classification_outcome = True \
                             and co.id_news is null \
+                            and cur.id_news is null \
                             and n.prob_classification > " + str(prob_classif_threshold) + " \
                         group by n.id_news, n.text_news, n.prob_classification \
                         order by max(p.num_shares) desc, n.prob_classification desc \
