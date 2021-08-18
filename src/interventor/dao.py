@@ -53,6 +53,18 @@ class InterventorDAO(object):
         except:
             raise
         
+        
+    def persist_to_curatorship(self, news):
+        sql_string = "INSERT INTO detectenv.curatorship \
+                (id_news, id_news_checked) \
+                VALUES (%s,%s);"
+        try:
+            with DatabaseWrapper() as db:
+                for id_news, _, id_news_checked in news:
+                    db.execute(sql_string, (id_news, id_news_checked))
+        except:
+            raise
+    
     
     def get_workbook(self):
         try:
