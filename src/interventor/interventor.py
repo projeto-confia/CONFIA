@@ -35,19 +35,10 @@ class Interventor(object):
         self._persist_news(candidates)
                 
                 
-    def _select_news_to_be_verified(self):
-        """Select news according environments variables
-        
-        Returns:
-            list: list of candidate news to be verified
-        """
-        pass
-    
-    
     def _persist_news_to_curatorship(self, news):
         similars, candidates_to_check = self._split_similar_news(news)
-        self._persist_similars_to_curatorship(similars)
-        self._persist_candidates_to_check_to_curatorship(candidates_to_check)
+        candidates_to_check = [c + (None,) for c in candidates_to_check]
+        self._dao.persist_to_curatorship(similars + candidates_to_check)
         
         
     def _split_similar_news(self, news):
@@ -62,25 +53,16 @@ class Interventor(object):
         Returns:
             tuple: (list of similars, list of not similars)
         """
-        pass
-    
-    
-    def _persist_similars_to_curatorship(self, similars):
-        """Persist list of similar news to be curated
-
-        Args:
-            similars (list): list of similar news
-        """
-        pass
-
-
-    def _persist_candidates_to_check_to_curatorship(self, candidates_to_check):
-        """Persist list of candidate news to be check to be curated
-
-        Args:
-            candidates (list): list of candidate news to be check
-        """
-        pass
+        # TODO: implement deduplication
+        # temp code to emulate deduplication
+        import random
+        similars, not_similars = list(), list()
+        for n in news:
+            if random.randint(0,1):
+                similars.append(n + (1,))
+            else:
+                not_similars.append(n)
+        return (similars, not_similars)
     
     
     def _persist_news(self, news):
