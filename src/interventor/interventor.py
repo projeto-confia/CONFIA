@@ -128,8 +128,8 @@ class Interventor(object):
     
     
     def _process_curatorship(self):
-        self._logger.info('Verifying curated news...')
         while (curations := self._dao.get_curations()):
+            self._logger.info('Processing curated news...')
             curations_id = [curation[4] for curation in curations]
             similars = [curation[:3] for curation in curations if curation[3]]
             candidates_to_check = [curation[:3] for curation in curations if not curation[3]]
@@ -138,3 +138,5 @@ class Interventor(object):
             if candidates_to_check:
                 self._process_candidates_to_check(candidates_to_check)
             self._dao.close_curations(tuple(curations_id))
+        else:
+            self._logger.info('No more curations to be process.')
