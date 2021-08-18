@@ -91,11 +91,13 @@ class Interventor(object):
         
     def _process_candidates_to_check(self, candidates_to_check):
         self._logger.info('Processing news to be checked...')
+        candidates_id = [c[0] for c in candidates_to_check]
+        id_trusted_agency,_,_,_ = self._dao.get_data_from_agency('Boatos.org')
+        self._dao.persist_candidates_to_check(candidates_id, id_trusted_agency)
         # TODO: implement functions
         # file_id = self._build_excel(candidates_to_check)
         # self._create_send_job(file_id)
         # self._create_alert_job(candidates_to_check, alert_type='detected')
-        pass
     
     
     def _build_excel(self, candidates_to_check):
