@@ -72,14 +72,17 @@ class Interventor(object):
         
         
     def _process_similars(self, similars):
-        self._persist_similar_news(similars)
-        self._create_alert_job(similars, alert_type='similar')
+        self._dao.persist_similar_news(similars)
+        # TODO: implement create alert job function
+        # self._create_alert_job(similars, alert_type='similar')
     
         
     def _process_candidates_to_check(self, candidates_to_check):
-        file_id = self._build_excel(candidates_to_check)
-        self._create_send_job(file_id)
-        self._create_alert_job(candidates_to_check, alert_type='detected')
+        # TODO: implement functions
+        # file_id = self._build_excel(candidates_to_check)
+        # self._create_send_job(file_id)
+        # self._create_alert_job(candidates_to_check, alert_type='detected')
+        pass
     
     
     def _build_excel(self, candidates_to_check):
@@ -94,15 +97,6 @@ class Interventor(object):
         pass
 
 
-    def _persist_similar_news(self, similars):
-        """Persist similar news list into database
-
-        Args:
-            similars (list): list of similar news
-        """
-        pass
-    
-    
     def _create_alert_job(self, news, alert_type):
         """Add alerts in social media tasks into jobs queue
 
