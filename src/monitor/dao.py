@@ -171,7 +171,7 @@ class MonitorDAO(object):
                     # consulta se a notícia já possui registro no banco
                     id_news = -1
 
-                    if len(self._id_text_news_cleaned): # verifica se a tabela 'detectenv.news' está vazia.
+                    if len(self._id_text_news_cleaned): # verifica se a tabela 'detectenv.news' possui registros.
                         news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
                     
                     if not news_with_biggest_score[2]:

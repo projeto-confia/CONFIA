@@ -17,7 +17,7 @@ class ICS:
         self.__smoothing  = laplace_smoothing
         self.__omega      = omega
 
-        # consulta os id's das contas de veículos de imprensa (usa 'id_owner' != null para isso).
+        # consulta os id's das contas de veículos de imprensa para filtragem.
         self._press_media_accounts = self.__dao.read_query_to_dataframe("select tbl.id_social_media_account, tbl.id_owner from \
                                     (select * from detectenv.social_media_account where id_owner is not null) tbl, detectenv.owner \
                                     where tbl.id_owner = detectenv.owner.id_owner \
@@ -26,25 +26,23 @@ class ICS:
         self._press_media_accounts = list(self._press_media_accounts['id_social_media_account'])
 
     def _fit_initialization(self, test_size = 0.3):
-        news = self.__news[self.__news['ground_truth_label'].notnull()]
+        
+        # remove as contas dos veículos de imprensa do treino.
+        self.__users = self.__users[~self.__users.id_social_media_account.isin(self._press_media_accounts)]
+        self.__news_users = self.__news_users[~self.__news_users.id_social_media_account.isin(self._press_media_accounts)]
+
+        labeled_news = self.__news[self.__news['ground_truth_label'].notnull()]
+        labels = labeled_news["ground_truth_label"]
 
         # se não tem amostras rotuladas no dataset, retorna uma exceção
-        if len(news) == 0:
+        if len(labeled_news) == 0:
             self.__logger.info('Não há notícias rotuladas para realizar o treinamento do ICS.')
             return 0
         
         else: # divide 'self.__news_users' em treino e teste.
-
-            # remove as contas dos veículos de imprensa do treino.
-            self.__users = self.__users[~self.__users.id_social_media_account.isin(self._press_media_accounts)]
-            self.__news_users = self.__news_users[~self.__news_users.id_social_media_account.isin(self._press_media_accounts)]
-            self.__news = self.__news[self.__news['ground_truth_label'].isnull()]
-
-            labels = news["ground_truth_label"]
-
             try:
-                self.__X_train_news, self.__X_test_news, _, _ = train_test_split(news, labels, test_size=test_size, stratify=labels)
-            except ValueError:
+                self.__X_train_news, self.__X_test_news, _, _ = train_test_split(labeled_news, labels, test_size=test_size, stratify=labels)
+            except:
                 self.__logger.info("Não há amostras rotuladas o suficiente para treinar o ICS.")
                 return 0
 
@@ -52,7 +50,7 @@ class ICS:
             self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
             self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
 
-            # conta a qtde de noticias verdadeiras e falsas presentes no conjunto de treino.
+            # conta a quantidade de noticias verdadeiras e falsas presentes no conjunto de treino.
             try:
                 self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
             except:
@@ -93,7 +91,7 @@ class ICS:
         unique_id_news   = self.__test_news_users["id_news"].unique()
 
         for newsId in unique_id_news:
-            # recupera os ids de usuário que compartilharam a notícia representada por 'newsId'.
+            # recupera os id's de usuário que compartilharam a notícia representada por 'newsId'.
             usersWhichSharedTheNews = list(self.__news_users["id_social_media_account"].loc[self.__news_users["id_news"] == newsId])
 
             productAlphaN    = 1.0
