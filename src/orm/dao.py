@@ -25,14 +25,6 @@ class DAO:
         query = "select * from detectenv.get_news_shared_by_users_with_params_ics();"
         news_shared_by_parameterized_ics_users = self.read_query_to_dataframe(query)
         return news_shared_by_parameterized_ics_users
-
-    def get_users_which_shared_the_news(self, id_news):
-        """
-        Recupera os usuários que postaram/compartilharam uma determinada notícia na rede social.
-        """
-        query = "select * from detectenv.get_users_which_shared_the_news({0});".format(id_news)
-        users_which_shared_the_news = self.read_query_to_dataframe(query)
-        return users_which_shared_the_news
     
     def insert_update_user_accounts_db(self, users):
         i = 1

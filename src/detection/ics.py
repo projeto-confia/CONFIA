@@ -161,7 +161,7 @@ class ICS:
                 self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
             
             self.__logger.info("Treinamento concluído.")
-            self.__assess()   
+            # self.__assess()   
        
             self.__logger.info("Salvando os parâmetros de usuário no banco de dados...")
             try:
@@ -178,7 +178,12 @@ class ICS:
         """
         Classifica uma notícia usando o ICS.
         """
-        usersWhichSharedTheNews = self.__dao.get_users_which_shared_the_news(id_news)
+        usersWhichSharedTheNews = self.__dao.read_query_to_dataframe(f"select * from detectenv.post p, detectenv.news n, detectenv.social_media_account sma where \
+             n.id_news = p.id_news and p.id_social_media_account = sma.id_social_media_account and p.id_news = {id_news}")
+        
+        usersWhichSharedTheNews = usersWhichSharedTheNews.loc[:, ~usersWhichSharedTheNews.columns.duplicated()]
+        # removendo as contas dos veículos de imprensa.
+        usersWhichSharedTheNews = usersWhichSharedTheNews[(~usersWhichSharedTheNews["id_social_media_account"].isin(self._press_media_accounts))]
 
         productAlphaN    = 1.0
         productUmAlphaN  = 1.0
