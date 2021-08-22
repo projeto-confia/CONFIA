@@ -3,7 +3,7 @@ import pandas as pd
 import logging
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
-from src.orm.dao import DAO
+from src.detection.dao import DAO
 from src.config import Config as config
 
 class ICS:
