@@ -11,19 +11,14 @@ class ICS:
     def __init__(self, laplace_smoothing=0.01, omega=0.5):
         self.__logger     = logging.getLogger(config.LOGGING.NAME)
         self.__dao        = DAO()
-        self.__users      = self.__dao.read_query_to_dataframe("select * from detectenv.social_media_account;")
-        self.__news       = self.__dao.read_query_to_dataframe("select * from detectenv.news;")
-        self.__news_users = self.__dao.read_query_to_dataframe("select * from detectenv.post;")
+        self.__users      = self.__dao.get_all_records_from_table_in_dataframe("detectenv.social_media_account")
+        self.__news       = self.__dao.get_all_records_from_table_in_dataframe("detectenv.news")
+        self.__news_users = self.__dao.get_all_records_from_table_in_dataframe("detectenv.post")
         self.__smoothing  = laplace_smoothing
         self.__omega      = omega
 
         # consulta os id's das contas de veículos de imprensa para filtragem.
-        self._press_media_accounts = self.__dao.read_query_to_dataframe("select tbl.id_social_media_account, tbl.id_owner from \
-                                    (select * from detectenv.social_media_account where id_owner is not null) tbl, detectenv.owner \
-                                    where tbl.id_owner = detectenv.owner.id_owner \
-                                    and detectenv.owner.is_media = true and detectenv.owner.is_media_activated = true;")
-                                    
-        self._press_media_accounts = list(self._press_media_accounts['id_social_media_account'])
+        self._press_media_accounts = self.__dao.get_list_of_ids_press_media_accounts()
 
     def _fit_initialization(self, test_size = 0.3):
         
@@ -93,39 +88,15 @@ class ICS:
         """
         etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
         """
-        predicted_labels = []
-        self.__test_news_users = self.__test_news_users[self.__test_news_users["ground_truth_label"].notnull()]
-        print(f"ASSESS test_news_users: {self.__test_news_users}")
-        unique_id_news   = self.__test_news_users["id_news"].unique()
+        
+        test_users = self.__test_news_users[self.__test_news_users["ground_truth_label"].notnull()]
+        test_users = test_users[test_users["classification_outcome"].notnull()]
 
-        for newsId in unique_id_news:
-            # recupera os id's de usuário que compartilharam a notícia representada por 'newsId'.
-            usersWhichSharedTheNews = list(self.__news_users["id_social_media_account"].loc[self.__news_users["id_news"] == newsId])
+        ground_truth_labels = list(test_users["ground_truth_label"])
+        predicted_labels    = list(test_users["classification_outcome"])
 
-            productAlphaN    = 1.0
-            productUmAlphaN  = 1.0
-            productBetaN     = 1.0
-            productUmBetaN   = 1.0
-            
-            for userId in usersWhichSharedTheNews:
-                i = self.__users.loc[self.__users["id_social_media_account"] == userId].index[0]
-
-                productAlphaN   = productAlphaN  * self.__users.at[i, "probAlphaN"]
-                productUmBetaN  = productUmBetaN * self.__users.at[i, "probUmBetaN"]
-            
-            # inferência bayesiana
-            reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
-            reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
-            
-            if reputation_news_tn >= reputation_news_fn:
-                predicted_labels.append(0)
-            else:
-                predicted_labels.append(1)
-
-        # mostra os resultados da matriz de confusão e acurácia.
-        gt = self.__X_test_news["ground_truth_label"].tolist()
-        self.__logger.info(f"Desempenho do ICS no conjunto de teste:\nMatriz de confusão:\n{confusion_matrix(gt, predicted_labels)}")
-        self.__logger.info(f"Acurácia: {accuracy_score(gt, predicted_labels)}")
+        self.__logger.info(f"Desempenho do ICS no conjunto de teste:\nMatriz de confusão:\n{confusion_matrix(ground_truth_labels, predicted_labels)}")
+        self.__logger.info(f"Acurácia: {accuracy_score(ground_truth_labels, predicted_labels)}")
 
     def fit(self, test_size = 0.3):
         """
@@ -169,7 +140,7 @@ class ICS:
                 self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
             
             self.__logger.info("Treinamento concluído.")
-            # self.__assess()  
+            self.__assess()  
        
             self.__logger.info("Salvando os parâmetros de usuário no banco de dados...")
             try:

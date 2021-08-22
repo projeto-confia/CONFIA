@@ -1,5 +1,5 @@
 from src.detection.ics import ICS
-from src.orm.dao import DAO
+from src.detection.dao import DAO
 from src.config import Config as config
 import logging
 
