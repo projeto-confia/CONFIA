@@ -57,6 +57,30 @@ class DAO:
         
         yield "Processo de inserção/atualização de contas de usuários concluído."
 
+    def get_all_records_from_table_in_dataframe(self, table_name):
+        """Retorna todos os registros da tabela representada por 'table_name' (select * from table_name;)
+
+        Args:
+            table_name (str): o nome da tabela.
+
+        Returns:
+            pd.dataframe: o conteúdo da tabela 'table_name' em formato dataframe.
+        """
+        return self.read_query_to_dataframe(f"select * from {table_name};")
+
+    def get_list_of_ids_press_media_accounts(self):
+        """Retorna uma lista com os id's das contas de mídias sociais que representam veículos de imprensa.
+
+        Returns:
+            list: lista dos id's das contas de veículos de imprensa.
+        """
+        press_media_accounts = self.read_query_to_dataframe("select tbl.id_social_media_account, tbl.id_owner from \
+                                    (select * from detectenv.social_media_account where id_owner is not null) tbl, detectenv.owner \
+                                    where tbl.id_owner = detectenv.owner.id_owner \
+                                    and detectenv.owner.is_media = true and detectenv.owner.is_media_activated = true;")
+                                    
+        return list(press_media_accounts['id_social_media_account'])
+
     def get_users_which_shared_the_news(self, id_news):
         return self.read_query_to_dataframe(f"select * from detectenv.post p, detectenv.news n, detectenv.social_media_account sma where \
              n.id_news = p.id_news and p.id_social_media_account = sma.id_social_media_account and p.id_news = {id_news}")
