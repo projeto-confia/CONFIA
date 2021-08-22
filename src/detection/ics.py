@@ -33,6 +33,7 @@ class ICS:
 
         labeled_news = self.__news[self.__news['ground_truth_label'].notnull()]
         labels = labeled_news["ground_truth_label"]
+        print(f"QTD LABELS: {len(labels)}")
 
         # se não tem amostras rotuladas no dataset, retorna uma exceção
         if len(labeled_news) == 0:
@@ -42,22 +43,27 @@ class ICS:
         else: # divide 'self.__news_users' em treino e teste.
             try:
                 self.__X_train_news, self.__X_test_news, _, _ = train_test_split(labeled_news, labels, test_size=test_size, stratify=labels)
+                print(f"LENGTH X_TRAIN_NEWS: {self.__X_train_news}\nLENGTH X_TEST_NEWS: {self.__X_test_news}")
             except:
                 self.__logger.info("Não há amostras rotuladas o suficiente para treinar o ICS.")
                 return 0
 
             # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
             self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
+            print(f"FIT train_news_users: {self.__train_news_users}")
             self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
+            print(f"FIT test_news_users: {self.__test_news_users}")
 
             # conta a quantidade de noticias verdadeiras e falsas presentes no conjunto de treino.
             try:
-                self.__qtd_V = self.__news["ground_truth_label"].value_counts()[0]
+                self.__qtd_V = self.__train_news_users["ground_truth_label"].value_counts()[0]
+                print(f"QTD_V: {self.__qtd_V}")
             except:
                 self.__logger.info("Não há notícias rotuladas como 'não fake (0)' para realizar o treinamento do ICS.")
                 return 0
             try:
-                self.__qtd_F = self.__news["ground_truth_label"].value_counts()[1]
+                self.__qtd_F = self.__train_news_users["ground_truth_label"].value_counts()[1]
+                print(f"QTD_F: {self.__qtd_F}")
             except:
                 self.__logger.info("Não há notícias rotuladas como 'fake (1)' para realizar o treinamento do ICS.")
                 return 0
@@ -88,6 +94,8 @@ class ICS:
         etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
         """
         predicted_labels = []
+        self.__test_news_users = self.__test_news_users[self.__test_news_users["ground_truth_label"].notnull()]
+        print(f"ASSESS test_news_users: {self.__test_news_users}")
         unique_id_news   = self.__test_news_users["id_news"].unique()
 
         for newsId in unique_id_news:
@@ -161,7 +169,7 @@ class ICS:
                 self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
             
             self.__logger.info("Treinamento concluído.")
-            # self.__assess()   
+            # self.__assess()  
        
             self.__logger.info("Salvando os parâmetros de usuário no banco de dados...")
             try:
@@ -178,34 +186,38 @@ class ICS:
         """
         Classifica uma notícia usando o ICS.
         """
-        usersWhichSharedTheNews = self.__dao.read_query_to_dataframe(f"select * from detectenv.post p, detectenv.news n, detectenv.social_media_account sma where \
-             n.id_news = p.id_news and p.id_social_media_account = sma.id_social_media_account and p.id_news = {id_news}")
-        
-        usersWhichSharedTheNews = usersWhichSharedTheNews.loc[:, ~usersWhichSharedTheNews.columns.duplicated()]
-        # removendo as contas dos veículos de imprensa.
-        usersWhichSharedTheNews = usersWhichSharedTheNews[(~usersWhichSharedTheNews["id_social_media_account"].isin(self._press_media_accounts))]
+        usersWhichSharedTheNews = self.__dao.get_users_which_shared_the_news(id_news)
 
-        productAlphaN    = 1.0
-        productUmAlphaN  = 1.0
-        productBetaN     = 1.0
-        productUmBetaN   = 1.0
-        
-        for _, row in usersWhichSharedTheNews.iterrows():
-            productAlphaN   = productAlphaN  * row["probalphan"]
-            productUmBetaN  = productUmBetaN * row["probumbetan"]
-                
-        # inferência bayesiana
-        reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
-        reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
+        if not usersWhichSharedTheNews.empty:
 
-        # calculando o grau de probabilidade da predição.
-        total = reputation_news_tn + reputation_news_fn
-        prob = 0
-        
-        if reputation_news_tn >= reputation_news_fn:
-            prob = reputation_news_tn / total
-            return 0, prob # notícia classificada como legítima.
+            usersWhichSharedTheNews = usersWhichSharedTheNews.loc[:, ~usersWhichSharedTheNews.columns.duplicated()]
+           
+            # removendo as contas dos veículos de imprensa.
+            usersWhichSharedTheNews = usersWhichSharedTheNews[(~usersWhichSharedTheNews["id_social_media_account"].isin(self._press_media_accounts))]
+
+            productAlphaN    = 1.0
+            productUmAlphaN  = 1.0
+            productBetaN     = 1.0
+            productUmBetaN   = 1.0
+            
+            for _, row in usersWhichSharedTheNews.iterrows():
+                productAlphaN   = productAlphaN  * row["probalphan"]
+                productUmBetaN  = productUmBetaN * row["probumbetan"]
+                    
+            # inferência bayesiana
+            reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
+            reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
+
+            # calculando o grau de probabilidade da predição.
+            total = reputation_news_tn + reputation_news_fn
+            prob = 0
+            
+            if reputation_news_tn >= reputation_news_fn:
+                prob = reputation_news_tn / total
+                return 0, prob # notícia classificada como legítima.
+            else:
+                prob = reputation_news_fn / total
+                return 1, prob # notícia classificada como fake.
         else:
-            prob = reputation_news_fn / total
-            return 1, prob # notícia classificada como fake.
+            return -1, -1
         
