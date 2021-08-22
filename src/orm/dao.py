@@ -57,6 +57,10 @@ class DAO:
         
         yield "Processo de inserção/atualização de contas de usuários concluído."
 
+    def get_users_which_shared_the_news(self, id_news):
+        return self.read_query_to_dataframe(f"select * from detectenv.post p, detectenv.news n, detectenv.social_media_account sma where \
+             n.id_news = p.id_news and p.id_social_media_account = sma.id_social_media_account and p.id_news = {id_news}")
+
     def read_query_to_dataframe(self, query):
         return pd.read_sql_query(query, self.__db.connection)
 
