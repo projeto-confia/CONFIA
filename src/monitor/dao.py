@@ -1,23 +1,37 @@
+import itertools
+from operator import ne
+from joblib.parallel import cpu_count
+from operator import itemgetter
 from src.orm.db_wrapper import DatabaseWrapper
-import csv, os
+from src.utils.text_preprocessing import TextPreprocessing
+from concurrent import futures
+import multiprocessing as mp
+import csv, os, math
 import pickle as pkl
+import numpy as np
 
 class MonitorDAO(object):
-    """
-    docstring
+    """Funcionalidades DAO voltadas para o módulo de monitoramento. 
+
+    Args:
+        batch_size (int): o tamanho do batch que será lida do arquivo de texto de notícias recuperado do banco de dados para comparação (deduplicação). 
     """
 
     def __init__(self):
+
         self._tweet_csv_header = ['name_social_media', 'id_account_social_media', 'screen_name',
                                   'date_creation', 'blue_badge', 'id_post_social_media', 
                                   'parent_id_post_social_media', 'text_post', 'num_likes', 'num_shares', 'datetime_post']
         
+        self._text_processor = TextPreprocessing()
         self._tweet_csv_filename = 'tweets.csv'
         self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
         self._tweet_pkl_filename = 'tweets.pkl'
         self._tweet_pkl_path = os.path.join("src", "data", self._tweet_pkl_filename)
         self._id_social_media = None
 
+        with DatabaseWrapper() as db:
+            self._id_text_news_cleaned = db.query("select id_news, text_news_cleaned from detectenv.news;")
 
     def insert_posts(self):
         """
@@ -31,9 +45,10 @@ class MonitorDAO(object):
 
         # inicia a transação
         try:
-            with DatabaseWrapper() as db:
+            with DatabaseWrapper() as db:                
                 for post in data:
-
+                    news_with_biggest_score = [-1, -1, False]
+                    
                     # separa os dados por tabela
                     social_media_data = {k:post[k] for k in list(self._tweet_csv_header[:1])}
                     account_data = {k:post[k] for k in list(self._tweet_csv_header[1:5])}
@@ -66,19 +81,26 @@ class MonitorDAO(object):
                                                                       db)
 
                     # consulta se a notícia já possui registro no banco
-                    id_news = self._get_id_news(news_data, db)
-                    if not id_news:
+
+                    if len(self._id_text_news_cleaned): # verifica se a tabela 'detectenv.news' está vazia.
+                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
+                    
+                    if not news_with_biggest_score[2]:
                         # insere a notícia e recupera o id
                         id_news = self._insert_record('detectenv.news',
                                                       news_data,
                                                       'id_news',
                                                       db)
+                    else:
+                        id_news = news_with_biggest_score[0]
 
                     # insere o post
                     post_data['id_social_media_account'] = id_social_media_account
-                    post_data['id_news'] = id_news
+                    post_data['id_news'] = int(id_news)
+                    
                     if not post_data['parent_id_post_social_media']:
                         post_data['parent_id_post_social_media'] = None
+                    
                     self._insert_record('detectenv.post',
                                         post_data,
                                         'id_post',
@@ -89,7 +111,6 @@ class MonitorDAO(object):
 
         except:
             raise
-
 
     def write_in_csv_from_dict(self, data, file_path):
         with open(file_path, mode='a') as f:
@@ -128,6 +149,7 @@ class MonitorDAO(object):
     
     
     def insert_posts_from_pkl(self):
+        
         """Carrega o arquivo pickle e persiste os dados no banco
         """
         
@@ -139,30 +161,40 @@ class MonitorDAO(object):
         # inicia a transação
         try:
             with DatabaseWrapper() as db:
-                for tweet in data:
+               
+                for tweet in data:                    
+                    news_with_biggest_score = [-1, -1, False]
                     news_data = {'text_news': tweet['text_post'],
                                  'datetime_publication': tweet['datetime_post'],
-                                 'ground_truth_label': False}
+                                 'ground_truth_label': False}                  
+
                     # consulta se a notícia já possui registro no banco
-                    id_news = self._get_id_news(news_data, db)
-                    if not id_news:
+                    id_news = -1
+
+                    if len(self._id_text_news_cleaned): # verifica se a tabela 'detectenv.news' possui registros.
+                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
+                    
+                    if not news_with_biggest_score[2]:
                         # insere a notícia e recupera o id
                         id_news = self._insert_record('detectenv.news',
                                                       news_data,
                                                       'id_news',
                                                       db)
+                    else:
+                        id_news = news_with_biggest_score[0]
+                    
                     # insere o tweet
                     tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
-                    tweet['id_news'] = id_news
+                    tweet['id_news'] = int(id_news)
                     self._insert_record('detectenv.post',
                                         tweet,
                                         'id_post',
                                         db)
+
             # deleta o arquivo pickle
             os.remove(self._tweet_pkl_path)
         except:
-            raise
-        
+            raise        
         
     def get_last_media_post(self, id_social_media_account):
         """Recupera o maior datetime de publicação de post
@@ -250,10 +282,8 @@ class MonitorDAO(object):
                                                                             cols, 
                                                                             values_placeholder, 
                                                                             returning)
-        # print(sql_string)
         db.execute(sql_string, list(data.values()))
         return db.fetchone()[0]
-
 
     # TODO: refatorar para função genéria _get_id_record
     def _get_id_social_media_account(self, ac_data, db):
@@ -301,30 +331,104 @@ class MonitorDAO(object):
         sql_string = "SELECT id_social_media from detectenv.social_media where upper(name_social_media) = upper(%s);"
         arg = sm_data['name_social_media']
         record = db.query(sql_string, (arg,))
-        # print('id_social_media', record)
+
         return 0 if not len(record) else record[0][0]
+    
+    def clean_and_save_text_news(self):
+        with DatabaseWrapper() as db:
+            no_cleaned_news = self._get_no_cleaned_text_news(db)
 
+            if no_cleaned_news != False:
+                for news in no_cleaned_news:
+                    news_aux = [news[0], news[1]]
+                    news_aux[1] = self._text_processor.text_cleaning(news[1])
+                    self._update_no_cleaned_news_with_cleaned_text(news_aux, db)
+                return True
 
-    def _get_id_news(self, news_data, db):
-        """
-        Recupera o id da notícia
+            return False
 
-        Parâmetros
-        -----------
-        news_data: dict
-            Dicionário contendo os dados da notícia
+    def _get_no_cleaned_text_news(self, db):
+        sql_string = "select id_news, text_news from detectenv.news where text_news_cleaned is null;"
+        no_cleaned_news = db.query(sql_string)
+        return False if not len(no_cleaned_news) else no_cleaned_news
 
-        db: DatabaseWrapper
-            Instância de conexão com o banco de dados
+    def _update_no_cleaned_news_with_cleaned_text(self, news, db):
+        sql_string = "update detectenv.news set text_news_cleaned = %s where id_news = %s;"
+        db.execute(sql_string, (news[1], news[0],))
+        db.commit()
 
-        Retorno
-        ----------
-        id: int
-            id se já está registrado, 0 caso contrário
-        """
+def read_cleaned_news_db_in_parallel(news_data, cleaned_news_db):
+    """Lê o arquivo de notícias processadas recuperadas do BD em paralelo e retorna o índice da notícia deduplicada.
 
-        sql_string = "SELECT id_news from detectenv.news where upper(text_news) = upper(%s);"
-        arg = news_data['text_news']
-        record = db.query(sql_string, (arg,))
-        # print('id_news', record)
-        return 0 if not len(record) else record[0][0]
+    Args:
+        news_data (dict): dicionário contendo os dados da notícia oriunda do streaming.
+        cleaned_news_db (list): A lista de notícias tratadas oriundas do banco de dados.
+
+    Returns:
+        indice (int): o índice da notícia duplicada no arquivo de texto.
+    """
+    pool = mp.Pool(mp.cpu_count())
+    results = []
+
+    for batch in _get_indices_batches_news_db(len(cleaned_news_db), batch_size=128):
+        results.append(pool.apply_async(_is_news_in_db, (news_data, cleaned_news_db, batch,)))
+
+    pool.close()
+    pool.join()
+    
+    return sorted([result.get() for result in results], key=itemgetter(1))[-1]
+
+def _get_indices_batches_news_db(total_news_db, batch_size = 128):
+    """Calcula os índices dos batches que representam as notícias da tabela 'detectenv.news'.
+
+    Args:
+        total_news_db (int): o número total de notícias presentes no banco de dados.
+        batch_size (int): o tamanho do batch de notícias.
+
+    Yields:
+        list: uma lista contendo os índices pertencentes ao intervalo (batch).
+    """
+    intervals = np.linspace(0, total_news_db-1, num=math.ceil(total_news_db/batch_size), dtype=int)
+
+    for i in range(len(intervals)-1):
+        yield [intervals[i], intervals[i+1]-1] if i < len(intervals)-2 else [intervals[i], intervals[i+1]]
+
+def _is_news_in_db(news_data, cleaned_news_db, batch):
+    """
+    Verifica se a notícia em 'news_data' já está presente no banco de dados.
+
+    Parâmetros
+    -----------
+    news_data: dict
+        Dicionário contendo os dados da notícia.
+
+    cleaned_news_db: list
+        Lista contendo as notícias tratadas oriundas do banco de dados.
+
+    batch: list
+        Lista com os índices das linhas das noticías tratadas e armazenadas no arquivo de texto.
+
+    Retorno
+    ----------
+    results: list
+        id_news e valor de Levenshtein se já está registrado, -1 caso contrário.
+    """
+    try:
+        text_processor = TextPreprocessing()
+        news_data_cleaned = text_processor.text_cleaning(news_data["text_news"])
+
+        text_news_batch = cleaned_news_db[batch[0]:batch[1]]
+        results = []
+
+        for id_news, text_news_cleaned in text_news_batch:
+            ans, value = text_processor.check_duplications(news_data_cleaned, text_news_cleaned)
+            results.append([id_news, value, ans])
+
+        results_sorted = sorted(results, key=itemgetter(1), reverse=True) # ordena o valor da semelhança por ordem decrescente.
+        return results_sorted[0] 
+
+    except Exception as e:
+        return -1
+
+    finally:
+        del text_processor

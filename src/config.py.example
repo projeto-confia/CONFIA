@@ -28,6 +28,10 @@ class Config(object):
         STREAM_TIME = 1200  # 1.200 seconds == 20 minutes
         SEARCH_TAGS = ["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"]
 
+    # detector
+    class DETECTOR(object):
+        TRAIN_ICS = False
+
     # interventor
     class INTERVENTOR(object):
         WINDOW_SIZE = 7
