@@ -169,7 +169,7 @@ class ICS:
             except Exception as e:
                 raise Exception(f"Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.\n{e.args}")
             
-            self.__assess()
+            # self.__assess()
 
         else:
             self.__logger.info("Não foi possível treinar o ICS.")
