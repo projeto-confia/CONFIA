@@ -73,3 +73,19 @@ class FactCheckManagerDAO(object):
         
     def store_excel_file(self):
         shutil.move(self.excel_filepath_received, os.path.join(self._excel_filepath_processed, '{}.xlsx'.format(datetime.now())))
+        
+        
+    def register_log_alert(self, id_news):
+        try:
+            dt = datetime.now()
+            sql_string = "INSERT INTO detectenv.action_log \
+                        (id_action, id_news, datetime_log, description_log) \
+                        VALUES ((SELECT act.id_action \
+                                FROM detectenv.action_type act \
+                                WHERE upper(act.name_action) = upper('alert_checked')), \
+                                %s, %s, 'alerta registrado no twitter');"
+                                
+            with DatabaseWrapper() as db:
+                db.execute(sql_string, (id_news, dt))
+        except:
+            raise
