@@ -3,16 +3,16 @@ from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
-import pandas as pd
+from fuzzywuzzy import fuzz
+import emoji
 import nltk
 import re
 import string
 import re
 
-
 class TextPreprocessing:
 
-    def __init__(self, install_nltk_packages=False):
+    def __init__(self, threshold = 70, install_nltk_packages=False):
         """
         Classe provedora de métodos para tokenização, normalização, lematização e denoising de posts em redes sociais. 
         Necessária como pré-requisito para a análise de sentimento do texto.
@@ -22,6 +22,7 @@ class TextPreprocessing:
         self.__tokenizer = TweetTokenizer()
         self.__lemmatizer = WordNetLemmatizer()
         self.__stopwords = nltk.corpus.stopwords.words('portuguese')
+        self._threshold = threshold
         self.__punctuation = '!"$%&\'()*+,-./:;<=>?[\]^_`{|}~'
 
     def __check_nltk_packages(self, install_nltk_packages):
@@ -39,11 +40,10 @@ class TextPreprocessing:
         text_cleaned = re.sub(r" #\w+\b(?!\s+\w+)", '', text_cleaned, flags=re.MULTILINE)
         text_cleaned = text_cleaned.replace('#', '')
         text_cleaned = re.sub("(@[A-Za-z0-9_]+)", "", text_cleaned, flags=re.MULTILINE)
-        # text_cleaned = "".join([char.lower() for char in text_cleaned if char not in self.__stopwords])
         text_cleaned = re.sub('\s+', ' ', text_cleaned).strip()
-
-        # remove dígitos
-        # tweet = re.sub(r"\d", "", tweet)
+        text_cleaned = re.sub(emoji.get_emoji_regexp(), r"", text_cleaned)
+        text_cleaned = text_cleaned.replace('\n', ' ')
+        
         return text_cleaned.lower()
 
     def translate(self, tweet):
@@ -78,3 +78,17 @@ class TextPreprocessing:
                 lemmatized_text.append(token.lower())
 
         return lemmatized_text
+
+    def check_duplications(self, news1_cleaned, news2_cleaned):
+        """Verifica se os textos em 'news1' e 'news2', após o processo de limpeza, têm seus conteúdo duplicados. Utiliza o algoritmo de Levenshtein.
+
+        Args:
+            news1_cleaned (string): texto limpo da primeira mensagem.
+            news2_cleaned (string): texto limpo da segunda mensagem.
+
+        Returns:
+            bool: retorna 'True' se os textos são semelhantes; falso se não.
+            int: o valor da semelhança entre os dois textos.
+        """
+        value = fuzz.token_sort_ratio(news1_cleaned, news2_cleaned)
+        return value >= self._threshold, value
