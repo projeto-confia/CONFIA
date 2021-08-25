@@ -18,6 +18,7 @@ class MonitorFacade(object):
             twitter_stream = TwitterStream()
             twitter_stream.collect_data()
             twitter_stream.persist_data()
+            twitter_stream.process_data()
             self._logger.info('Monitor finished.')
         except:
             raise

@@ -174,10 +174,14 @@ class TwitterStream(StreamInterface):
     
     def process_data(self):
         """
-        docstring
+        Limpa as notícias capturadas via streaming e persiste os textos processados na coluna 'text_news_cleaned' da tabela 'detectenv.news'.
         """
-        pass
+        self._logger.info("Tratando notícias capturadas via streaming...")
 
+        if self._dao.clean_and_save_text_news():
+            self._logger.info("Notícias capturadas via streaming tratadas com sucesso.")  
+        else:
+             self._logger.info("Nenhuma nova notícia para ser tratada.")
     
     def persist_data(self):
         """
@@ -218,8 +222,7 @@ class TwitterMediaCollector(object):
         self._logger.info('Persisting data')
         self._persist_data()
             
-        # TODO: implementar e chamar método disconnect()
-            
+        # TODO: implementar e chamar método disconnect()            
         
     def _fetch_data(self, id_social_media_account, screen_name, pattern, limit=0, datetime_limit=None):
         """Recupera tweets da timeline da media e armazena em arquivo
