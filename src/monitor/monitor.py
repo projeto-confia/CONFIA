@@ -12,47 +12,76 @@ from unicodedata import normalize
 from src.apis.twitter import TwitterAPI
 
 
-class StreamInterface(metaclass=abc.ABCMeta):
+class CollectorInterface(metaclass=abc.ABCMeta):
+    """Interface to collectors
+    """
 
     @classmethod
     def __subclasshook__(cls, subclass):
-        return (hasattr(subclass, 'collect_data') and
-                callable(subclass.collect_data) and
-                hasattr(subclass, 'process_data') and
-                callable(subclass.process_data) and
-                hasattr(subclass, 'persist_data') and
-                callable(subclass.persist_data) or
+        return (hasattr(subclass, 'run') and
+                callable(subclass.run) and
+                hasattr(subclass, '_get_data') and
+                callable(subclass._get_data) and
+                hasattr(subclass, '_process_data') and
+                callable(subclass._process_data) and
+                hasattr(subclass, '_persist_data') and
+                callable(subclass._persist_data) or
                 NotImplemented)
+        
 
     @abc.abstractmethod
-    def collect_data(self):
+    def run(self):
         """
-        Coleta dados da rede social.
+        Execute main methods get, process, persist
+        """
+        raise NotImplementedError
+    
 
-        Retorna:
-            TRUE se não ocorrer falha, FALSE caso contrário.
+    @abc.abstractmethod
+    def _get_data(self):
+        """
+        Get data from social network.
         """
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def process_data(self):
-        """
-        Processa os dados coletados da rede social.
 
-        Retorna:
-            True se não ocorrer falha, False caso contrário.
+    @abc.abstractmethod
+    def _process_data(self):
+        """
+        Process data collected from social network.
         """
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def persist_data(self):
-        """
-        Persiste os dados processados na base relacional.
 
-        Retorna:
-            True se não ocorrer falha, False caso contrário.
+    @abc.abstractmethod
+    def _persist_data(self):
+        """
+        Persist data processed into database.
         """
         raise NotImplementedError
+
+
+class Monitor(object):
+    
+    def __init__(self):
+        self._social_network_monitors = [TwitterMonitor]
+        # TODO: get list from database, only activated social networks
+    
+        
+    def run(self):
+        for snm in self._social_network_monitors:
+            snm().run()
+            
+            
+class TwitterMonitor(object):
+    
+    def __init__(self):
+        self._collectors = [TwitterMediaCollector, TwitterStreamCollector]
+    
+        
+    def run(self):
+        for collector in self._collectors:
+            collector().run()
 
 
 class TwitterStreamListener(tweepy.StreamListener):
@@ -139,7 +168,7 @@ class TwitterStreamListener(tweepy.StreamListener):
         return [media[2] for media in self._media_accounts]
 
 
-class TwitterStream(StreamInterface):
+class TwitterStreamCollector(CollectorInterface):
     
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
@@ -147,9 +176,15 @@ class TwitterStream(StreamInterface):
         self._dao = MonitorDAO()
         self.stream_time = config.MONITOR.STREAM_TIME
         self._logger.info("Twitter Streaming initialized.")
+        
+        
+    def run(self):
+        self._get_data()
+        self._process_data()
+        self._persist_data()
     
 
-    def collect_data(self):
+    def _get_data(self):
         """
         docstring
         """
@@ -172,7 +207,7 @@ class TwitterStream(StreamInterface):
         streamAccess.disconnect()
 
     
-    def process_data(self):
+    def _process_data(self):
         """
         Limpa as notícias capturadas via streaming e persiste os textos processados na coluna 'text_news_cleaned' da tabela 'detectenv.news'.
         """
@@ -183,7 +218,7 @@ class TwitterStream(StreamInterface):
         else:
              self._logger.info("Nenhuma nova notícia para ser tratada.")
     
-    def persist_data(self):
+    def _persist_data(self):
         """
         docstring
         """
@@ -191,7 +226,7 @@ class TwitterStream(StreamInterface):
         self._dao.insert_posts()
 
 
-class TwitterMediaCollector(object):
+class TwitterMediaCollector(CollectorInterface):
     
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
@@ -204,12 +239,12 @@ class TwitterMediaCollector(object):
 
     
     def run(self):
-        self._collect_data()
+        self._get_data()
         self._process_data()
         self._persist_data()
         
     
-    def _collect_data(self):
+    def _get_data(self):
         tags = set(map(str.lower, map(self._normalize_text, self._search_tags)))
         regex_string = '|'.join(tags)
         pattern = re.compile(regex_string)
