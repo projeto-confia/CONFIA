@@ -65,7 +65,18 @@ class Interventor(object):
         Returns:
             tuple: (list of similars, list of not similars)
         """
-        pass
+        
+        similars, not_similars = list(), list()
+        for i, (_, text_news) in enumerate(news):
+            text_news_cleaned = self._text_preprocessor.text_cleaning(text_news)
+            for id_news_checked, _, _, publication_title_cleaned in self._all_fca_news:
+                is_similar, _ = self._text_preprocessor.check_duplications(text_news_cleaned, publication_title_cleaned)
+                if is_similar:
+                    similars.append(news[i] + (id_news_checked,))
+                    break
+            else:
+                not_similars.append(news[i])
+        return (similars, not_similars)
     
     
     def _persist_news(self, news):
