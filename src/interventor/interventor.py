@@ -14,6 +14,7 @@ class Interventor(object):
         self._twitter_api = TwitterAPI()
         self._email_api = EmailAPI()
         self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
+        self._all_fca_news = self._dao.get_all_agency_news()
         self._logger.info("Interventor initialized.")
         
         
@@ -55,16 +56,8 @@ class Interventor(object):
         Returns:
             tuple: (list of similars, list of not similars)
         """
-        # TODO: implement deduplication
-        # temp code to emulate deduplication
-        import random
-        similars, not_similars = list(), list()
-        for n in news:
-            if random.randint(0,1):
-                similars.append(n + (1,))
-            else:
-                not_similars.append(n)
-        return (similars, not_similars)
+        print(self._all_fca_news[0])
+        exit()
     
     
     def _persist_news(self, news):
