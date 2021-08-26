@@ -4,6 +4,7 @@ from src.config import Config as config
 from src.interventor.dao import InterventorDAO
 from src.apis.twitter import TwitterAPI
 from src.utils.email import EmailAPI
+from src.utils.text_preprocessing import TextPreprocessing
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
@@ -14,13 +15,21 @@ class Interventor(object):
         self._twitter_api = TwitterAPI()
         self._email_api = EmailAPI()
         self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
-        self._all_fca_news = self._dao.get_all_agency_news()
+        self._text_preprocessor = TextPreprocessing()
+        self._all_fca_news = self._get_all_agency_news()
         self._logger.info("Interventor initialized.")
         
         
     def run(self):
         self._process_news()
         self._process_curatorship()
+        
+        
+    def _get_all_agency_news(self):
+        all_fca_news = self._dao.get_all_agency_news()
+        for i, (_, publication_title, _) in enumerate(all_fca_news):
+            all_fca_news[i] += (self._text_preprocessor.text_cleaning(publication_title),)
+        return all_fca_news
         
         
     def _process_news(self):
@@ -56,8 +65,7 @@ class Interventor(object):
         Returns:
             tuple: (list of similars, list of not similars)
         """
-        print(self._all_fca_news[0])
-        exit()
+        pass
     
     
     def _persist_news(self, news):
