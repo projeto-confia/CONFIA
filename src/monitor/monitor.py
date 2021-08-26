@@ -84,156 +84,26 @@ class TwitterMonitor(object):
             collector().run()
 
 
-class TwitterStreamListener(tweepy.StreamListener):
-
-    def on_connect(self):
+class Collector(object):
+    
+    def __init__(self):
+        self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = MonitorDAO()
-        self._tweet_csv_filename = 'tweets.csv'
-        self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
-        # TODO: erro ao criar o arquivo não dispara exceção. Experimentar mover para o init de TwitterStream
+        
+        
+class TwitterCollector(Collector):
+    
+    def __init__(self):
+        super().__init__()
         self._name_social_media = 'twitter'
-        self._media_ids = self._get_media_ids()
-        
-
-    def on_status(self, status):
-        """
-        status: tweepy.models.status - objeto twitter
-        """
-        
-        # não armazena posts de medias
-        if status.author.id in self._media_ids:
-            return
-        
-        # init
-        tweet = dict()
-
-        # social media
-        tweet['name_social_media'] = 'twitter'
-
-        # account
-        tweet['id_account_social_media'] = status.author.id_str
-        tweet['screen_name'] = status.author.screen_name
-        tweet['date_creation'] = status.author.created_at
-        tweet['blue_badge'] = status.author.verified
-
-        # post
-        tweet['id_post_social_media'] = status.id
-
-        if hasattr(status, "retweeted_status"):  # Checa se é retweet
-            tweet['parent_id_post_social_media'] = status.retweeted_status.id
-        else:
-            tweet['parent_id_post_social_media'] = None
-
-        tweet['text_post'] = ''
-        tweet['num_likes'] = 0
-        tweet['num_shares'] = 0
-        if hasattr(status, "retweeted_status"):  # Checa se é retweet
-            try:
-                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
-            except AttributeError:
-                tweet['text_post'] = status.retweeted_status.text
-            finally:
-                tweet['num_likes'] = status.retweeted_status.favorite_count
-                tweet['num_shares'] = status.retweeted_status.retweet_count
-        else:
-            try:
-                tweet['text_post'] = status.extended_tweet["full_text"]
-            except AttributeError:
-                tweet['text_post'] = status.text
-
-        # processa o texto da mensagem.
-        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
-        # self._preprocessing.process_text(tweet['text_post'])
-
-        # será sempre 0, pois acabou de ser postado
-        # tweet['num_likes'] = status.favorite_count
-        # será sempre 0, pois acabou de ser postado
-        # tweet['num_shares'] = status.retweet_count
-        tweet['datetime_post'] = status.created_at
-
-        # if hasattr(status, "retweeted_status"):
-        #     print(tweet['text_post'])
-        #     print()
-        #     print('id tweet:', tweet['id_str'], 'likes:', tweet['num_likes'], 'shares', tweet['num_shares'])
-        #     print('parent post id', tweet['parent_id_post'], 'shares:', status.retweeted_status.retweet_count, 'likes:', status.retweeted_status.favorite_count)
-        #     # print(tweet['parent_id_post'])
-        #     print('#####################################################')
-        #     print()
-
-        self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
-    
-    
-    def _get_media_ids(self):
-        self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
-        return [media[2] for media in self._media_accounts]
-
-
-class TwitterStreamCollector(CollectorInterface):
-    
-    def __init__(self):
-        self._logger = logging.getLogger(config.LOGGING.NAME)
-        self.streamListener = TwitterStreamListener()
-        self._dao = MonitorDAO()
-        self.stream_time = config.MONITOR.STREAM_TIME
-        self._logger.info("Twitter Streaming initialized.")
-        
-        
-    def run(self):
-        self._get_data()
-        self._process_data()
-        self._persist_data()
-    
-
-    def _get_data(self):
-        """
-        docstring
-        """
-        
-        self._logger.info("Streaming for {} seconds...".format(self.stream_time))
-        
-        tokens = cfg.tokens
-        auth = tweepy.OAuthHandler(
-            tokens["consumer_key"], tokens["consumer_secret"])
-        auth.set_access_token(
-            tokens["access_token"], tokens["access_token_secret"])
-
-        api = tweepy.API(auth)
-        streamAccess = tweepy.Stream(
-            auth=api.auth, listener=self.streamListener, tweet_mode='extended')
-        streamAccess.filter(track=config.MONITOR.SEARCH_TAGS,
-                            languages=["pt"],
-                            is_async=True)
-        time.sleep(self.stream_time)
-        streamAccess.disconnect()
-
-    
-    def _process_data(self):
-        """
-        Limpa as notícias capturadas via streaming e persiste os textos processados na coluna 'text_news_cleaned' da tabela 'detectenv.news'.
-        """
-        self._logger.info("Tratando notícias capturadas via streaming...")
-
-        if self._dao.clean_and_save_text_news():
-            self._logger.info("Notícias capturadas via streaming tratadas com sucesso.")  
-        else:
-             self._logger.info("Nenhuma nova notícia para ser tratada.")
-    
-    def _persist_data(self):
-        """
-        docstring
-        """
-        self._logger.info('Persisting data...')
-        self._dao.insert_posts()
-
-
-class TwitterMediaCollector(CollectorInterface):
-    
-    def __init__(self):
-        self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._search_tags = config.MONITOR.SEARCH_TAGS
         self._twitter_api = TwitterAPI()
-        self._dao = MonitorDAO()
-        self._name_social_media = 'twitter'
+        self._search_tags = config.MONITOR.SEARCH_TAGS
+
+
+class TwitterMediaCollector(CollectorInterface, TwitterCollector):
+    
+    def __init__(self):
+        super().__init__()
         self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
         self._logger.info("Twitter Media Collector initialized")
 
@@ -337,3 +207,145 @@ class TwitterMediaCollector(CollectorInterface):
     
     def _normalize_text(self, text):
         return normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
+
+
+class TwitterStreamListener(tweepy.StreamListener):
+
+    def on_connect(self):
+        self._dao = MonitorDAO()
+        self._tweet_csv_filename = 'tweets.csv'
+        self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
+        # TODO: erro ao criar o arquivo não dispara exceção. Experimentar mover para o init de TwitterStream
+        self._name_social_media = 'twitter'
+        self._media_ids = self._get_media_ids()
+        
+
+    def on_status(self, status):
+        """
+        status: tweepy.models.status - objeto twitter
+        """
+        
+        # não armazena posts de medias
+        if status.author.id in self._media_ids:
+            return
+        
+        # init
+        tweet = dict()
+
+        # social media
+        tweet['name_social_media'] = 'twitter'
+
+        # account
+        tweet['id_account_social_media'] = status.author.id_str
+        tweet['screen_name'] = status.author.screen_name
+        tweet['date_creation'] = status.author.created_at
+        tweet['blue_badge'] = status.author.verified
+
+        # post
+        tweet['id_post_social_media'] = status.id
+
+        if hasattr(status, "retweeted_status"):  # Checa se é retweet
+            tweet['parent_id_post_social_media'] = status.retweeted_status.id
+        else:
+            tweet['parent_id_post_social_media'] = None
+
+        tweet['text_post'] = ''
+        tweet['num_likes'] = 0
+        tweet['num_shares'] = 0
+        if hasattr(status, "retweeted_status"):  # Checa se é retweet
+            try:
+                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
+            except AttributeError:
+                tweet['text_post'] = status.retweeted_status.text
+            finally:
+                tweet['num_likes'] = status.retweeted_status.favorite_count
+                tweet['num_shares'] = status.retweeted_status.retweet_count
+        else:
+            try:
+                tweet['text_post'] = status.extended_tweet["full_text"]
+            except AttributeError:
+                tweet['text_post'] = status.text
+
+        # processa o texto da mensagem.
+        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
+        # self._preprocessing.process_text(tweet['text_post'])
+
+        # será sempre 0, pois acabou de ser postado
+        # tweet['num_likes'] = status.favorite_count
+        # será sempre 0, pois acabou de ser postado
+        # tweet['num_shares'] = status.retweet_count
+        tweet['datetime_post'] = status.created_at
+
+        # if hasattr(status, "retweeted_status"):
+        #     print(tweet['text_post'])
+        #     print()
+        #     print('id tweet:', tweet['id_str'], 'likes:', tweet['num_likes'], 'shares', tweet['num_shares'])
+        #     print('parent post id', tweet['parent_id_post'], 'shares:', status.retweeted_status.retweet_count, 'likes:', status.retweeted_status.favorite_count)
+        #     # print(tweet['parent_id_post'])
+        #     print('#####################################################')
+        #     print()
+
+        self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
+    
+    
+    def _get_media_ids(self):
+        self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
+        return [media[2] for media in self._media_accounts]
+
+
+class TwitterStreamCollector(CollectorInterface, TwitterCollector):
+    
+    def __init__(self):
+        super().__init__()
+        self.streamListener = TwitterStreamListener()
+        self.stream_time = config.MONITOR.STREAM_TIME
+        self._logger.info("Twitter Streaming initialized.")
+        
+        
+    def run(self):
+        self._get_data()
+        self._process_data()
+        self._persist_data()
+    
+
+    def _get_data(self):
+        """
+        docstring
+        """
+        
+        self._logger.info("Streaming for {} seconds...".format(self.stream_time))
+        
+        tokens = cfg.tokens
+        auth = tweepy.OAuthHandler(
+            tokens["consumer_key"], tokens["consumer_secret"])
+        auth.set_access_token(
+            tokens["access_token"], tokens["access_token_secret"])
+
+        api = tweepy.API(auth)
+        streamAccess = tweepy.Stream(
+            auth=api.auth, listener=self.streamListener, tweet_mode='extended')
+        streamAccess.filter(track=self._search_tags,
+                            languages=["pt"],
+                            is_async=True)
+        time.sleep(self.stream_time)
+        streamAccess.disconnect()
+
+    
+    def _process_data(self):
+        """
+        Limpa as notícias capturadas via streaming e persiste os textos processados na coluna 'text_news_cleaned' da tabela 'detectenv.news'.
+        """
+        self._logger.info("Tratando notícias capturadas via streaming...")
+
+        if self._dao.clean_and_save_text_news():
+            self._logger.info("Notícias capturadas via streaming tratadas com sucesso.")  
+        else:
+             self._logger.info("Nenhuma nova notícia para ser tratada.")
+             
+    
+    def _persist_data(self):
+        """
+        docstring
+        """
+        self._logger.info('Persisting data...')
+        self._dao.insert_posts()
