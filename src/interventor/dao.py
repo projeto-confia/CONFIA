@@ -152,6 +152,18 @@ class InterventorDAO(object):
         except:
             raise
         
+        
+    def get_all_agency_news(self):
+        
+        sql_string = "SELECT anc.id_news_checked, anc.publication_title, anc.id_trusted_agency \
+                        FROM detectenv.agency_news_checked anc"
+        try:
+            with DatabaseWrapper() as db:
+                records = db.query(sql_string)
+            return records
+        except:
+            raise
+        
     
     def get_workbook(self):
         try:
