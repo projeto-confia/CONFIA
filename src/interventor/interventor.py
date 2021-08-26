@@ -4,6 +4,7 @@ from src.config import Config as config
 from src.interventor.dao import InterventorDAO
 from src.apis.twitter import TwitterAPI
 from src.utils.email import EmailAPI
+from src.utils.text_preprocessing import TextPreprocessing
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
@@ -14,12 +15,21 @@ class Interventor(object):
         self._twitter_api = TwitterAPI()
         self._email_api = EmailAPI()
         self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
+        self._text_preprocessor = TextPreprocessing()
+        self._all_fca_news = self._get_all_agency_news()
         self._logger.info("Interventor initialized.")
         
         
     def run(self):
         self._process_news()
         self._process_curatorship()
+        
+        
+    def _get_all_agency_news(self):
+        all_fca_news = self._dao.get_all_agency_news()
+        for i, (_, publication_title, _) in enumerate(all_fca_news):
+            all_fca_news[i] += (self._text_preprocessor.text_cleaning(publication_title),)
+        return all_fca_news
         
         
     def _process_news(self):
@@ -55,15 +65,17 @@ class Interventor(object):
         Returns:
             tuple: (list of similars, list of not similars)
         """
-        # TODO: implement deduplication
-        # temp code to emulate deduplication
-        import random
+        
         similars, not_similars = list(), list()
-        for n in news:
-            if random.randint(0,1):
-                similars.append(n + (1,))
+        for i, (_, text_news) in enumerate(news):
+            text_news_cleaned = self._text_preprocessor.text_cleaning(text_news)
+            for id_news_checked, _, _, publication_title_cleaned in self._all_fca_news:
+                is_similar, _ = self._text_preprocessor.check_duplications(text_news_cleaned, publication_title_cleaned)
+                if is_similar:
+                    similars.append(news[i] + (id_news_checked,))
+                    break
             else:
-                not_similars.append(n)
+                not_similars.append(news[i])
         return (similars, not_similars)
     
     
