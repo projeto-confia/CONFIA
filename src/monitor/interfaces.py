@@ -56,13 +56,13 @@ class TwitterStatusProcessorInterface(metaclass=abc.ABCMeta):
 
     @classmethod
     def __subclasshook__(cls, subclass):
-        return (hasattr(subclass, 'process_status') and
-                callable(subclass.process_status) or
+        return (hasattr(subclass, 'process') and
+                callable(subclass.process) or
                 NotImplemented)
         
 
     @abc.abstractmethod
-    def process_status(self, status):
+    def process(self, status):
         """
         Process status
         """

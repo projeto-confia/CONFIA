@@ -129,7 +129,7 @@ class MonitorDAO(object):
                 pkl.dump(data, f)
             
             
-    def get_media_accounts(self, name_social_media):
+    def get_media_accounts(self, name_social_network):
         sql_string = 'select sma.id_social_media_account, sma.screen_name, sma.id_account_social_media, \
                         CASE WHEN count(p.*) > 0 THEN false ELSE true END as initial_load \
                       from detectenv.owner o inner join detectenv.social_media_account sma on \
@@ -145,7 +145,7 @@ class MonitorDAO(object):
                       group by sma.id_social_media_account, sma.screen_name, sma.id_account_social_media;'
 
         with DatabaseWrapper() as db:
-            return db.query(sql_string, (name_social_media,))
+            return db.query(sql_string, (name_social_network,))
     
     
     def insert_posts_from_pkl(self):

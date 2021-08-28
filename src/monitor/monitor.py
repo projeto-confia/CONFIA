@@ -28,6 +28,82 @@ class TwitterMonitor(object):
     def run(self):
         for collector in self._collectors:
             collector().run()
+            
+            
+class TwitterStatusProcessor(TwitterStatusProcessorInterface):
+    
+    def __init__(self):
+        pass
+        
+        
+    def process(self, status):
+        tweet = dict()
+        tweet['text_post'] = ''
+        tweet['num_likes'] = 0
+        tweet['num_shares'] = 0
+        tweet['id_post_social_media'] = status.id
+        if hasattr(status, "retweeted_status"):  # if is retweet
+            tweet['parent_id_post_social_media'] = status.retweeted_status.id
+            try:
+                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
+            except AttributeError:
+                try:
+                    tweet['text_post'] = status.retweeted_status.full_text
+                except AttributeError:
+                    tweet['text_post'] = status.retweeted_status.text
+            finally:
+                tweet['num_likes'] = status.retweeted_status.favorite_count
+                tweet['num_shares'] = status.retweeted_status.retweet_count
+        else:
+            tweet['parent_id_post_social_media'] = None
+            try:
+                tweet['text_post'] = status.extended_tweet["full_text"]
+            except AttributeError:
+                try:
+                    tweet['text_post'] = status.full_text
+                except AttributeError:
+                    tweet['text_post'] = status.text
+        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
+        tweet['datetime_post'] = status.created_at
+        return tweet
+        
+        
+class TwitterStreamStatusProcessor(TwitterStatusProcessor):
+    
+    def __init__(self, name_social_network, dao:MonitorDAO, media_ids):
+        super().__init__()
+        self._name_social_network = name_social_network
+        self._dao = dao
+        self._media_ids = media_ids
+    
+    
+    def process(self, status):
+        if status.author.id in self._media_ids:
+            return
+        tweet = super().process(status)
+        # TODO: change database name column and table to social_network
+        tweet['name_social_media'] = self._name_social_network
+        tweet['id_account_social_media'] = status.author.id_str
+        tweet['screen_name'] = status.author.screen_name
+        tweet['date_creation'] = status.author.created_at
+        tweet['blue_badge'] = status.author.verified
+        tweet['datetime_post'] = status.created_at
+        self._dao.write_in_csv_from_dict(tweet)
+    
+    
+class TwitterMediaStatusProcessor(TwitterStatusProcessor):
+
+    def __init__(self):
+        super().__init__()
+        self.id_social_media_account = None
+    
+    
+    def process(self, status):
+        tweet = super().process(status)
+        tweet['id_social_media_account'] = self.id_social_media_account
+        tweet['num_likes'] = status.favorite_count or tweet['num_likes']
+        tweet['num_shares'] = status.retweet_count or tweet['num_shares']
+        return tweet
 
 
 class Collector(object):
@@ -41,7 +117,9 @@ class TwitterCollector(Collector):
     
     def __init__(self):
         super().__init__()
-        self._name_social_media = 'twitter'
+        self._name_social_network = 'twitter'
+        self._media_accounts = self._dao.get_media_accounts(self._name_social_network)
+        self._media_ids = [media[2] for media in self._media_accounts]
         self._twitter_api = TwitterAPI()
         self._search_tags = config.MONITOR.SEARCH_TAGS
 
@@ -50,7 +128,7 @@ class TwitterMediaCollector(CollectorInterface, TwitterCollector):
     
     def __init__(self):
         super().__init__()
-        self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
+        self._status_processor = TwitterMediaStatusProcessor()
         self._logger.info("Twitter Media Collector initialized")
 
     
@@ -90,8 +168,9 @@ class TwitterMediaCollector(CollectorInterface, TwitterCollector):
         
         try:
             tweets = list()
+            self._status_processor.id_social_media_account = id_social_media_account
             for status in self._twitter_api.fetch_timeline(screen_name=screen_name, limit=limit):
-                tweet = self._process_status(status, id_social_media_account)
+                tweet = self._status_processor.process(status)
                 text_post = self._normalize_text(tweet['text_post']).lower()
                 if datetime_limit and tweet['datetime_post'] <= datetime_limit:
                     break
@@ -116,120 +195,10 @@ class TwitterMediaCollector(CollectorInterface, TwitterCollector):
     def _persist_data(self):
         self._logger.info('Persisting data')
         self._dao.insert_posts_from_pkl()
-        
-        
-    def _process_status(self, status, id_social_media_account):
-        """
-        status: tweepy.models.status - objeto twitter
-        """
-        
-        tweet = dict()
-        tweet['text_post'] = ''
-        tweet['num_likes'] = 0
-        tweet['num_shares'] = 0
-        tweet['id_social_media_account'] = id_social_media_account
-        tweet['id_post_social_media'] = status.id
-        if hasattr(status, "retweeted_status"):  # if is retweet
-            tweet['parent_id_post_social_media'] = status.retweeted_status.id
-            try:
-                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
-            except AttributeError:
-                tweet['text_post'] = status.retweeted_status.full_text
-            finally:
-                tweet['num_likes'] = status.retweeted_status.favorite_count
-                tweet['num_shares'] = status.retweeted_status.retweet_count
-        else:
-            tweet['parent_id_post_social_media'] = None
-            try:
-                tweet['text_post'] = status.extended_tweet["full_text"]
-            except AttributeError:
-                tweet['text_post'] = status.full_text
-        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
-        tweet['num_likes'] = status.favorite_count or tweet['num_likes']
-        tweet['num_shares'] = status.retweet_count or tweet['num_shares']
-        tweet['datetime_post'] = status.created_at
-        return tweet
     
     
     def _normalize_text(self, text):
         return normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
-
-
-class TwitterStreamStatusProcessor(TwitterStatusProcessorInterface):
-    
-    def __init__(self, name_social_media, dao:MonitorDAO):
-        self._dao = dao
-        self._name_social_media = name_social_media
-        self._media_ids = self._get_media_ids()
-    
-    
-    def process_status(self, status):
-        # não armazena posts de medias
-        if status.author.id in self._media_ids:
-            return
-        
-        # init
-        tweet = dict()
-
-        # social media
-        tweet['name_social_media'] = 'twitter'
-
-        # account
-        tweet['id_account_social_media'] = status.author.id_str
-        tweet['screen_name'] = status.author.screen_name
-        tweet['date_creation'] = status.author.created_at
-        tweet['blue_badge'] = status.author.verified
-
-        # post
-        tweet['id_post_social_media'] = status.id
-
-        if hasattr(status, "retweeted_status"):  # Checa se é retweet
-            tweet['parent_id_post_social_media'] = status.retweeted_status.id
-        else:
-            tweet['parent_id_post_social_media'] = None
-
-        tweet['text_post'] = ''
-        tweet['num_likes'] = 0
-        tweet['num_shares'] = 0
-        if hasattr(status, "retweeted_status"):  # Checa se é retweet
-            try:
-                tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
-            except AttributeError:
-                tweet['text_post'] = status.retweeted_status.text
-            finally:
-                tweet['num_likes'] = status.retweeted_status.favorite_count
-                tweet['num_shares'] = status.retweeted_status.retweet_count
-        else:
-            try:
-                tweet['text_post'] = status.extended_tweet["full_text"]
-            except AttributeError:
-                tweet['text_post'] = status.text
-
-        # processa o texto da mensagem.
-        tweet['text_post'] = tweet['text_post'].replace("\n", " ")
-        # self._preprocessing.process_text(tweet['text_post'])
-
-        # será sempre 0, pois acabou de ser postado
-        # tweet['num_likes'] = status.favorite_count
-        # será sempre 0, pois acabou de ser postado
-        # tweet['num_shares'] = status.retweet_count
-        tweet['datetime_post'] = status.created_at
-
-        # if hasattr(status, "retweeted_status"):
-        #     print(tweet['text_post'])
-        #     print()
-        #     print('id tweet:', tweet['id_str'], 'likes:', tweet['num_likes'], 'shares', tweet['num_shares'])
-        #     print('parent post id', tweet['parent_id_post'], 'shares:', status.retweeted_status.retweet_count, 'likes:', status.retweeted_status.favorite_count)
-        #     # print(tweet['parent_id_post'])
-        #     print('#####################################################')
-        #     print()
-
-        self._dao.write_in_csv_from_dict(tweet)
-        
-        
-    def _get_media_ids(self):
-        self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
-        return [media[2] for media in self._media_accounts]
 
 
 class TwitterStreamCollector(CollectorInterface, TwitterCollector):
@@ -237,6 +206,9 @@ class TwitterStreamCollector(CollectorInterface, TwitterCollector):
     def __init__(self):
         super().__init__()
         self.stream_time = config.MONITOR.STREAM_TIME
+        self.status_processor = TwitterStreamStatusProcessor(self._name_social_network,
+                                                             self._dao, 
+                                                             self._media_ids)
         self._logger.info("Twitter Streaming initialized.")
         
         
@@ -253,9 +225,8 @@ class TwitterStreamCollector(CollectorInterface, TwitterCollector):
         
         self._logger.info(f'Streaming for {self.stream_time} seconds...')
         self._twitter_api.fetch_stream(self._search_tags, 
-                                       self.stream_time, 
-                                       TwitterStreamStatusProcessor(self._name_social_media, 
-                                                                    self._dao))
+                                       self.stream_time,
+                                       self.status_processor)
 
     
     def _process_data(self):
