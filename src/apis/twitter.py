@@ -13,7 +13,7 @@ class TwitterStreamListener(tweepy.StreamListener):
 
 
     def on_status(self, status):
-        self._status_processor.process_status(status)
+        self._status_processor.process(status)
     
     
 class TwitterAPI(object):
