@@ -1,8 +1,5 @@
 import re
-import tweepy
 import abc
-import time
-import os
 import logging
 # TODO: transferir authconfig para config.py
 import src.monitor.authconfig as cfg
@@ -209,22 +206,15 @@ class TwitterMediaCollector(CollectorInterface, TwitterCollector):
         return normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
 
 
-class TwitterStreamListener(tweepy.StreamListener):
-
-    def on_connect(self):
-        self._dao = MonitorDAO()
-        self._tweet_csv_filename = 'tweets.csv'
-        self._tweet_csv_path = os.path.join("src", "data", self._tweet_csv_filename)
-        # TODO: erro ao criar o arquivo não dispara exceção. Experimentar mover para o init de TwitterStream
-        self._name_social_media = 'twitter'
+class TwitterStreamStatusProcessor(object):
+    
+    def __init__(self, name_social_media, dao:MonitorDAO):
+        self._dao = dao
+        self._name_social_media = name_social_media
         self._media_ids = self._get_media_ids()
-        
-
-    def on_status(self, status):
-        """
-        status: tweepy.models.status - objeto twitter
-        """
-        
+    
+    
+    def process_status(self, status):
         # não armazena posts de medias
         if status.author.id in self._media_ids:
             return
@@ -285,9 +275,9 @@ class TwitterStreamListener(tweepy.StreamListener):
         #     print('#####################################################')
         #     print()
 
-        self._dao.write_in_csv_from_dict(tweet, self._tweet_csv_path)
-    
-    
+        self._dao.write_in_csv_from_dict(tweet)
+        
+        
     def _get_media_ids(self):
         self._media_accounts = self._dao.get_media_accounts(self._name_social_media)
         return [media[2] for media in self._media_accounts]
@@ -297,7 +287,6 @@ class TwitterStreamCollector(CollectorInterface, TwitterCollector):
     
     def __init__(self):
         super().__init__()
-        self.streamListener = TwitterStreamListener()
         self.stream_time = config.MONITOR.STREAM_TIME
         self._logger.info("Twitter Streaming initialized.")
         
@@ -306,29 +295,18 @@ class TwitterStreamCollector(CollectorInterface, TwitterCollector):
         self._get_data()
         self._process_data()
         self._persist_data()
-    
-
+        
+        
     def _get_data(self):
         """
         docstring
         """
         
-        self._logger.info("Streaming for {} seconds...".format(self.stream_time))
-        
-        tokens = cfg.tokens
-        auth = tweepy.OAuthHandler(
-            tokens["consumer_key"], tokens["consumer_secret"])
-        auth.set_access_token(
-            tokens["access_token"], tokens["access_token_secret"])
-
-        api = tweepy.API(auth)
-        streamAccess = tweepy.Stream(
-            auth=api.auth, listener=self.streamListener, tweet_mode='extended')
-        streamAccess.filter(track=self._search_tags,
-                            languages=["pt"],
-                            is_async=True)
-        time.sleep(self.stream_time)
-        streamAccess.disconnect()
+        self._logger.info(f'Streaming for {self.stream_time} seconds...')
+        self._twitter_api.fetch_stream(self._search_tags, 
+                                       self.stream_time, 
+                                       TwitterStreamStatusProcessor(self._name_social_media, 
+                                                                    self._dao))
 
     
     def _process_data(self):

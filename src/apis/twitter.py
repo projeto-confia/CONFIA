@@ -1,9 +1,21 @@
 import logging
 import tweepy
+import time
 import src.monitor.authconfig as cfg
 from src.config import Config as config
 
 
+class TwitterStreamListener(tweepy.StreamListener):
+    
+    def __init__(self, status_processor):
+        super().__init__()
+        self._status_processor = status_processor
+
+
+    def on_status(self, status):
+        self._status_processor.process_status(status)
+    
+    
 class TwitterAPI(object):
     
     def __init__(self):
@@ -57,3 +69,15 @@ class TwitterAPI(object):
         
     def tweet(self, text_tweet):
         self._api.update_status(text_tweet)
+        
+        
+    def fetch_stream(self, tags, stream_time, status_processor):
+        stream_listener = TwitterStreamListener(status_processor)
+        streamAccess = tweepy.Stream(auth=self._api.auth, 
+                                     listener=stream_listener, 
+                                     tweet_mode='extended')
+        streamAccess.filter(track=tags,
+                            languages=["pt"],
+                            is_async=True)
+        time.sleep(stream_time)
+        streamAccess.disconnect()
