@@ -1,7 +1,6 @@
 import logging
 import tweepy
 import time
-import src.monitor.authconfig as cfg
 from src.config import Config as config
 
 
@@ -20,7 +19,6 @@ class TwitterAPI(object):
     
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._tokens = cfg.tokens
         self._api = None
         self._connect()
         self._logger.info("Twitter API initialized")
@@ -29,8 +27,10 @@ class TwitterAPI(object):
     def _connect(self):
         if not self._api:
             try:
-                auth = tweepy.OAuthHandler(self._tokens['consumer_key'], self._tokens['consumer_secret'])
-                auth.set_access_token(self._tokens['access_token'], self._tokens['access_token_secret'])
+                auth = tweepy.OAuthHandler(config.TWITTER_CREDENTIAL.CONSUMER_KEY, 
+                                           config.TWITTER_CREDENTIAL.CONSUMER_SECRET)
+                auth.set_access_token(config.TWITTER_CREDENTIAL.ACCESS_TOKEN, 
+                                      config.TWITTER_CREDENTIAL.ACCESS_TOKEN_SECRET)
                 self._api = tweepy.API(auth)
             except:
                 self._logger.error('Unable to connect to Twitter API.')

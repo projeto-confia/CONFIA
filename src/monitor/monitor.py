@@ -1,8 +1,6 @@
 import re
 import abc
 import logging
-# TODO: transferir authconfig para config.py
-import src.monitor.authconfig as cfg
 from src.config import Config as config
 from src.monitor.dao import MonitorDAO
 from unicodedata import normalize
