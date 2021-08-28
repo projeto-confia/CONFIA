@@ -47,3 +47,10 @@ class Config(object):
     class EMAIL(object):
         ACCOUNT = 'account_name@server.com'
         PASSWORD = 'there_is_no_spoon'
+
+    # twitter credentials
+    class TWITTER_CREDENTIAL:
+        CONSUMER_KEY = "consumer_key_here"
+        CONSUMER_SECRET = "consumer_secret_here"
+        ACCESS_TOKEN = "access_token_here"
+        ACCESS_TOKEN_SECRET = "access_token_secret_here"
