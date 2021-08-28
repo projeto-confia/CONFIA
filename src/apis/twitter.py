@@ -2,11 +2,12 @@ import logging
 import tweepy
 import time
 from src.config import Config as config
+from src.monitor.interfaces import TwitterStatusProcessorInterface
 
 
 class TwitterStreamListener(tweepy.StreamListener):
     
-    def __init__(self, status_processor):
+    def __init__(self, status_processor:TwitterStatusProcessorInterface):
         super().__init__()
         self._status_processor = status_processor
 
