@@ -106,11 +106,18 @@ class TwitterMediaStatusProcessor(TwitterStatusProcessor):
         return tweet
 
 
-class Collector(object):
+class Collector(CollectorInterface):
     
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._dao = MonitorDAO()
+        self._search_tags = config.MONITOR.SEARCH_TAGS
+        
+        
+    def run(self):
+        self._get_data()
+        self._process_data()
+        self._persist_data()
         
         
 class TwitterCollector(Collector):
@@ -121,21 +128,14 @@ class TwitterCollector(Collector):
         self._media_accounts = self._dao.get_media_accounts(self._name_social_network)
         self._media_ids = [media[2] for media in self._media_accounts]
         self._twitter_api = TwitterAPI()
-        self._search_tags = config.MONITOR.SEARCH_TAGS
 
 
-class TwitterMediaCollector(CollectorInterface, TwitterCollector):
+class TwitterMediaCollector(TwitterCollector):
     
     def __init__(self):
         super().__init__()
         self._status_processor = TwitterMediaStatusProcessor()
         self._logger.info("Twitter Media Collector initialized")
-
-    
-    def run(self):
-        self._get_data()
-        self._process_data()
-        self._persist_data()
         
     
     def _get_data(self):
@@ -201,7 +201,7 @@ class TwitterMediaCollector(CollectorInterface, TwitterCollector):
         return normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
 
 
-class TwitterStreamCollector(CollectorInterface, TwitterCollector):
+class TwitterStreamCollector(TwitterCollector):
     
     def __init__(self):
         super().__init__()
@@ -210,12 +210,6 @@ class TwitterStreamCollector(CollectorInterface, TwitterCollector):
                                                              self._dao, 
                                                              self._media_ids)
         self._logger.info("Twitter Streaming initialized.")
-        
-        
-    def run(self):
-        self._get_data()
-        self._process_data()
-        self._persist_data()
         
         
     def _get_data(self):
