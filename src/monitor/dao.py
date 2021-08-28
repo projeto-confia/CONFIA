@@ -5,6 +5,7 @@ import multiprocessing as mp
 import csv, os, math
 import pickle as pkl
 import numpy as np
+import pandas as pd
 
 
 class MonitorDAO(object):
@@ -121,9 +122,8 @@ class MonitorDAO(object):
         Args:
             data_list (list): list of objects (list, dict, tuple, etc) that will be persisted
         """
-        with open(self._tweet_pkl_path, 'ab') as f:
-            for data in data_list:
-                pkl.dump(data, f)
+        df = pd.DataFrame(data_list)
+        df.to_pickle(self._tweet_pkl_path)
             
             
     def get_media_accounts(self, name_social_network):
