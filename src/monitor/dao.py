@@ -112,8 +112,8 @@ class MonitorDAO(object):
         except:
             raise
 
-    def write_in_csv_from_dict(self, data, file_path):
-        with open(file_path, mode='a') as f:
+    def write_in_csv_from_dict(self, data):
+        with open(self._tweet_csv_path, mode='a') as f:
             writer = csv.DictWriter(f, data.keys(), delimiter=';')
             writer.writerow(data)
             
