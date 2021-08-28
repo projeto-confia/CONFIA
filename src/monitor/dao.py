@@ -1,14 +1,11 @@
-import itertools
-from operator import ne
-from joblib.parallel import cpu_count
 from operator import itemgetter
 from src.orm.db_wrapper import DatabaseWrapper
 from src.utils.text_preprocessing import TextPreprocessing
-from concurrent import futures
 import multiprocessing as mp
 import csv, os, math
 import pickle as pkl
 import numpy as np
+
 
 class MonitorDAO(object):
     """Funcionalidades DAO voltadas para o módulo de monitoramento. 
