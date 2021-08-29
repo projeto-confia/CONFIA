@@ -3,7 +3,6 @@ from src.orm.db_wrapper import DatabaseWrapper
 from src.utils.text_preprocessing import TextPreprocessing
 import multiprocessing as mp
 import csv, os, math
-import pickle as pkl
 import numpy as np
 import pandas as pd
 
@@ -116,13 +115,14 @@ class MonitorDAO(object):
             writer.writerow(data)
             
             
-    def write_in_pkl(self, data_list):
-        """Persist a list of objects within a pickle file
+    def write_in_pkl(self, df):
+        """Persist data within a pickle file
 
         Args:
-            data_list (list): list of objects (list, dict, tuple, etc) that will be persisted
+            df (pd.DataFrame, list): pandas.DataFrame or list of dict
         """
-        df = pd.DataFrame(data_list)
+        if not isinstance(df, pd.DataFrame):
+            df = pd.DataFrame(df)
         df.to_pickle(self._tweet_pkl_path)
             
             
@@ -213,23 +213,21 @@ class MonitorDAO(object):
             raise
 
 
-    def _load_pkl(self, filepath):
-        """Recupera os dados de um arquivo pickle.
+    def _load_pkl(self, filepath=None) -> pd.DataFrame:
+        """Load data from pickle file.
 
         Args:
-            filepath (str): File path do arquivo pickle
+            filepath (str): Pickle filepath. If not passed, self._tweet_pkl_path will be used. Defaults None
 
         Returns:
-            list: Lista de objetos do arquivo pickle
+            pandas.DataFrame: Pandas dataframe of the pickle file
         """
-        data = []
-        with open(filepath, 'rb') as f:
-            try:
-                while True:
-                    data.append(pkl.load(f))
-            except EOFError:
-                pass
-        return data
+        try:
+            if not filepath:
+                filepath = self._tweet_pkl_path
+            return pd.read_pickle(filepath)
+        except:
+            raise
         
         
     def _load_csv_to_dict(self, file_path, fieldnames, delimiter=','):

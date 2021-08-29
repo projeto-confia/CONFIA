@@ -1,10 +1,13 @@
 import re
 import logging
+import numpy as np
+import pandas as pd
 from src.config import Config as config
 from src.monitor.dao import MonitorDAO
 from unicodedata import normalize
 from src.apis.twitter import TwitterAPI
 from src.monitor.interfaces import CollectorInterface, TwitterStatusProcessorInterface
+from src.utils.text_preprocessing import TextPreprocessing
 
 
 class Monitor(object):
@@ -189,7 +192,25 @@ class TwitterMediaCollector(TwitterCollector):
         
         
     def _process_data(self):
-        pass
+        self._logger.info('Processing data...')
+        text_preprocessing = TextPreprocessing()
+        df = self._dao._load_pkl()
+        df['text_prep'] = df['text_post'].apply(text_preprocessing.text_cleaning)
+        df['group'] = pd.Series(range(len(df)))
+        df['ratio_similarity'] = 0
+        group_col_id = df.columns.get_loc('group')
+        ratio_similarity_col_id = df.columns.get_loc('ratio_similarity')
+        for index_i, row_i in df.iterrows():
+            idx1 = df.iloc[index_i+1:].index
+            idx2 = df[df['ratio_similarity'] == 0].index
+            idx_intersect = np.intersect1d(idx1, idx2)
+            for index_j, row_j in df.iloc[idx_intersect].iterrows():
+                is_similar, ratio_similarity = text_preprocessing.check_duplications(row_i['text_prep'], row_j['text_prep'])
+                if not is_similar:
+                    continue
+                df.iloc[index_j, group_col_id] = row_i['group']
+                df.iloc[index_j, ratio_similarity_col_id] = ratio_similarity
+        self._dao.write_in_pkl(df)
     
     
     def _persist_data(self):
