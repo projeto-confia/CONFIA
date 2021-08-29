@@ -145,13 +145,15 @@ class TwitterMediaCollector(TwitterCollector):
         tags = set(map(str.lower, map(self._normalize_text, self._search_tags)))
         regex_string = '|'.join(tags)
         pattern = re.compile(regex_string)
+        data = list()
         for id_social_media_account, screen_name, _, initial_load in self._media_accounts:
             if not initial_load:
                 self._logger.info('Updating data from {}'.format(screen_name))
-                self._update_data(id_social_media_account, screen_name, pattern)
+                data += self._update_data(id_social_media_account, screen_name, pattern)
             else:
                 self._logger.info('Fetching data from {}'.format(screen_name))
-                self._fetch_data(id_social_media_account, screen_name, pattern, limit=1000)  # TODO: parametrizar limit?
+                data += self._fetch_data(id_social_media_account, screen_name, pattern, limit=1000)  # TODO: parametrizar limit?
+        self._dao.write_in_pkl(data)
         # TODO: implementar e chamar método disconnect()
         
         
@@ -179,8 +181,7 @@ class TwitterMediaCollector(TwitterCollector):
                     break
                 if pattern.search(text_post):
                     tweets.append(tweet)
-            if len(tweets):
-                self._dao.write_in_pkl(tweets)
+            return tweets
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(screen_name))
             raise
@@ -188,7 +189,7 @@ class TwitterMediaCollector(TwitterCollector):
     
     def _update_data(self, id_social_media_account, screen_name, pattern):
         last_post_datetime = self._dao.get_last_media_post(id_social_media_account)
-        self._fetch_data(id_social_media_account, screen_name, pattern, datetime_limit=last_post_datetime)
+        return self._fetch_data(id_social_media_account, screen_name, pattern, datetime_limit=last_post_datetime)
         
         
     def _process_data(self):
