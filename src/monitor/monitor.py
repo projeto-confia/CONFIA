@@ -152,23 +152,24 @@ class TwitterMediaCollector(TwitterCollector):
                 data += self._update_data(id_social_media_account, screen_name, pattern)
             else:
                 self._logger.info('Fetching data from {}'.format(screen_name))
-                data += self._fetch_data(id_social_media_account, screen_name, pattern, limit=1000)  # TODO: parametrizar limit?
+                data += self._fetch_data(id_social_media_account, screen_name, pattern, limit=1000)  # TODO: parametrize limit?
         self._dao.write_in_pkl(data)
-        # TODO: implementar e chamar método disconnect()
+        # TODO: Implement and call method disconnect()
         
         
     def _fetch_data(self, id_social_media_account, screen_name, pattern, limit=0, datetime_limit=None):
-        """Recupera tweets da timeline da media e armazena em arquivo
+        """Fetch tweets from account timeline and store in file
 
         Args:
-            id_social_media_account (int): Id da conta da media na rede social
-            screen_name (str): Screen name da conta na rede social
-            pattern (re.Pattern): Objeto Pattern do módulo re
-            limit (int, optional): Quantidade de posts a serem recuperados. \
-                Se 0 for passado, serão recuperados os 20 posts mais recentes. \
-                Defaults to 0.
-            datetime_limit (datetime, optional): Datetime limite do post que deve \
-                ser recuperado. Defaults to None.
+            id_social_media_account (int): Id of social network account
+            screen_name (str): Screen name of the social network account
+            pattern (re.pattern): Pattern object from re module
+            limit (int, optional): Num of posts to be fetched. \
+                If 0 passed, will be fetched 20 posts. Defaults to 0.
+            datetime_limit (datetime, optional): Datetime limit of posts datetime publication. Defaults to None.
+
+        Returns:
+            list: List of dicts, each dict representing one tweet
         """
         
         try:
