@@ -5,6 +5,7 @@ import multiprocessing as mp
 import csv, os, math
 import numpy as np
 import pandas as pd
+from datetime import datetime, timedelta
 
 
 class MonitorDAO(object):
@@ -26,9 +27,8 @@ class MonitorDAO(object):
         self._tweet_pkl_filename = 'tweets.pkl'
         self._tweet_pkl_path = os.path.join("src", "data", self._tweet_pkl_filename)
         self._id_social_media = None
-
-        with DatabaseWrapper() as db:
-            self._id_text_news_cleaned = db.query("select id_news, text_news_cleaned from detectenv.news;")
+        self._text_news_cleaned = self._get_text_news_cleaned()
+      
 
     def insert_posts(self):
         """
@@ -79,8 +79,8 @@ class MonitorDAO(object):
 
                     # consulta se a notícia já possui registro no banco
 
-                    if len(self._id_text_news_cleaned): # verifica se a tabela 'detectenv.news' está vazia.
-                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
+                    if len(self._text_news_cleaned): # verifica se a tabela 'detectenv.news' está vazia.
+                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
                     
                     if not news_with_biggest_score[2]:
                         # insere a notícia e recupera o id
@@ -145,51 +145,85 @@ class MonitorDAO(object):
             return db.query(sql_string, (name_social_network,))
     
     
-    def insert_posts_from_pkl(self):
-        
-        """Carrega o arquivo pickle e persiste os dados no banco
+    def insert_media_posts_from_pkl(self):
+        """Persist pickle file content into database
         """
         
         if not os.path.exists(self._tweet_pkl_path):
             return
-        
-        data = self._load_pkl(self._tweet_pkl_path)
-        
-        # inicia a transação
+        df = self._load_pkl()
+        df['id_news'] = 0
+        df['ground_truth_label'] = False
+        groups = df.groupby(['group']).groups
         try:
             with DatabaseWrapper() as db:
-               
-                for tweet in data:                    
-                    news_with_biggest_score = [-1, -1, False]
-                    news_data = {'text_news': tweet['text_post'],
-                                 'datetime_publication': tweet['datetime_post'],
-                                 'ground_truth_label': False}                  
-
-                    # consulta se a notícia já possui registro no banco
-                    id_news = -1
-
-                    if len(self._id_text_news_cleaned): # verifica se a tabela 'detectenv.news' possui registros.
-                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._id_text_news_cleaned)
+                # If table news is not empty, execute algorithm
+                if self._text_news_cleaned:
+                    for key in groups.keys():
+                        text_post, text_prep = df.iloc[groups[key][0]][['text_post', 'text_prep']]
+                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
+                        print(news_with_biggest_score)
+                # If empty, just persist
+                else:
+                    cols = ['text_post', 'datetime_post', 'text_prep', 'ground_truth_label']
+                    df_news = df.groupby('group').first()[cols]
+                    df_news.columns = ['text_news', 'datetime_publication', 'text_news_cleaned', 'ground_truth_label']
+                    arglist = df_news.to_records(index=False)
+                    arglist = [(a, pd.Timestamp(b).to_pydatetime(), c, d) for a, b , c, d in arglist]
+                    id_news_list = self._insert_many_records('detectenv.news',
+                                                             df_news.columns,
+                                                             arglist,
+                                                             'id_news',
+                                                             db)
+                    id_news_col_idx = df.columns.get_loc('id_news')
+                    for key, id_news in zip(groups.keys(), id_news_list):
+                        idxs = groups[key]
+                        df.iloc[idxs, id_news_col_idx] = id_news[0]
                     
-                    if not news_with_biggest_score[2]:
-                        # insere a notícia e recupera o id
-                        id_news = self._insert_record('detectenv.news',
-                                                      news_data,
-                                                      'id_news',
-                                                      db)
-                    else:
-                        id_news = news_with_biggest_score[0]
+                    # posts
+                    cols = ['id_social_media_account', 'id_news', 'id_post_social_media',
+                            'parent_id_post_social_media', 'text_post', 'datetime_post',
+                            'num_likes', 'num_shares']
+                    df['parent_id_post_social_media'] = df['parent_id_post_social_media'].fillna(0)
+                    arglist = df.loc[:,cols].to_records(index=False)
+                    arglist = [(a,b,c,(d if d else None),e,pd.Timestamp(f).to_pydatetime(),g,h) for a,b,c,d,e,f,g,h in arglist]
+                    self._insert_many_records('detectenv.post',
+                                                cols,
+                                                arglist,
+                                                'id_post',
+                                                db)
+                
+                # for tweet in data:
+                #     news_with_biggest_score = [-1, -1, False]
+                #     news_data = {'text_news': tweet['text_post'],
+                #                  'datetime_publication': tweet['datetime_post'],
+                #                  'ground_truth_label': False}                  
+
+                #     # consulta se a notícia já possui registro no banco
+                #     id_news = -1
+
+                #     if len(self._text_news_cleaned): # verifica se a tabela 'detectenv.news' possui registros.
+                #         news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
                     
-                    # insere o tweet
-                    tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
-                    tweet['id_news'] = int(id_news)
-                    self._insert_record('detectenv.post',
-                                        tweet,
-                                        'id_post',
-                                        db)
+                #     if not news_with_biggest_score[2]:
+                #         # insere a notícia e recupera o id
+                #         id_news = self._insert_record('detectenv.news',
+                #                                       news_data,
+                #                                       'id_news',
+                #                                       db)
+                #     else:
+                #         id_news = news_with_biggest_score[0]
+                    
+                #     # insere o tweet
+                #     tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
+                #     tweet['id_news'] = int(id_news)
+                #     self._insert_record('detectenv.post',
+                #                         tweet,
+                #                         'id_post',
+                #                         db)
 
             # deleta o arquivo pickle
-            os.remove(self._tweet_pkl_path)
+            # os.remove(self._tweet_pkl_path)
         except:
             raise        
         
@@ -279,6 +313,31 @@ class MonitorDAO(object):
                                                                             returning)
         db.execute(sql_string, list(data.values()))
         return db.fetchone()[0]
+    
+    
+    def _insert_many_records(self, tablename, cols, args, returning, db:DatabaseWrapper):
+        """Insert many records into database
+
+        Args:
+            tablename (str): Table name
+            cols (list): List of table columns
+            args (list): List of tuples, each one related to one record to be persisted
+            returning (str): Table column to return, often the PK columns
+            db (DatabaseWrapper): Database conection instance
+
+        Returns:
+            list: List of values returned from database, according returning param
+        """
+    
+        cols = ', '.join(cols)
+        sql_string = f'INSERT INTO {tablename} ({cols}) VALUES %s RETURNING {returning};'
+        returnings = []
+        for i in range(0, len(args), 50):
+            db.execute_many_values(sql_string, args[i:i+50])
+            part = db.fetchall()
+            returnings += part
+        return returnings
+
 
     # TODO: refatorar para função genéria _get_id_record
     def _get_id_social_media_account(self, ac_data, db):
@@ -328,6 +387,21 @@ class MonitorDAO(object):
         record = db.query(sql_string, (arg,))
 
         return 0 if not len(record) else record[0][0]
+    
+    
+    def _get_text_news_cleaned(self):
+        try:
+            with DatabaseWrapper() as db:
+                window_size = 30
+                datetime_ago = datetime.today() - timedelta(days = window_size)
+                sql_string = "SELECT n.id_news, n.text_news_cleaned \
+                                FROM detectenv.news n \
+                                WHERE n.datetime_publication >= %s;"
+                records = db.query(sql_string, (datetime_ago.date(),))
+                return records
+        except:
+            raise
+        
     
     def clean_and_save_text_news(self):
         with DatabaseWrapper() as db:
