@@ -194,8 +194,10 @@ class TwitterMediaCollector(TwitterCollector):
         
     def _process_data(self):
         self._logger.info('Processing data...')
-        text_preprocessing = TextPreprocessing()
         df = self._dao._load_pkl()
+        if not isinstance(df, pd.DataFrame):
+            return
+        text_preprocessing = TextPreprocessing()
         df['text_prep'] = df['text_post'].apply(text_preprocessing.text_cleaning)
         df['group'] = pd.Series(range(len(df)))
         df['ratio_similarity'] = 0

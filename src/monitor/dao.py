@@ -149,9 +149,9 @@ class MonitorDAO(object):
         """Persist pickle file content into database
         """
         
-        if not os.path.exists(self._tweet_pkl_path):
-            return
         df = self._load_pkl()
+        if not isinstance(df, pd.DataFrame):
+            return
         df['id_news'] = 0
         df['ground_truth_label'] = False
         groups = df.groupby(['group']).groups
@@ -254,11 +254,13 @@ class MonitorDAO(object):
             filepath (str): Pickle filepath. If not passed, self._tweet_pkl_path will be used. Defaults None
 
         Returns:
-            pandas.DataFrame: Pandas dataframe of the pickle file
+            pandas.DataFrame: Pandas dataframe of the pickle file or None if filepath doesn't exists
         """
         try:
             if not filepath:
                 filepath = self._tweet_pkl_path
+            if not os.path.exists(filepath):
+                return None
             return pd.read_pickle(filepath)
         except:
             raise
