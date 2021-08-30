@@ -1,4 +1,5 @@
 from operator import itemgetter
+from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
 from src.utils.text_preprocessing import TextPreprocessing
 import multiprocessing as mp
@@ -394,8 +395,7 @@ class MonitorDAO(object):
     def _get_text_news_cleaned(self):
         try:
             with DatabaseWrapper() as db:
-                window_size = 30
-                datetime_ago = datetime.today() - timedelta(days = window_size)
+                datetime_ago = datetime.today() - timedelta(days = config.MONITOR.WINDOW_SIZE)
                 sql_string = "SELECT n.id_news, n.text_news_cleaned \
                                 FROM detectenv.news n \
                                 WHERE n.datetime_publication >= %s;"
