@@ -150,83 +150,76 @@ class MonitorDAO(object):
         """Persist pickle file content into database
         """
         
+        def extract_df_news_groups_firsts(df:pd.DataFrame):
+            cols = ['text_post', 'datetime_post', 'text_prep', 'ground_truth_label']
+            df_news = df[df['id_news'] == 0].groupby('group').first()[cols]
+            df_news.columns = ['text_news', 'datetime_publication', 'text_news_cleaned', 'ground_truth_label']
+            return df_news
+        
+        
+        def insert_news_in_db(df_news:pd.DataFrame, db:DatabaseWrapper):
+            arglist = df_news.to_records(index=False)
+            arglist = [(a, pd.Timestamp(b).to_pydatetime(), c, d) for a, b , c, d in arglist]
+            id_news_list = self._insert_many_records('detectenv.news',
+                                                        df_news.columns,
+                                                        arglist,
+                                                        'id_news',
+                                                        db)
+            return id_news_list
+        
+        
+        def update_dataframe_with_id_news(df_news:pd.DataFrame, id_news_list:list, 
+                                          df:pd.DataFrame, groups):
+            id_news_col_idx = df.columns.get_loc('id_news')
+            for group_key, id_news in zip(df_news.index, id_news_list):
+                indices = groups[group_key]
+                df.iloc[indices, id_news_col_idx] = id_news[0]
+                
+                
+        def insert_posts_in_db(df:pd.DataFrame):
+            cols = ['id_social_media_account', 'id_news', 'id_post_social_media',
+                    'parent_id_post_social_media', 'text_post', 'datetime_post',
+                    'num_likes', 'num_shares']
+            df['parent_id_post_social_media'] = df['parent_id_post_social_media'].fillna(0)
+            arglist = df.loc[:,cols].to_records(index=False)
+            arglist = [(a,b,c,(d if d else None),e,pd.Timestamp(f).to_pydatetime(),g,h) for a,b,c,d,e,f,g,h in arglist]
+            self._insert_many_records('detectenv.post',
+                                        cols,
+                                        arglist,
+                                        'id_post',
+                                        db)
+        
+        
         df = self._load_pkl()
         if not isinstance(df, pd.DataFrame):
             return
-        df['id_news'] = 0
         df['ground_truth_label'] = False
+        df['id_news'] = 0
+        id_news_col_idx = df.columns.get_loc('id_news')
         groups = df.groupby(['group']).groups
         try:
             with DatabaseWrapper() as db:
-                # If table news is not empty, execute algorithm
                 if self._text_news_cleaned:
-                    for key in groups.keys():
-                        text_post, text_prep = df.iloc[groups[key][0]][['text_post', 'text_prep']]
-                        news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
-                        print(news_with_biggest_score)
-                # If empty, just persist
+                    df_news = extract_df_news_groups_firsts(df)
+                    for group_key, group_row in df_news.iterrows():
+                        news_data = group_row.to_dict()
+                        id_news_db, _, is_similar = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
+                        if is_similar:
+                            indices = groups[group_key]
+                            df.iloc[indices, id_news_col_idx] = id_news_db
+                    df_news = extract_df_news_groups_firsts(df)
+                    if not df_news.empty:
+                        id_news_list = insert_news_in_db(df_news, db)
+                        update_dataframe_with_id_news(df_news, id_news_list, df, groups)
                 else:
-                    cols = ['text_post', 'datetime_post', 'text_prep', 'ground_truth_label']
-                    df_news = df.groupby('group').first()[cols]
-                    df_news.columns = ['text_news', 'datetime_publication', 'text_news_cleaned', 'ground_truth_label']
-                    arglist = df_news.to_records(index=False)
-                    arglist = [(a, pd.Timestamp(b).to_pydatetime(), c, d) for a, b , c, d in arglist]
-                    id_news_list = self._insert_many_records('detectenv.news',
-                                                             df_news.columns,
-                                                             arglist,
-                                                             'id_news',
-                                                             db)
-                    id_news_col_idx = df.columns.get_loc('id_news')
-                    for key, id_news in zip(groups.keys(), id_news_list):
-                        idxs = groups[key]
-                        df.iloc[idxs, id_news_col_idx] = id_news[0]
-                    
-                    # posts
-                    cols = ['id_social_media_account', 'id_news', 'id_post_social_media',
-                            'parent_id_post_social_media', 'text_post', 'datetime_post',
-                            'num_likes', 'num_shares']
-                    df['parent_id_post_social_media'] = df['parent_id_post_social_media'].fillna(0)
-                    arglist = df.loc[:,cols].to_records(index=False)
-                    arglist = [(a,b,c,(d if d else None),e,pd.Timestamp(f).to_pydatetime(),g,h) for a,b,c,d,e,f,g,h in arglist]
-                    self._insert_many_records('detectenv.post',
-                                                cols,
-                                                arglist,
-                                                'id_post',
-                                                db)
-                
-                # for tweet in data:
-                #     news_with_biggest_score = [-1, -1, False]
-                #     news_data = {'text_news': tweet['text_post'],
-                #                  'datetime_publication': tweet['datetime_post'],
-                #                  'ground_truth_label': False}                  
-
-                #     # consulta se a notícia já possui registro no banco
-                #     id_news = -1
-
-                #     if len(self._text_news_cleaned): # verifica se a tabela 'detectenv.news' possui registros.
-                #         news_with_biggest_score = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
-                    
-                #     if not news_with_biggest_score[2]:
-                #         # insere a notícia e recupera o id
-                #         id_news = self._insert_record('detectenv.news',
-                #                                       news_data,
-                #                                       'id_news',
-                #                                       db)
-                #     else:
-                #         id_news = news_with_biggest_score[0]
-                    
-                #     # insere o tweet
-                #     tweet['parent_id_post_social_media'] = tweet['parent_id_post_social_media'] or None  # empty str to None
-                #     tweet['id_news'] = int(id_news)
-                #     self._insert_record('detectenv.post',
-                #                         tweet,
-                #                         'id_post',
-                #                         db)
-
-            # deleta o arquivo pickle
-            # os.remove(self._tweet_pkl_path)
+                    df_news = extract_df_news_groups_firsts(df)
+                    id_news_list = insert_news_in_db(df_news, db)
+                    update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                insert_posts_in_db(df)
+            os.remove(self._tweet_pkl_path)
         except:
-            raise        
+            raise
+    
         
     def get_last_media_post(self, id_social_media_account):
         """Recupera o maior datetime de publicação de post
@@ -418,36 +411,42 @@ class MonitorDAO(object):
 
             return False
 
+
     def _get_no_cleaned_text_news(self, db):
         sql_string = "select id_news, text_news from detectenv.news where text_news_cleaned is null;"
         no_cleaned_news = db.query(sql_string)
         return False if not len(no_cleaned_news) else no_cleaned_news
+
 
     def _update_no_cleaned_news_with_cleaned_text(self, news, db):
         sql_string = "update detectenv.news set text_news_cleaned = %s where id_news = %s;"
         db.execute(sql_string, (news[1], news[0],))
         db.commit()
 
+
 def read_cleaned_news_db_in_parallel(news_data, cleaned_news_db):
-    """Lê o arquivo de notícias processadas recuperadas do BD em paralelo e retorna o índice da notícia deduplicada.
+    """Finds the most similar news on database
 
     Args:
-        news_data (dict): dicionário contendo os dados da notícia oriunda do streaming.
-        cleaned_news_db (list): A lista de notícias tratadas oriundas do banco de dados.
+        news_data (dict): dict that must contain 'text_news_cleaned' indice
+        cleaned_news_db (list): List of cleaned news from database.
 
     Returns:
-        indice (int): o índice da notícia duplicada no arquivo de texto.
+        news_most_similar (list): most similar news as list, with [id_news_db:int, \
+            ratio_similarity:float, \
+            is_similar:bool]
     """
+    
     pool = mp.Pool(mp.cpu_count())
     results = []
-
     for batch in _get_indices_batches_news_db(len(cleaned_news_db), batch_size=128):
+        # TODO: if len(cleaned_news_db < batch_size), doesn't execute line code below
+        # TODO: if len(cleaned_news_db) was not multiple of batch_size, remains news are not considered
         results.append(pool.apply_async(_is_news_in_db, (news_data, cleaned_news_db, batch,)))
-
     pool.close()
     pool.join()
-    
     return sorted([result.get() for result in results], key=itemgetter(1))[-1]
+
 
 def _get_indices_batches_news_db(total_news_db, batch_size = 128):
     """Calcula os índices dos batches que representam as notícias da tabela 'detectenv.news'.
@@ -463,6 +462,7 @@ def _get_indices_batches_news_db(total_news_db, batch_size = 128):
 
     for i in range(len(intervals)-1):
         yield [intervals[i], intervals[i+1]-1] if i < len(intervals)-2 else [intervals[i], intervals[i+1]]
+
 
 def _is_news_in_db(news_data, cleaned_news_db, batch):
     """
@@ -486,19 +486,19 @@ def _is_news_in_db(news_data, cleaned_news_db, batch):
     """
     try:
         text_processor = TextPreprocessing()
-        news_data_cleaned = text_processor.text_cleaning(news_data["text_news"])
-
+        # news_data_cleaned = text_processor.text_cleaning(news_data["text_news"])
         text_news_batch = cleaned_news_db[batch[0]:batch[1]]
         results = []
 
         for id_news, text_news_cleaned in text_news_batch:
-            ans, value = text_processor.check_duplications(news_data_cleaned, text_news_cleaned)
+            ans, value = text_processor.check_duplications(news_data['text_news_cleaned'], text_news_cleaned)
             results.append([id_news, value, ans])
 
         results_sorted = sorted(results, key=itemgetter(1), reverse=True) # ordena o valor da semelhança por ordem decrescente.
         return results_sorted[0] 
 
     except Exception as e:
+        # TODO: evolve this exception treatment
         return -1
 
     finally:
