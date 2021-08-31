@@ -146,49 +146,9 @@ class MonitorDAO(object):
             return db.query(sql_string, (name_social_network,))
     
     
-    def insert_media_posts_from_pkl(self):
+    def insert_media_posts(self):
         """Persist pickle file content into database
         """
-        
-        def extract_df_news_groups_firsts(df:pd.DataFrame):
-            cols = ['text_post', 'datetime_post', 'text_prep', 'ground_truth_label']
-            df_news = df[df['id_news'] == 0].groupby('group').first()[cols]
-            df_news.columns = ['text_news', 'datetime_publication', 'text_news_cleaned', 'ground_truth_label']
-            return df_news
-        
-        
-        def insert_news_in_db(df_news:pd.DataFrame, db:DatabaseWrapper):
-            arglist = df_news.to_records(index=False)
-            arglist = [(a, pd.Timestamp(b).to_pydatetime(), c, d) for a, b , c, d in arglist]
-            id_news_list = self._insert_many_records('detectenv.news',
-                                                        df_news.columns,
-                                                        arglist,
-                                                        'id_news',
-                                                        db)
-            return id_news_list
-        
-        
-        def update_dataframe_with_id_news(df_news:pd.DataFrame, id_news_list:list, 
-                                          df:pd.DataFrame, groups):
-            id_news_col_idx = df.columns.get_loc('id_news')
-            for group_key, id_news in zip(df_news.index, id_news_list):
-                indices = groups[group_key]
-                df.iloc[indices, id_news_col_idx] = id_news[0]
-                
-                
-        def insert_posts_in_db(df:pd.DataFrame):
-            cols = ['id_social_media_account', 'id_news', 'id_post_social_media',
-                    'parent_id_post_social_media', 'text_post', 'datetime_post',
-                    'num_likes', 'num_shares']
-            df['parent_id_post_social_media'] = df['parent_id_post_social_media'].fillna(0)
-            arglist = df.loc[:,cols].to_records(index=False)
-            arglist = [(a,b,c,(d if d else None),e,pd.Timestamp(f).to_pydatetime(),g,h) for a,b,c,d,e,f,g,h in arglist]
-            self._insert_many_records('detectenv.post',
-                                        cols,
-                                        arglist,
-                                        'id_post',
-                                        db)
-        
         
         df = self._load_pkl()
         if not isinstance(df, pd.DataFrame):
@@ -200,27 +160,108 @@ class MonitorDAO(object):
         try:
             with DatabaseWrapper() as db:
                 if self._text_news_cleaned:
-                    df_news = extract_df_news_groups_firsts(df)
-                    for group_key, group_row in df_news.iterrows():
-                        news_data = group_row.to_dict()
-                        id_news_db, _, is_similar = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
-                        if is_similar:
-                            indices = groups[group_key]
-                            df.iloc[indices, id_news_col_idx] = id_news_db
-                    df_news = extract_df_news_groups_firsts(df)
+                    df_news = self._extract_df_news_groups_firsts(df, has_ground_truth_label=True)
+                    self._update_dataframe_with_similar_id_news(df, df_news, groups, id_news_col_idx)
+                    df_news = self._extract_df_news_groups_firsts(df, has_ground_truth_label=True)
                     if not df_news.empty:
-                        id_news_list = insert_news_in_db(df_news, db)
-                        update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                        id_news_list = self._insert_news_in_db(df_news, db, has_ground_truth_label=True)
+                        self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
                 else:
-                    df_news = extract_df_news_groups_firsts(df)
-                    id_news_list = insert_news_in_db(df_news, db)
-                    update_dataframe_with_id_news(df_news, id_news_list, df, groups)
-                insert_posts_in_db(df)
+                    df_news = self._extract_df_news_groups_firsts(df, has_ground_truth_label=True)
+                    id_news_list = self._insert_news_in_db(df_news, db, has_ground_truth_label=True)
+                    self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                self._insert_posts_in_db(df, db)
             os.remove(self._tweet_pkl_path)
         except:
             raise
-    
         
+        
+    def insert_stream_posts(self):
+        """Persist pickle file content into database
+        """
+        
+        df = self._load_pkl()
+        if not isinstance(df, pd.DataFrame):
+            return
+        df['id_news'] = 0
+        id_news_col_idx = df.columns.get_loc('id_news')
+        groups = df.groupby(['group']).groups
+        try:
+            with DatabaseWrapper() as db:
+                if self._text_news_cleaned:
+                    df_news = self._extract_df_news_groups_firsts(df)
+                    self._update_dataframe_with_similar_id_news(df, df_news, groups, id_news_col_idx)
+                    df_news = self._extract_df_news_groups_firsts(df)
+                    if not df_news.empty:
+                        id_news_list = self._insert_news_in_db(df_news, db)
+                        self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                else:
+                    df_news = self._extract_df_news_groups_firsts(df)
+                    id_news_list = self._insert_news_in_db(df_news, db)
+                    self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                    
+                # insert_posts_in_db(df)
+            # os.remove(self._tweet_pkl_path)
+        except:
+            raise
+            
+        
+    def _extract_df_news_groups_firsts(self, df:pd.DataFrame, has_ground_truth_label=False):
+        ground_truth_label = ['ground_truth_label'] if has_ground_truth_label else []
+        cols = ['text_post', 'datetime_post', 'text_prep'] + ground_truth_label
+        df_news = df[df['id_news'] == 0].groupby('group').first()[cols]
+        df_news.columns = ['text_news', 'datetime_publication', 'text_news_cleaned'] + ground_truth_label
+        return df_news
+    
+    
+    def _update_dataframe_with_similar_id_news(self, df:pd.DataFrame, df_news:pd.DataFrame, groups, id_news_col_idx):
+        for group_key, group_row in df_news.iterrows():
+            news_data = group_row.to_dict()
+            id_news_db, _, is_similar = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
+            if is_similar:
+                indices = groups[group_key]
+                df.iloc[indices, id_news_col_idx] = id_news_db
+                
+                
+    def _insert_news_in_db(self, df_news:pd.DataFrame, db:DatabaseWrapper, has_ground_truth_label=False):
+            arglist = df_news.to_records(index=False)
+            if has_ground_truth_label:
+                arglist = [(a, pd.Timestamp(b).to_pydatetime(), c, d) for a, b, c, d in arglist]
+            else:
+                arglist = [(a, pd.Timestamp(b).to_pydatetime(), c) for a, b, c in arglist]
+            id_news_list = self._insert_many_records('detectenv.news',
+                                                        df_news.columns,
+                                                        arglist,
+                                                        'id_news',
+                                                        db)
+            return id_news_list
+
+    
+    def _update_dataframe_with_id_news(self, 
+                                       df_news:pd.DataFrame, 
+                                       id_news_list:list,
+                                       df:pd.DataFrame, 
+                                       groups):
+        id_news_col_idx = df.columns.get_loc('id_news')
+        for group_key, id_news in zip(df_news.index, id_news_list):
+            indices = groups[group_key]
+            df.iloc[indices, id_news_col_idx] = id_news[0]
+
+
+    def _insert_posts_in_db(self, df:pd.DataFrame, db:DatabaseWrapper):
+        cols = ['id_social_media_account', 'id_news', 'id_post_social_media',
+                'parent_id_post_social_media', 'text_post', 'datetime_post',
+                'num_likes', 'num_shares']
+        df['parent_id_post_social_media'] = df['parent_id_post_social_media'].fillna(0)
+        arglist = df.loc[:,cols].to_records(index=False)
+        arglist = [(a,b,c,(d if d else None),e,pd.Timestamp(f).to_pydatetime(),g,h) for a,b,c,d,e,f,g,h in arglist]
+        self._insert_many_records('detectenv.post',
+                                    cols,
+                                    arglist,
+                                    'id_post',
+                                    db)
+        
+    
     def get_last_media_post(self, id_social_media_account):
         """Recupera o maior datetime de publicação de post
 
