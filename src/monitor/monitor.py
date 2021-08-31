@@ -78,6 +78,7 @@ class TwitterStreamStatusProcessor(TwitterStatusProcessor):
         self._name_social_network = name_social_network
         self._dao = dao
         self._media_ids = media_ids
+        self._processed_tweets = list()
     
     
     def process(self, status):
@@ -91,7 +92,11 @@ class TwitterStreamStatusProcessor(TwitterStatusProcessor):
         tweet['date_creation'] = status.author.created_at
         tweet['blue_badge'] = status.author.verified
         tweet['datetime_post'] = status.created_at
-        self._dao.write_in_csv_from_dict(tweet)
+        self._processed_tweets.append(tweet)
+        
+        
+    def _store(self):
+        self._dao.write_in_pkl(self._processed_tweets)
     
     
 class TwitterMediaStatusProcessor(TwitterStatusProcessor):
@@ -247,6 +252,7 @@ class TwitterStreamCollector(TwitterCollector):
         self._twitter_api.fetch_stream(self._search_tags, 
                                        self.stream_time,
                                        self.status_processor)
+        self.status_processor._store()
 
     
     def _process_data(self):
