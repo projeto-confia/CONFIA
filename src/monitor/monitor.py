@@ -136,6 +136,30 @@ class TwitterCollector(Collector):
         self._media_accounts = self._dao.get_media_accounts(self._name_social_network)
         self._media_ids = [media[2] for media in self._media_accounts]
         self._twitter_api = TwitterAPI()
+        
+        
+    def _process_data(self):
+        self._logger.info('Processing data...')
+        df = self._dao._load_pkl()
+        if not isinstance(df, pd.DataFrame):
+            return
+        text_preprocessing = TextPreprocessing()
+        df['text_prep'] = df['text_post'].apply(text_preprocessing.text_cleaning)
+        df['group'] = pd.Series(range(len(df)))
+        df['ratio_similarity'] = 0
+        group_col_id = df.columns.get_loc('group')
+        ratio_similarity_col_id = df.columns.get_loc('ratio_similarity')
+        for index_i, row_i in df.iterrows():
+            idx1 = df.iloc[index_i+1:].index
+            idx2 = df[df['ratio_similarity'] == 0].index
+            idx_intersect = np.intersect1d(idx1, idx2)
+            for index_j, row_j in df.iloc[idx_intersect].iterrows():
+                is_similar, ratio_similarity = text_preprocessing.check_duplications(row_i['text_prep'], row_j['text_prep'])
+                if not is_similar:
+                    continue
+                df.iloc[index_j, group_col_id] = row_i['group']
+                df.iloc[index_j, ratio_similarity_col_id] = ratio_similarity
+        self._dao.write_in_pkl(df)
 
 
 class TwitterMediaCollector(TwitterCollector):
@@ -200,27 +224,7 @@ class TwitterMediaCollector(TwitterCollector):
         
         
     def _process_data(self):
-        self._logger.info('Processing data...')
-        df = self._dao._load_pkl()
-        if not isinstance(df, pd.DataFrame):
-            return
-        text_preprocessing = TextPreprocessing()
-        df['text_prep'] = df['text_post'].apply(text_preprocessing.text_cleaning)
-        df['group'] = pd.Series(range(len(df)))
-        df['ratio_similarity'] = 0
-        group_col_id = df.columns.get_loc('group')
-        ratio_similarity_col_id = df.columns.get_loc('ratio_similarity')
-        for index_i, row_i in df.iterrows():
-            idx1 = df.iloc[index_i+1:].index
-            idx2 = df[df['ratio_similarity'] == 0].index
-            idx_intersect = np.intersect1d(idx1, idx2)
-            for index_j, row_j in df.iloc[idx_intersect].iterrows():
-                is_similar, ratio_similarity = text_preprocessing.check_duplications(row_i['text_prep'], row_j['text_prep'])
-                if not is_similar:
-                    continue
-                df.iloc[index_j, group_col_id] = row_i['group']
-                df.iloc[index_j, ratio_similarity_col_id] = ratio_similarity
-        self._dao.write_in_pkl(df)
+        super()._process_data()
     
     
     def _persist_data(self):
@@ -256,15 +260,7 @@ class TwitterStreamCollector(TwitterCollector):
 
     
     def _process_data(self):
-        """
-        Limpa as notícias capturadas via streaming e persiste os textos processados na coluna 'text_news_cleaned' da tabela 'detectenv.news'.
-        """
-        self._logger.info("Tratando notícias capturadas via streaming...")
-
-        if self._dao.clean_and_save_text_news():
-            self._logger.info("Notícias capturadas via streaming tratadas com sucesso.")  
-        else:
-             self._logger.info("Nenhuma nova notícia para ser tratada.")
+        super()._process_data()
              
     
     def _persist_data(self):
