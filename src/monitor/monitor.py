@@ -229,7 +229,7 @@ class TwitterMediaCollector(TwitterCollector):
     
     def _persist_data(self):
         self._logger.info('Persisting data...')
-        self._dao.insert_media_posts_from_pkl()
+        self._dao.insert_media_posts()
     
     
     def _normalize_text(self, text):
@@ -268,4 +268,4 @@ class TwitterStreamCollector(TwitterCollector):
         docstring
         """
         self._logger.info('Persisting data...')
-        self._dao.insert_posts()
+        self._dao.insert_stream_posts()
