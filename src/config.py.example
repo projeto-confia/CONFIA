@@ -67,3 +67,7 @@ class Config(object):
         CONSUMER_SECRET = "consumer_secret_here"
         ACCESS_TOKEN = "access_token_here"
         ACCESS_TOKEN_SECRET = "access_token_secret_here"
+        
+    # text preprocessor
+    class TEXT_PREPROCESSOR:
+        DEFAULT_THRESHOLD = 70
