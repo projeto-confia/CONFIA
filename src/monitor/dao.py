@@ -249,50 +249,27 @@ class MonitorDAO(object):
             
          
     def _update_dataframe_with_social_network_accounts(self, df:pd.DataFrame, db:DatabaseWrapper):
-        # TODO: refactor, split in smaller and reusable methods
         social_network_data = {'name_social_media': df['name_social_media'].unique()[0]}
         id_social_network = self._get_id_social_media(social_network_data, db)
         external_accounts = df['id_account_social_media'].unique()
-        internal_accounts = self._get_internal_social_networks_accounts(id_social_network,
-                                                                        external_accounts)
+        internal_accounts = self._get_social_networks_accounts(id_social_network,
+                                                               external_accounts)
         if internal_accounts:
-            df_internal_accounts = pd.DataFrame(internal_accounts,
-                                                columns=['id_account_social_media',
-                                                        'id_social_media_account'])
-            df_internal_accounts = df_internal_accounts.astype({'id_account_social_media': str,
-                                                                'id_social_media_account': int})
-            df = df.merge(df_internal_accounts, on='id_account_social_media', how='left')
-        
+            df = self._update_dataframe_with_accounts(internal_accounts, df)
         cols = ['id_account_social_media', 'screen_name', 'date_creation', 'blue_badge']
         df_accounts_to_insert = df[df['id_social_media_account'].isnull()][cols].drop_duplicates()
         if df_accounts_to_insert.empty:
             return df
-        
-        df_accounts_to_insert['id_social_media'] = id_social_network
-        df_accounts_to_insert["probalphan"] = 0.5
-        df_accounts_to_insert["probbetan"] = 0.5
-        df_accounts_to_insert["probumalphan"] = 0.5
-        df_accounts_to_insert["probumbetan"] = 0.5
-        arglist = df_accounts_to_insert.to_records(index=False)
-        arglist = [(a,b, pd.Timestamp(c).to_pydatetime(), d,e,f,g,h,i) for a,b,c,d,e,f,g,h,i in arglist]
-        id_social_media_account_list = self._insert_many_records('detectenv.social_media_account',
-                                                                 df_accounts_to_insert.columns,
-                                                                 arglist,
-                                                                 'id_social_media_account',
-                                                                 db)
-        
-        internal_accounts = [(a, b[0]) for a, b in zip(df_accounts_to_insert['id_account_social_media'], id_social_media_account_list)]
-        df_internal_accounts = pd.DataFrame(internal_accounts,
-                                            columns=['id_account_social_media',
-                                                     'id_social_media_account'])
-        df = df.merge(df_internal_accounts, on='id_account_social_media', how='left')
+        id_social_media_accounts = self._insert_social_network_accounts(id_social_network, df_accounts_to_insert, db)
+        internal_accounts = [(a, b[0]) for a, b in zip(df_accounts_to_insert['id_account_social_media'], id_social_media_accounts)]
+        df = self._update_dataframe_with_accounts(internal_accounts, df)
         df['id_social_media_account'] = df['id_social_media_account_x'].combine_first(df['id_social_media_account_y'])
         return df
 
 
-    def _get_internal_social_networks_accounts(self, 
-                                               id_social_network, 
-                                               external_social_network_accounts):
+    def _get_social_networks_accounts(self,
+                                      id_social_network, 
+                                      external_social_network_accounts):
         
         sql_string = "SELECT sma.id_account_social_media, sma.id_social_media_account \
                         FROM detectenv.social_media_account sma \
@@ -304,6 +281,30 @@ class MonitorDAO(object):
                 return records
         except:
             raise
+        
+        
+    def _update_dataframe_with_accounts(self, accounts, df:pd.DataFrame):
+        df_internal_accounts = pd.DataFrame(accounts,
+                                            columns=['id_account_social_media',
+                                                     'id_social_media_account'])
+        df_internal_accounts = df_internal_accounts.astype({'id_account_social_media': str,
+                                                            'id_social_media_account': int})
+        return df.merge(df_internal_accounts, on='id_account_social_media', how='left')
+        
+        
+    def _insert_social_network_accounts(self, id_social_network, df_accounts:pd.DataFrame, db:DatabaseWrapper):
+        df_accounts['id_social_media'] = id_social_network
+        df_accounts["probalphan"] = 0.5
+        df_accounts["probbetan"] = 0.5
+        df_accounts["probumalphan"] = 0.5
+        df_accounts["probumbetan"] = 0.5
+        arglist = df_accounts.to_records(index=False)
+        arglist = [(a,b, pd.Timestamp(c).to_pydatetime(), d,e,f,g,h,i) for a,b,c,d,e,f,g,h,i in arglist]
+        return self._insert_many_records('detectenv.social_media_account',
+                                         df_accounts.columns,
+                                         arglist,
+                                         'id_social_media_account',
+                                         db)
         
         
     def _insert_posts_in_db(self, df:pd.DataFrame, db:DatabaseWrapper):
