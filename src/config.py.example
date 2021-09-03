@@ -26,7 +26,20 @@ class Config(object):
     # monitor
     class MONITOR(object):
         STREAM_TIME = 1200  # 1.200 seconds == 20 minutes
-        SEARCH_TAGS = ["COVID", "covid", "Covid",  "coronavirus", "coronavírus", "covid-19", "vacina"]
+        SEARCH_TAGS = ["COVID", "covid", "Covid",
+                       "CORONAVIRUS", "Coronavirus", "coronavirus",
+                       "CORONAVÍRUS", "Coronavírus", "coronavírus",
+                       "COVID-19", "Covid-19", "covid-19",
+                       "VACINA", "Vacina", "vacina", 
+                       "PANDEMIA", "pandemia", "Pandemia",
+                       "PFIZER", "Pfizer", "pfizer", 
+                       "CORONAVAC", "coronavac", "Coronavac", "CoronaVac",
+                       "JOHNSON", "johnson", "Johnson",
+                       "OXFORD", "oxford", "Oxford",
+                       "ASTRAZENECA", "astrazeneca", "Astrazeneca", "AstraZeneca",
+                       "SPUTINIK", "sputinik", "Sputinik"]
+        WINDOW_SIZE = 30
+
 
     # detector
     class DETECTOR(object):
@@ -47,3 +60,14 @@ class Config(object):
     class EMAIL(object):
         ACCOUNT = 'account_name@server.com'
         PASSWORD = 'there_is_no_spoon'
+
+    # twitter credentials
+    class TWITTER_CREDENTIAL:
+        CONSUMER_KEY = "consumer_key_here"
+        CONSUMER_SECRET = "consumer_secret_here"
+        ACCESS_TOKEN = "access_token_here"
+        ACCESS_TOKEN_SECRET = "access_token_secret_here"
+        
+    # text preprocessor
+    class TEXT_PREPROCESSOR:
+        DEFAULT_THRESHOLD = 70

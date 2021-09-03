@@ -1,14 +1,25 @@
 import logging
 import tweepy
-import src.monitor.authconfig as cfg
+import time
 from src.config import Config as config
+from src.monitor.interfaces import TwitterStatusProcessorInterface
 
 
+class TwitterStreamListener(tweepy.StreamListener):
+    
+    def __init__(self, status_processor:TwitterStatusProcessorInterface):
+        super().__init__()
+        self._status_processor = status_processor
+
+
+    def on_status(self, status):
+        self._status_processor.process(status)
+    
+    
 class TwitterAPI(object):
     
     def __init__(self):
         self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._tokens = cfg.tokens
         self._api = None
         self._connect()
         self._logger.info("Twitter API initialized")
@@ -17,8 +28,10 @@ class TwitterAPI(object):
     def _connect(self):
         if not self._api:
             try:
-                auth = tweepy.OAuthHandler(self._tokens['consumer_key'], self._tokens['consumer_secret'])
-                auth.set_access_token(self._tokens['access_token'], self._tokens['access_token_secret'])
+                auth = tweepy.OAuthHandler(config.TWITTER_CREDENTIAL.CONSUMER_KEY, 
+                                           config.TWITTER_CREDENTIAL.CONSUMER_SECRET)
+                auth.set_access_token(config.TWITTER_CREDENTIAL.ACCESS_TOKEN, 
+                                      config.TWITTER_CREDENTIAL.ACCESS_TOKEN_SECRET)
                 self._api = tweepy.API(auth)
             except:
                 self._logger.error('Unable to connect to Twitter API.')
@@ -57,3 +70,15 @@ class TwitterAPI(object):
         
     def tweet(self, text_tweet):
         self._api.update_status(text_tweet)
+        
+        
+    def fetch_stream(self, tags, stream_time, status_processor):
+        stream_listener = TwitterStreamListener(status_processor)
+        streamAccess = tweepy.Stream(auth=self._api.auth, 
+                                     listener=stream_listener, 
+                                     tweet_mode='extended')
+        streamAccess.filter(track=tags,
+                            languages=["pt"],
+                            is_async=True)
+        time.sleep(stream_time)
+        streamAccess.disconnect()
