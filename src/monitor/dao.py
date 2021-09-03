@@ -372,15 +372,13 @@ def read_cleaned_news_db_in_parallel(news_data, cleaned_news_db):
     pool = mp.Pool(mp.cpu_count())
     results = []
     for batch in _get_indices_batches_news_db(len(cleaned_news_db), batch_size=128):
-        # TODO: if len(cleaned_news_db < batch_size), doesn't execute line code below
-        # TODO: if len(cleaned_news_db) was not multiple of batch_size, remains news are not considered
         results.append(pool.apply_async(_is_news_in_db, (news_data, cleaned_news_db, batch,)))
     pool.close()
     pool.join()
     return sorted([result.get() for result in results], key=itemgetter(1))[-1]
 
 
-def _get_indices_batches_news_db(total_news_db, batch_size = 128):
+def _get_indices_batches_news_db(total_news_db, batch_size=128):
     """Calcula os índices dos batches que representam as notícias da tabela 'detectenv.news'.
 
     Args:
@@ -390,9 +388,8 @@ def _get_indices_batches_news_db(total_news_db, batch_size = 128):
     Yields:
         list: uma lista contendo os índices pertencentes ao intervalo (batch).
     """
-    intervals = np.linspace(0, total_news_db-1, num=math.ceil(total_news_db/batch_size), dtype=int)
-    for i in range(len(intervals)-1):
-        yield [intervals[i], intervals[i+1]-1] if i < len(intervals)-2 else [intervals[i], intervals[i+1]]
+    for i in range(0, total_news_db, batch_size):
+        yield([i, i+batch_size])
 
 
 def _is_news_in_db(news_data, cleaned_news_db, batch):
