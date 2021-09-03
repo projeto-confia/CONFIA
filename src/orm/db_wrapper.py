@@ -1,5 +1,10 @@
 import psycopg2
 from src.orm import db_config as dbc
+import numpy as np
+from psycopg2.extras import execute_values
+from psycopg2.extensions import register_adapter, AsIs
+import pandas as pd
+
 
 class DatabaseWrapper:
 
@@ -12,6 +17,7 @@ class DatabaseWrapper:
                                           database = dbc.DATABASE_CONFIG['database'])
 
             self._csr = self._conn.cursor()
+            self._register_adapters()
 
         except (Exception, psycopg2.Error) as error :
             print ("Error while connecting to PostgreSQL", error)
@@ -53,3 +59,38 @@ class DatabaseWrapper:
 
     def row_count(self):
         return self.cursor.rowcount
+    
+    def execute_many_values(self, sql, arglist=None):
+        if not len(arglist):
+            arglist = ()
+        return execute_values(self.cursor, sql, arglist)
+
+    def _addapt_numpy_float64(x, numpy_float64):
+        return AsIs(numpy_float64)
+
+    def _addapt_numpy_int64(x, numpy_int64):
+        return AsIs(numpy_int64)
+
+    def _addapt_numpy_float32(x, numpy_float32):
+        return AsIs(numpy_float32)
+
+    def _addapt_numpy_int32(x, numpy_int32):
+        return AsIs(numpy_int32)
+
+    def _addapt_numpy_array(x, numpy_array):
+        return AsIs(tuple(numpy_array))
+    
+    def _addapt_numpy_bool_(x, numpy_bool_):
+        return AsIs(numpy_bool_)
+    
+    # def _addapt_numpy_datetime64(x, numpy_datetime64):
+    #     return pd.Timestamp(numpy_datetime64).to_pydatetime()
+
+    def _register_adapters(self):
+        register_adapter(np.float64, self._addapt_numpy_float64)
+        register_adapter(np.int64, self._addapt_numpy_int64)
+        register_adapter(np.float32, self._addapt_numpy_float32)
+        register_adapter(np.int32, self._addapt_numpy_int32)
+        register_adapter(np.ndarray, self._addapt_numpy_array)
+        register_adapter(np.bool_, self._addapt_numpy_bool_)
+        # register_adapter(np.datetime64, self._addapt_numpy_datetime64)
