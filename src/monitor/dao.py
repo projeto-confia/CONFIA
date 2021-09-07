@@ -110,6 +110,7 @@ class MonitorDAO(object):
         if not isinstance(df, pd.DataFrame):
             return
         df['id_news'] = 0
+        df['id_social_media_account'] = None
         id_news_col_idx = df.columns.get_loc('id_news')
         groups = df.groupby(['group']).groups
         try:
@@ -186,11 +187,9 @@ class MonitorDAO(object):
         df_accounts_to_insert = df[df['id_social_media_account'].isnull()][cols].drop_duplicates()
         if df_accounts_to_insert.empty:
             return df
-        id_social_media_accounts = self._insert_social_network_accounts(id_social_network, df_accounts_to_insert, db)
-        internal_accounts = [(a, b[0]) for a, b in zip(df_accounts_to_insert['id_account_social_media'], id_social_media_accounts)]
-        df = self._update_dataframe_with_accounts(internal_accounts, df)
-        df['id_social_media_account'] = df['id_social_media_account_x'].combine_first(df['id_social_media_account_y'])
-        return df
+        id_social_network_accounts = self._insert_social_network_accounts(id_social_network, df_accounts_to_insert, db)
+        internal_accounts = [(a, b[0]) for a, b in zip(df_accounts_to_insert['id_account_social_media'], id_social_network_accounts)]
+        return self._update_dataframe_with_accounts(internal_accounts, df)
 
 
     def _get_social_networks_accounts(self,
@@ -215,7 +214,10 @@ class MonitorDAO(object):
                                                      'id_social_media_account'])
         df_internal_accounts = df_internal_accounts.astype({'id_account_social_media': str,
                                                             'id_social_media_account': int})
-        return df.merge(df_internal_accounts, on='id_account_social_media', how='left')
+        df = df.merge(df_internal_accounts, on='id_account_social_media', how='left')
+        df['id_social_media_account'] = df['id_social_media_account_x'].combine_first(df['id_social_media_account_y'])
+        df.drop(['id_social_media_account_x', 'id_social_media_account_y'], axis=1, inplace=True)
+        return df
         
         
     def _insert_social_network_accounts(self, id_social_network, df_accounts:pd.DataFrame, db:DatabaseWrapper):
