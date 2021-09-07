@@ -1,8 +1,8 @@
 import psycopg2
-from src.orm import db_config as dbc
-import numpy as np
 from psycopg2.extras import execute_values
 from psycopg2.extensions import register_adapter, AsIs
+from src.config import Config as config
+import numpy as np
 import pandas as pd
 
 
@@ -10,11 +10,11 @@ class DatabaseWrapper:
 
     def __init__(self):
         try:
-            self._conn = psycopg2.connect(user = dbc.DATABASE_CONFIG['user'],
-                                          password = dbc.DATABASE_CONFIG['password'],
-                                          host = dbc.DATABASE_CONFIG['host'],
-                                          port = dbc.DATABASE_CONFIG['port'],
-                                          database = dbc.DATABASE_CONFIG['database'])
+            self._conn = psycopg2.connect(user=config.DATABASE.USER,
+                                          password=config.DATABASE.PASSWORD,
+                                          host=config.DATABASE.HOST,
+                                          port=config.DATABASE.PORT,
+                                          database=config.DATABASE.NAME)
 
             self._csr = self._conn.cursor()
             self._register_adapters()
