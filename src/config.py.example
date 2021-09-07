@@ -5,6 +5,7 @@ class Config(object):
     # logging
     class LOGGING(object):
         VERBOSE = False
+        SMTP_LOG = False
         FILE_PATH = 'logs/automata.log'
         NAME = 'automata'
     
@@ -71,3 +72,10 @@ class Config(object):
     # text preprocessor
     class TEXT_PREPROCESSOR:
         DEFAULT_THRESHOLD = 70
+
+    class DATABASE:
+        HOST = 'localhost'
+        PORT = 'port_here'
+        NAME = 'db_name_here'
+        USER = 'db_user_here'
+        PASSWORD = 'db_user_password_here'
