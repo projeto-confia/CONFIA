@@ -5,6 +5,7 @@ class Config(object):
     # logging
     class LOGGING(object):
         VERBOSE = False
+        SMTP_LOG = False
         FILE_PATH = 'logs/automata.log'
         NAME = 'automata'
     
