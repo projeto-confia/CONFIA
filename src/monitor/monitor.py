@@ -256,6 +256,7 @@ class TwitterStreamCollector(TwitterCollector):
         self._twitter_api.fetch_stream(self._search_tags, 
                                        self.stream_time,
                                        self.status_processor)
+        self._logger.info(f'{len(self.status_processor._processed_tweets)} posts collected from stream.')
         self.status_processor._store()
 
     
