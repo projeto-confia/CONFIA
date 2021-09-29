@@ -164,6 +164,18 @@ class InterventorDAO(object):
         except:
             raise
         
+        
+    def update_ground_truth_label(self, news):
+        sql_string = "UPDATE detectenv.news \
+                        SET ground_truth_label = %s \
+                        WHERE id_news = %s;"
+        try:
+            with DatabaseWrapper() as db:
+                for id_news, label in news:
+                    db.execute(sql_string, (label, id_news))
+        except:
+            raise
+        
     
     def get_workbook(self):
         try:

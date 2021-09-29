@@ -120,7 +120,11 @@ class Interventor(object):
         
         
     def _process_labeled_curatorship(self, curated):
-        print([c[0] for c in curated])
+        news = [(c[0], c[3]) for c in curated]
+        self._dao.update_ground_truth_label(news)
+        # TODO: implement function
+        # fake_news = [c[0] for c in curated if c[3]]
+        # self._create_alert_job(fake_news, alert_type='labeled')
     
     
     def _build_excel(self, candidates_to_check):
@@ -140,10 +144,10 @@ class Interventor(object):
 
         Args:
             news (list): list of news
-            alert_type (str): {'similar', 'detected'} type of alert.
+            alert_type (str): {'similar', 'detected', 'labeled'} type of alert.
         """
         
-        assert alert_type in ('similar', 'detected')
+        assert alert_type in ('similar', 'detected', 'labeled')
         # TODO: build specific module in utils package to register jobs
         pass
     
