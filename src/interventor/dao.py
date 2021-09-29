@@ -121,10 +121,10 @@ class InterventorDAO(object):
         """Get curations already curated but not processed
 
         Returns:
-            list: list of tuples like (id_news, text_news, id_news_checked, is_similar, id_curatorship)
+            list: list of tuples like (id_news, text_news, id_news_checked, is_fake_news, is_similar, id_curatorship)
         """
         
-        sql_string = "SELECT cur.id_news, n.text_news, cur.id_news_checked, cur.is_similar, cur.id_curatorship \
+        sql_string = "SELECT cur.id_news, n.text_news, cur.id_news_checked, cur.is_fake_news, cur.is_similar, cur.id_curatorship \
                         FROM detectenv.curatorship cur inner join detectenv.news n on cur.id_news = n.id_news \
                         WHERE not cur.is_processed \
                             and cur.is_curated"
