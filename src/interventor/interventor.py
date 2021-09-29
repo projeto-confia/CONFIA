@@ -21,7 +21,7 @@ class Interventor(object):
         
         
     def run(self):
-        self._process_news()
+        # self._process_news()
         self._process_curatorship()
         
         
@@ -103,6 +103,13 @@ class Interventor(object):
         
     def _process_candidates_to_check(self, candidates_to_check):
         self._logger.info('Processing news to be checked...')
+        if config.INTERVENTOR.CURATOR:
+            curated = [c for c in candidates_to_check if c[3] != None]
+            candidates_to_check = [c for c in candidates_to_check if c[3] == None]
+            if curated:
+                self._process_labeled_curatorship(curated)
+            if not candidates_to_check:
+                return
         candidates_id = [c[0] for c in candidates_to_check]
         id_trusted_agency,_,_,_ = self._dao.get_data_from_agency('Boatos.org')
         self._dao.persist_candidates_to_check(candidates_id, id_trusted_agency)
@@ -110,6 +117,10 @@ class Interventor(object):
         # file_id = self._build_excel(candidates_to_check)
         # self._create_send_job(file_id)
         # self._create_alert_job(candidates_to_check, alert_type='detected')
+        
+        
+    def _process_labeled_curatorship(self, curated):
+        print([c[0] for c in curated])
     
     
     def _build_excel(self, candidates_to_check):
@@ -144,9 +155,9 @@ class Interventor(object):
     def _process_curatorship(self):
         while (curations := self._dao.get_curations()):
             self._logger.info('Processing curated news...')
-            curations_id = [curation[4] for curation in curations]
-            similars = [curation[:3] for curation in curations if curation[3]]
-            candidates_to_check = [curation[:3] for curation in curations if not curation[3]]
+            curations_id = [curation[5] for curation in curations]
+            similars = [curation[:3] for curation in curations if curation[4]]
+            candidates_to_check = [curation[:4] for curation in curations if not curation[4]]
             if similars:
                 self._process_similars(similars)
             if candidates_to_check:
