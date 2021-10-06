@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from src.config import Config as config
 from src.interventor.dao import InterventorDAO
 from src.apis.twitter import TwitterAPI
@@ -21,7 +20,7 @@ class Interventor(object):
         
         
     def run(self):
-        # self._process_news()
+        self._process_news()
         self._process_curatorship()
         
         
