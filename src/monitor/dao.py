@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 import multiprocessing as mp
 import os
@@ -17,6 +18,7 @@ class MonitorDAO(object):
 
     def __init__(self):
 
+        self._logger = logging.getLogger(config.LOGGING.NAME)
         self._tweet_file = 'tweets.pkl'
         self._tweet_filepath = os.path.join("src", "data", self._tweet_file)
         self._text_news_cleaned = self._get_text_news_cleaned()
@@ -142,26 +144,31 @@ class MonitorDAO(object):
     
     
     def _update_dataframe_with_similar_id_news(self, df:pd.DataFrame, df_news:pd.DataFrame, groups, id_news_col_idx):
+        self._logger.info('Identifying similar news into database')
+        self._logger.info(f'Comparing with {len(self._text_news_cleaned)} stored news')
         for group_key, group_row in df_news.iterrows():
             news_data = group_row.to_dict()
             id_news_db, _, is_similar = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
             if is_similar:
                 indices = groups[group_key]
                 df.iloc[indices, id_news_col_idx] = id_news_db
+        self._logger.info('Similar news identified')
                 
                 
     def _insert_news_in_db(self, df_news:pd.DataFrame, db:DatabaseWrapper, has_ground_truth_label=False):
-            arglist = df_news.to_records(index=False)
-            if has_ground_truth_label:
-                arglist = [(a, pd.Timestamp(b).to_pydatetime(), c, d) for a, b, c, d in arglist]
-            else:
-                arglist = [(a, pd.Timestamp(b).to_pydatetime(), c) for a, b, c in arglist]
-            id_news_list = self._insert_many_records('detectenv.news',
-                                                        df_news.columns,
-                                                        arglist,
-                                                        'id_news',
-                                                        db)
-            return id_news_list
+        self._logger.info("Persisting news into database")
+        arglist = df_news.to_records(index=False)
+        if has_ground_truth_label:
+            arglist = [(a, pd.Timestamp(b).to_pydatetime(), c, d) for a, b, c, d in arglist]
+        else:
+            arglist = [(a, pd.Timestamp(b).to_pydatetime(), c) for a, b, c in arglist]
+        id_news_list = self._insert_many_records('detectenv.news',
+                                                    df_news.columns,
+                                                    arglist,
+                                                    'id_news',
+                                                    db)
+        self._logger.info("News persisted")
+        return id_news_list
 
     
     def _update_dataframe_with_id_news(self, 
@@ -176,6 +183,7 @@ class MonitorDAO(object):
             
          
     def _update_dataframe_with_social_network_accounts(self, df:pd.DataFrame, db:DatabaseWrapper):
+        self._logger.info('Retrieving social network accounts from database ')
         social_network_data = {'name_social_media': df['name_social_media'].unique()[0]}
         id_social_network = self._get_id_social_network(social_network_data, db)
         external_accounts = df['id_account_social_media'].unique()
@@ -187,8 +195,10 @@ class MonitorDAO(object):
         df_accounts_to_insert = df[df['id_social_media_account'].isnull()][cols].drop_duplicates()
         if df_accounts_to_insert.empty:
             return df
+        self._logger.info('Persisting novel social network accounts')
         id_social_network_accounts = self._insert_social_network_accounts(id_social_network, df_accounts_to_insert, db)
         internal_accounts = [(a, b[0]) for a, b in zip(df_accounts_to_insert['id_account_social_media'], id_social_network_accounts)]
+        self._logger.info('Novel social network accounts persisted')
         return self._update_dataframe_with_accounts(internal_accounts, df)
 
 
@@ -236,6 +246,7 @@ class MonitorDAO(object):
         
         
     def _insert_posts_in_db(self, df:pd.DataFrame, db:DatabaseWrapper):
+        self._logger.info("Persisting posts into database")
         cols = ['id_social_media_account', 'id_news', 'id_post_social_media',
                 'parent_id_post_social_media', 'text_post', 'datetime_post',
                 'num_likes', 'num_shares']
@@ -247,6 +258,7 @@ class MonitorDAO(object):
                                     arglist,
                                     'id_post',
                                     db)
+        self._logger.info("Posts persisted")
 
 
     def _load_pkl(self, filepath=None) -> pd.DataFrame:
