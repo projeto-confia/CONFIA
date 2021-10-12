@@ -65,6 +65,24 @@ class DAO:
 
     # TODO: separar este método em dois métodos distintos: um para inserir novos usuários e outro para atualizar usuários existentes. 
     # TODO: Utilizar, para isso, métodos da para inserção e atualização única da biblioteca 'psycopg2'.
+
+    def update_social_media_accounts(self, list_social_media_accounts):
+        
+        self._db.execute_many_values("UPDATE detectenv.social_media_account SET \
+            id_social_media = %s, \
+            id_owner = %s \
+            screen_name = %s \
+            date_creation = %s \
+            blue_badge = %s \
+            probalphan = %s \
+            probbetan = %s \
+            probumalphan = %s \
+            probumbetan = %s \
+            id_account_social_media = %s \
+            WHERE id_account_social_media = %s;", list_social_media_accounts)
+
+        self._db.commit()
+
     def insert_update_user_accounts_db(self, users):
         """
         Insere uma nova conta de usuário ou, caso já exista, atualiza seus atributos a partir do atributo 'id_account_social_media'.

@@ -1,6 +1,6 @@
-from re import S
-import pandas as pd
+import math
 import logging
+import pandas as pd
 from src.detection.dao import DAO
 from src.config import Config as config
 
@@ -51,6 +51,7 @@ class ICS:
     def fit(self):
 
         df_labeled_news = self._dao.get_labeled_news()
+        list_social_media_accounts = []
         
         if df_labeled_news.empty:
             self._logger.info("There are no labeled news to repute novel social media accounts.")
@@ -59,26 +60,14 @@ class ICS:
             qtd_V = len(df_labeled_news[bool(df_labeled_news["ground_truth_label"]) == False])
             qtd_F = len(df_labeled_news[bool(df_labeled_news["ground_truth_label"]) == True])
 
-            for i, row_labeled_news in df_labeled_news.iterrows():
+            for _, row_labeled_news in df_labeled_news.iterrows():
 
                 id_news = row_labeled_news["id_news"]
                 df_users_which_shared_the_news = self._dao.get_users_which_shared_the_news(id_news, all_users=True)
 
-                if not df_users_which_shared_the_news.empty:                    
-                    k = 0
-                    aux = -1
-                    total_users = len(df_users_which_shared_the_news)
+                if not df_users_which_shared_the_news.empty:
 
                     for j, row_user in df_users_which_shared_the_news.iterrows():
-
-                        k += 1
-                        progress = float((k / total_users) * 100)
-                        
-                        if aux != int(progress): 
-                            aux = int(progress)
-                        
-                            if aux % 20 == 0 and aux > 0:
-                                self._logger.info(f"Progresso do cálculo da reputação dos novos usuários: {aux}%")
 
                         id_social_media_account = row_user["id_social_media_account"]
                         df_news_shared_by_the_user = self._dao.get_labels_of_news_shared_by_user(id_social_media_account)
@@ -102,9 +91,25 @@ class ICS:
                         df_users_which_shared_the_news.loc[j, "probUmAlphaN"] = probUmAlphaN
                         df_users_which_shared_the_news.loc[j, "probUmBetaN"]  = probUmBetaN
 
-            # TODO: implementar método de atualização/inserção único.
-            self._logger.info("Novel social media accounts have been reputed successfully!")       
-            self._logger.info("Saving probabilities in the database...")
+                        list_social_media_accounts.append
+                        (
+                            (   2, 
+                                None if math.isnan(row_user["id_owner"]) else int(row_user["id_owner"]),
+                                row_user["screen_name"],
+                                row_user["date_creation"],
+                                row_user["blue_badge"],
+                                row_user["probUmAlphaN"],
+                                row_user["probBetaN"],
+                                row_user["probUmBetaN"],
+                                row_user["id_account_social_media"],
+                                id_social_media_account
+                            )
+                        )
 
+            self._logger.info("Social media accounts have been reputed successfully!")       
+            self._logger.info("Saving probabilities in database...")
 
-
+            try:
+                self._dao.update_social_media_accounts(list_social_media_accounts)
+            except Exception as e:
+                self._logger.error(f"An error occurred when updating social media accounts' probabilities in database: {e.args}")
