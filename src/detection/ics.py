@@ -1,202 +1,35 @@
 from re import S
 import pandas as pd
 import logging
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, accuracy_score
 from src.detection.dao import DAO
 from src.config import Config as config
 
 class ICS:
 
     def __init__(self, laplace_smoothing=0.01, omega=0.5):
-        self.__logger     = logging.getLogger(config.LOGGING.NAME)
-        self.__dao        = DAO()
-        self.__users      = self.__dao.get_all_records_from_table_in_dataframe("detectenv.social_media_account")
-        self.__news       = self.__dao.get_all_records_from_table_in_dataframe("detectenv.news")
-        self.__news_users = self.__dao.get_all_records_from_table_in_dataframe("detectenv.post")
-        self.__smoothing  = laplace_smoothing
-        self.__omega      = omega
-
-        # consulta os id's das contas de veículos de imprensa para filtragem.
-        self._press_media_accounts = self.__dao.get_list_of_ids_press_media_accounts()
-
-    def _fit_initialization(self, test_size = 0.3):
-        
-        # remove as contas dos veículos de imprensa do treino.
-        self.__users = self.__users[~self.__users.id_social_media_account.isin(self._press_media_accounts)]
-        self.__news_users = self.__news_users[~self.__news_users.id_social_media_account.isin(self._press_media_accounts)]
-
-        labeled_news = self.__news[self.__news['ground_truth_label'].notnull()]
-        labels = labeled_news["ground_truth_label"]
-
-        # se não tem amostras rotuladas no dataset, retorna uma exceção
-        if len(labeled_news) == 0:
-            self.__logger.info('Não há notícias rotuladas para realizar o treinamento do ICS.')
-            return 0
-        
-        else: # divide 'self.__news_users' em treino e teste.
-            try:
-                self.__X_train_news, self.__X_test_news, _, _ = train_test_split(labeled_news, labels, test_size=test_size, stratify=labels)
-            except:
-                self.__logger.info("Não há amostras rotuladas o suficiente para treinar o ICS.")
-                return 0
-
-            # armazena em 'self.__train_news_users' as notícias compartilhadas por cada usuário.
-            self.__train_news_users = pd.merge(self.__X_train_news, self.__news_users, left_on="id_news", right_on="id_news")
-            self.__test_news_users  = pd.merge(self.__X_test_news, self.__news_users, left_on="id_news", right_on="id_news")
-
-            # conta a quantidade de noticias verdadeiras e falsas presentes no conjunto de treino.
-            try:
-                self.__qtd_V = self.__train_news_users["ground_truth_label"].value_counts()[0]
-            except:
-                self.__logger.info("Não há notícias rotuladas como 'não fake (0)' para realizar o treinamento do ICS.")
-                return 0
-            try:
-                self.__qtd_F = self.__train_news_users["ground_truth_label"].value_counts()[1]
-            except:
-                self.__logger.info("Não há notícias rotuladas como 'fake (1)' para realizar o treinamento do ICS.")
-                return 0
-                
-            # filtra apenas os usuários que não estão em ambos os conjuntos de treino e teste.
-            self.__train_news_users = self.__train_news_users[self.__train_news_users["id_social_media_account"].isin(self.__test_news_users["id_social_media_account"])]
-
-            # inicializa os parâmetros dos usuários.
-            totR            = 0
-            totF            = 0
-            alphaN          = totR + self.__smoothing
-            umAlphaN        = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
-            betaN           = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
-            umBetaN         = totF + self.__smoothing
-            probAlphaN      = alphaN / (alphaN + umAlphaN)
-            probUmAlphaN    = 1 - probAlphaN
-            probBetaN       = betaN / (betaN + umBetaN)
-            probUmBetaN     = 1 - probBetaN
-            self.__users["probAlphaN"]    = probAlphaN
-            self.__users["probUmAlphaN"]  = probUmAlphaN
-            self.__users["probBetaN"]     = probBetaN
-            self.__users["probUmBetaN"]   = probUmBetaN    
-
-            return 1
-
-    def __assess(self):
-        """
-        etapa de avaliação: avalia a notícia com base nos parâmetros de cada usuário obtidos na etapa de treinamento.
-        """
-
-        predicted_labels = []
-        self.__test_news_users = self.__test_news_users[self.__test_news_users["ground_truth_label"].notnull()]
-        unique_id_news   = self.__test_news_users["id_news"].unique()
-
-        for newsId in unique_id_news:
-            # recupera os id's de usuário que compartilharam a notícia representada por 'newsId'.
-            usersWhichSharedTheNews = list(self.__news_users["id_social_media_account"].loc[self.__news_users["id_news"] == newsId])
-
-            productAlphaN    = 1.0
-            productUmAlphaN  = 1.0
-            productBetaN     = 1.0
-            productUmBetaN   = 1.0
-
-            for userId in usersWhichSharedTheNews:
-                i = self.__users.loc[self.__users["id_social_media_account"] == userId].index[0]
-
-                productAlphaN   = productAlphaN  * self.__users.at[i, "probAlphaN"]
-                productUmBetaN  = productUmBetaN * self.__users.at[i, "probUmBetaN"]
-
-            # inferência bayesiana
-            reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
-            reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
-
-            if reputation_news_tn >= reputation_news_fn:
-                predicted_labels.append(0)
-            else:
-                predicted_labels.append(1)
-
-        # mostra os resultados da matriz de confusão e acurácia.
-        gt = self.__X_test_news["ground_truth_label"].tolist()
-        self.__logger.info(f"Desempenho do ICS no conjunto de teste:\nMatriz de confusão:\n{confusion_matrix(gt, predicted_labels)}")
-        self.__logger.info(f"Acurácia: {accuracy_score(gt, predicted_labels)}")
-
-    def fit(self, test_size = 0.3):
-        """
-        Etapa de treinamento: calcula os parâmetros de cada usuário a partir do Implict Crowd Signals.        
-        """
-        if self._fit_initialization(test_size) == 1:
-            i = 0
-            users_unique = self.__train_news_users["id_social_media_account"].unique()
-            total = len(users_unique)
-            aux = -1
-            
-            for userId in users_unique:   
-                i = i + 1
-                progress = float((i / total) * 100)
-                
-                if aux != int(progress): 
-                    aux = int(progress)
-                
-                    if aux % 20 == 0 and aux > 0:
-                        self.__logger.info(f"Progresso do treinamento: {aux}%")
-                
-                # obtém os labels das notícias compartilhadas por cada usuário.
-                newsSharedByUser = list(self.__train_news_users["ground_truth_label"].loc[self.__train_news_users["id_social_media_account"] == userId])
-                
-                # calcula a matriz de opinião para cada usuário.
-                totR        = newsSharedByUser.count(0)
-                totF        = newsSharedByUser.count(1)
-                alphaN      = totR + self.__smoothing
-                umAlphaN    = ((totF + self.__smoothing) / (self.__qtd_F + self.__smoothing)) * (self.__qtd_V + self.__smoothing)
-                betaN       = (umAlphaN * (totR + self.__smoothing)) / (totF + self.__smoothing)
-                umBetaN     = totF + self.__smoothing
-
-                # calcula as probabilidades para cada usuário.
-                probAlphaN      = alphaN / (alphaN + umAlphaN)
-                probUmAlphaN    = 1 - probAlphaN
-                probBetaN       = betaN / (betaN + umBetaN)
-                probUmBetaN     = 1 - probBetaN
-                self.__users.loc[self.__users["id_social_media_account"] == userId, "probAlphaN"]   = probAlphaN
-                self.__users.loc[self.__users["id_social_media_account"] == userId, "probBetaN"]    = probBetaN
-                self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmAlphaN"] = probUmAlphaN
-                self.__users.loc[self.__users["id_social_media_account"] == userId, "probUmBetaN"]  = probUmBetaN
-            
-            self.__logger.info("Treinamento concluído.")       
-            self.__logger.info("Salvando os parâmetros de usuário no banco de dados...")
-
-            try:
-                for msg in self.__dao.insert_update_user_accounts_db(self.__users):
-                    self.__logger.info(msg)
-
-                self.__logger.info("Parâmetros dos usuários salvos com sucesso!\n")
-
-            except Exception as e:
-                raise Exception(f"Ocorreu um erro ao salvar os parâmetros de usuário no banco de dados.\n{e.args}")
-            
-            # self.__assess()
-
-        else:
-            self.__logger.info("Não foi possível treinar o ICS.")
+        self._dao = DAO()
+        self._omega = omega
+        self._smoothing = laplace_smoothing
+        self._logger = logging.getLogger(config.LOGGING.NAME)
+        self._press_media_accounts_ids = self._dao.get_list_of_ids_press_media_accounts()
 
     def predict(self, id_news):
-        """
-        Classifica uma notícia usando o ICS.
-        """
-        usersWhichSharedTheNews = self.__dao.get_users_which_shared_the_news(id_news)
 
-        if not usersWhichSharedTheNews.empty:
+        # aqui já são removidas as contas dos veículos de imprensa.
+        df_reputed_users_which_shared_the_news = self._dao.get_users_which_shared_the_news(id_news, all_users=False)
 
-            usersWhichSharedTheNews = usersWhichSharedTheNews.loc[:, ~usersWhichSharedTheNews.columns.duplicated()]
-           
-            # removendo as contas dos veículos de imprensa.
-            usersWhichSharedTheNews = usersWhichSharedTheNews[(~usersWhichSharedTheNews["id_social_media_account"].isin(self._press_media_accounts))]
+        if not df_reputed_users_which_shared_the_news.empty:
 
             productAlphaN    = 1.0
             productUmAlphaN  = 1.0
             productBetaN     = 1.0
             productUmBetaN   = 1.0
-            
-            for _, row in usersWhichSharedTheNews.iterrows():
+
+            for _, row in df_reputed_users_which_shared_the_news.iterrows():
                 productAlphaN   = productAlphaN  * row["probalphan"]
                 productUmBetaN  = productUmBetaN * row["probumbetan"]
-                    
-            # inferência bayesiana
+
+            # inferência bayesiana.
             reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
             reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
 
@@ -207,9 +40,71 @@ class ICS:
             if reputation_news_tn >= reputation_news_fn:
                 prob = reputation_news_tn / total
                 return 0, prob # notícia classificada como legítima.
+
             else:
                 prob = reputation_news_fn / total
                 return 1, prob # notícia classificada como fake.
+
         else:
             return -1, -1
+
+    def fit(self):
+
+        df_labeled_news = self._dao.get_labeled_news()
         
+        if df_labeled_news.empty:
+            self._logger.info("There are no labeled news to repute novel social media accounts.")
+
+        else:
+            qtd_V = len(df_labeled_news[bool(df_labeled_news["ground_truth_label"]) == False])
+            qtd_F = len(df_labeled_news[bool(df_labeled_news["ground_truth_label"]) == True])
+
+            for i, row_labeled_news in df_labeled_news.iterrows():
+
+                id_news = row_labeled_news["id_news"]
+                df_users_which_shared_the_news = self._dao.get_users_which_shared_the_news(id_news, all_users=True)
+
+                if not df_users_which_shared_the_news.empty:                    
+                    k = 0
+                    aux = -1
+                    total_users = len(df_users_which_shared_the_news)
+
+                    for j, row_user in df_users_which_shared_the_news.iterrows():
+
+                        k += 1
+                        progress = float((k / total_users) * 100)
+                        
+                        if aux != int(progress): 
+                            aux = int(progress)
+                        
+                            if aux % 20 == 0 and aux > 0:
+                                self._logger.info(f"Progresso do cálculo da reputação dos novos usuários: {aux}%")
+
+                        id_social_media_account = row_user["id_social_media_account"]
+                        df_news_shared_by_the_user = self._dao.get_labels_of_news_shared_by_user(id_social_media_account)
+
+                        # calcula a matriz de opinião para cada usuário.
+                        totR        = len(df_news_shared_by_the_user[bool(df_news_shared_by_the_user["ground_truth_label"]) == False])
+                        totF        = len(df_news_shared_by_the_user[bool(df_news_shared_by_the_user["ground_truth_label"]) == True])
+                        alphaN      = totR + self._smoothing
+                        umAlphaN    = ((totF + self._smoothing) / (qtd_F + self._smoothing)) * (qtd_V + self._smoothing)
+                        betaN       = (umAlphaN * (totR + self._smoothing)) / (totF + self._smoothing)
+                        umBetaN     = totF + self._smoothing
+
+                        # calcula as probabilidades para cada usuário.
+                        probAlphaN      = alphaN / (alphaN + umAlphaN)
+                        probUmAlphaN    = 1 - probAlphaN
+                        probBetaN       = betaN / (betaN + umBetaN)
+                        probUmBetaN     = 1 - probBetaN
+
+                        df_users_which_shared_the_news.loc[j, "probAlphaN"]   = probAlphaN
+                        df_users_which_shared_the_news.loc[j, "probBetaN"]    = probBetaN
+                        df_users_which_shared_the_news.loc[j, "probUmAlphaN"] = probUmAlphaN
+                        df_users_which_shared_the_news.loc[j, "probUmBetaN"]  = probUmBetaN
+
+            # TODO: implementar método de atualização/inserção único.
+            self._logger.info("Novel social media accounts have been reputed successfully!")       
+            self._logger.info("Saving probabilities in the database...")
+
+
+
