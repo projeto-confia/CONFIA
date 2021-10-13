@@ -52,13 +52,14 @@ class ICS:
 
         df_labeled_news = self._dao.get_labeled_news()
         list_social_media_accounts = []
+        l = 0
         
         if df_labeled_news.empty:
             self._logger.info("There are no labeled news to repute novel social media accounts.")
 
         else:
-            qtd_V = len(df_labeled_news[bool(df_labeled_news["ground_truth_label"]) == False])
-            qtd_F = len(df_labeled_news[bool(df_labeled_news["ground_truth_label"]) == True])
+            qtd_V = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == False])
+            qtd_F = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == True])
 
             for _, row_labeled_news in df_labeled_news.iterrows():
 
@@ -67,14 +68,14 @@ class ICS:
 
                 if not df_users_which_shared_the_news.empty:
 
-                    for j, row_user in df_users_which_shared_the_news.iterrows():
+                    for j, _ in df_users_which_shared_the_news.iterrows():
 
-                        id_social_media_account = row_user["id_social_media_account"]
+                        id_social_media_account = df_users_which_shared_the_news.loc[j,"id_social_media_account"][0]
                         df_news_shared_by_the_user = self._dao.get_labels_of_news_shared_by_user(id_social_media_account)
 
                         # calcula a matriz de opinião para cada usuário.
-                        totR        = len(df_news_shared_by_the_user[bool(df_news_shared_by_the_user["ground_truth_label"]) == False])
-                        totF        = len(df_news_shared_by_the_user[bool(df_news_shared_by_the_user["ground_truth_label"]) == True])
+                        totR        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == False])
+                        totF        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == True])
                         alphaN      = totR + self._smoothing
                         umAlphaN    = ((totF + self._smoothing) / (qtd_F + self._smoothing)) * (qtd_V + self._smoothing)
                         betaN       = (umAlphaN * (totR + self._smoothing)) / (totF + self._smoothing)
@@ -86,30 +87,34 @@ class ICS:
                         probBetaN       = betaN / (betaN + umBetaN)
                         probUmBetaN     = 1 - probBetaN
 
-                        df_users_which_shared_the_news.loc[j, "probAlphaN"]   = probAlphaN
-                        df_users_which_shared_the_news.loc[j, "probBetaN"]    = probBetaN
-                        df_users_which_shared_the_news.loc[j, "probUmAlphaN"] = probUmAlphaN
-                        df_users_which_shared_the_news.loc[j, "probUmBetaN"]  = probUmBetaN
+                        df_users_which_shared_the_news.loc[j, "probalphan"]   = probAlphaN
+                        df_users_which_shared_the_news.loc[j, "probbetan"]    = probBetaN
+                        df_users_which_shared_the_news.loc[j, "probumalphan"] = probUmAlphaN
+                        df_users_which_shared_the_news.loc[j, "probumBetan"]  = probUmBetaN
 
-                        list_social_media_accounts.append
-                        (
-                            (   2, 
-                                None if math.isnan(row_user["id_owner"]) else int(row_user["id_owner"]),
-                                row_user["screen_name"],
-                                row_user["date_creation"],
-                                row_user["blue_badge"],
-                                row_user["probUmAlphaN"],
-                                row_user["probBetaN"],
-                                row_user["probUmBetaN"],
-                                row_user["id_account_social_media"],
+                        tuple_social_media_accounts = (1, #TODO: alterar isso quando trabalharmos com mais redes sociais.
+                                df_users_which_shared_the_news.loc[j,"id_owner"],
+                                df_users_which_shared_the_news.loc[j,"screen_name"],
+                                str(df_users_which_shared_the_news.loc[j,"date_creation"]),
+                                df_users_which_shared_the_news.loc[j,"blue_badge"],
+                                df_users_which_shared_the_news.loc[j,"probalphan"],
+                                df_users_which_shared_the_news.loc[j,"probbetan"],
+                                df_users_which_shared_the_news.loc[j,"probumalphan"],
+                                df_users_which_shared_the_news.loc[j,"probumbetan"],
+                                df_users_which_shared_the_news.loc[j,"id_account_social_media"],
                                 id_social_media_account
                             )
-                        )
+
+                        list_social_media_accounts.append(tuple_social_media_accounts)
+                l+=1                
+                if l>50: break
 
             self._logger.info("Social media accounts have been reputed successfully!")       
             self._logger.info("Saving probabilities in database...")
 
             try:
                 self._dao.update_social_media_accounts(list_social_media_accounts)
+                self._logger.info("Social media accounts' probabilities saved successfully!")
+
             except Exception as e:
                 self._logger.error(f"An error occurred when updating social media accounts' probabilities in database: {e.args}")

@@ -68,68 +68,20 @@ class DAO:
 
     def update_social_media_accounts(self, list_social_media_accounts):
         
-        self._db.execute_many_values("UPDATE detectenv.social_media_account SET \
+        self._db.cursor.executemany("UPDATE detectenv.social_media_account SET \
             id_social_media = %s, \
-            id_owner = %s \
-            screen_name = %s \
-            date_creation = %s \
-            blue_badge = %s \
-            probalphan = %s \
-            probbetan = %s \
-            probumalphan = %s \
-            probumbetan = %s \
+            id_owner = %s, \
+            screen_name = %s, \
+            date_creation = %s, \
+            blue_badge = %s, \
+            probalphan = %s, \
+            probbetan = %s, \
+            probumalphan = %s, \
+            probumbetan = %s, \
             id_account_social_media = %s \
-            WHERE id_account_social_media = %s;", list_social_media_accounts)
+            WHERE id_social_media_account = %s;", vars_list = list_social_media_accounts)
 
         self._db.commit()
-
-    def insert_update_user_accounts_db(self, users):
-        """
-        Insere uma nova conta de usuário ou, caso já exista, atualiza seus atributos a partir do atributo 'id_account_social_media'.
-
-        Args:
-            users (dataframe): dataframe contendo os usuários a serem inseridos/atualizados no banco de dados.
-
-        Yields:
-            str: mensagem de andamento da operação.
-        """
-
-        i = 1
-        aux = -1
-        total = len(users.index)
-
-        for _, row in users.iterrows():
-            progress = float((i / total) * 100)
-            
-            if aux != int(progress): 
-                aux = int(progress)            
-                
-                if aux % 10 == 0 and aux > 0:
-                    yield f"Progresso de inserção/atualização de contas de usuário: {aux}%"
-
-            id_social_media             = 2 # TODO: mudar isso quando começarmos a trabalhar com outras redes sociais.
-            id_owner                    = None if math.isnan(row["id_owner"]) else int(row["id_owner"])
-            screen_name                 = str(row["screen_name"])
-            date_creation               = row["date_creation"]
-            blue_badge                  = row["blue_badge"]
-            probAlphaN                  = row["probAlphaN"]
-            probUmAlphaN                = row["probUmAlphaN"]
-            probBetaN                   = row["probBetaN"]
-            probUmBetaN                 = row["probUmBetaN"]
-            id_account_social_media     = row["id_account_social_media"]
-
-            command = f"INSERT INTO detectenv.social_media_account(id_social_media, id_owner, screen_name, date_creation, blue_badge, probalphan, probbetan, probumalphan, probumbetan, id_account_social_media) \
-                VALUES ({id_social_media}, {id_owner}, {screen_name}, {date_creation}, {blue_badge}, {probAlphaN}, {probBetaN}, {probUmAlphaN}, {probUmBetaN}, {id_account_social_media}) \
-                ON CONFLICT (id_account_social_media) DO \
-		        UPDATE SET probalphan = {probAlphaN}, probbetan = {probBetaN}, probumalphan = {probUmAlphaN}, probumbetan = {probUmBetaN} \
-                WHERE social_media_account.id_account_social_media = {id_account_social_media};"
-            
-            self._db.execute(command, ())
-            self._db.commit()
-            i = i + 1
-        
-        yield "Processo de inserção/atualização de contas de usuários concluído."
-
 
     def get_list_of_ids_press_media_accounts(self):
         """Retorna uma lista com os id's das contas de mídias sociais que representam veículos de imprensa.
@@ -180,12 +132,12 @@ class DAO:
 
         query = f"SELECT n.id_news, n.ground_truth_label \
                 FROM detectenv.post p, detectenv.news n, detectenv.social_media_account sma \
-                WHERE n.id_news = p.id_news \
-                AND p.id_social_media_account = sma.id_social_media_account \
-                AND n.ground_truth_label IS NOT NULL \
-                AND sma.id_social_media_account = {id_social_media_account};"
+                WHERE n.id_news = p.id_news AND \
+                p.id_social_media_account = sma.id_social_media_account AND \
+                n.ground_truth_label IS NOT NULL AND \
+                sma.id_social_media_account = %s;"
 
-        return self.query_to_dataframe(query)
+        return self.query_to_dataframe(query, id_social_media_account)
 
     def get_labeled_news(self):
         """
@@ -196,14 +148,15 @@ class DAO:
         """
         return self.query_to_dataframe("SELECT * FROM detectenv.news WHERE ground_truth_label IS NOT NULL;")
             
-    def query_to_dataframe(self, query):
+    def query_to_dataframe(self, query, *params):
         """
         Executa uma query to tipo 'select' e retorna a consulta em formato Pandas Dataframe.
 
         Args:
             query (str): a consulta do tipo 'select' a ser executada no banco de dados.
+            *params (list): a lista de parâmetros para serem passados para a execução da query.
 
         Returns:
             dataframe: o dataframe com o resultado da consulta no banco de dados.
         """
-        return pd.read_sql_query(query, self._db.connection)
+        return pd.read_sql_query(query, self._db.connection, params=params)
