@@ -16,7 +16,7 @@ class Detector:
             self._unlabeled_news_shared_by_reputed_users = self._dao.get_unlabeled_news_shared_by_reputed_users()
 
             if self._unlabeled_news_shared_by_reputed_users.empty:
-                self._logger.info("There are no unlabeled news shared by reputed users.")
+                self._logger.info("There are no unlabeled news shared by reputed social media accounts.")
             
             else:
                 news = set()
@@ -39,11 +39,12 @@ class Detector:
     def fit(self):
         
         try:
-            self._logger.info("Starting the reputation of novel users...")
+            self._logger.info("Starting the reputation process of social media accounts...")
             self._ics.fit()
         
         except Exception as e:
-            self._logger.error(f"An error occurred during the reputation process of novel users: {e.args}")
+            self._logger.error(f"An error occurred during the reputation process of social media accounts: {e.args}")
 
     def predict(self, id_news):
         return self._ics.predict(id_news)
+
