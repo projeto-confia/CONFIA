@@ -183,6 +183,7 @@ class TwitterMediaCollector(TwitterCollector):
                 self._logger.info('Fetching data from {}'.format(screen_name))
                 data += self._fetch_data(id_social_media_account, screen_name, pattern, limit=1000)  # TODO: parametrize limit?
         if data:
+            self._logger.info(f'{len(data)} posts collected from media')
             self._dao.write_in_pkl(data)
         # TODO: Implement and call method disconnect()
         
