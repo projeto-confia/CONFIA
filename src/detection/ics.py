@@ -30,36 +30,38 @@ class ICS:
                 productUmBetaN  = productUmBetaN * row["probumbetan"]
 
             # inferência bayesiana.
-            reputation_news_tn = (self.__omega * productAlphaN * productUmAlphaN) * 100
-            reputation_news_fn = ((1 - self.__omega) * productBetaN * productUmBetaN) * 100
+            reputation_news_tn = (self._omega * productAlphaN * productUmAlphaN) * 100
+            reputation_news_fn = ((1 - self._omega) * productBetaN * productUmBetaN) * 100
 
             # calculando o grau de probabilidade da predição.
-            total = reputation_news_tn + reputation_news_fn
             prob = 0
+            total = reputation_news_tn + reputation_news_fn
             
             if reputation_news_tn >= reputation_news_fn:
                 prob = reputation_news_tn / total
-                return 0, prob # notícia classificada como legítima.
+                return (0, prob) # notícia classificada como legítima.
 
             else:
                 prob = reputation_news_fn / total
-                return 1, prob # notícia classificada como fake.
+                return (1, prob) # notícia classificada como fake.
 
         else:
-            return -1, -1
+            return (-1, -1) # nenhum usuário reputado compartilhou a notícia.
 
     def fit(self):
 
         df_labeled_news = self._dao.get_labeled_news()
         list_social_media_accounts = []
-        l = 0
+        # l = 0
         
         if df_labeled_news.empty:
-            self._logger.info("There are no labeled news to repute novel social media accounts.")
+            self._logger.info("There are no labeled news to repute social media accounts.")
 
         else:
             qtd_V = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == False])
             qtd_F = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == True])
+            
+            #TODO: Início da paralelismo
 
             for _, row_labeled_news in df_labeled_news.iterrows():
 
@@ -74,8 +76,11 @@ class ICS:
                         df_news_shared_by_the_user = self._dao.get_labels_of_news_shared_by_user(id_social_media_account)
 
                         # calcula a matriz de opinião para cada usuário.
-                        totR        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == False])
+                        # total de notícias 'not fake' compartilhadas pelo usuário.
+                        totR        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == False]) 
+                        # total de notícias 'fake' compartilhadas pelo usuário.
                         totF        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == True])
+                        
                         alphaN      = totR + self._smoothing
                         umAlphaN    = ((totF + self._smoothing) / (qtd_F + self._smoothing)) * (qtd_V + self._smoothing)
                         betaN       = (umAlphaN * (totR + self._smoothing)) / (totF + self._smoothing)
@@ -106,8 +111,10 @@ class ICS:
                             )
 
                         list_social_media_accounts.append(tuple_social_media_accounts)
-                l+=1                
-                if l>50: break
+                    
+            #TODO: Fim do paralelismo.
+                # l+=1                
+                # if l>500: break
 
             self._logger.info("Social media accounts have been reputed successfully!")       
             self._logger.info("Saving probabilities in database...")
