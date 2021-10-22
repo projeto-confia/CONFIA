@@ -1,7 +1,7 @@
+import logging
 from src.detection.ics import ICS
 from src.detection.dao import DAO
 from src.config import Config as config
-import logging
 
 class Detector:
 
@@ -21,17 +21,20 @@ class Detector:
             else:
                 news = set()
 
-                for i, row in self._unlabeled_news_shared_by_reputed_users:
+                for _, row in self._unlabeled_news_shared_by_reputed_users:
                     id_news = row["id_news"]
-                    predicted_label, prob_label = self.predict(id_news)
+                    predicted_prob_label = self.predict(id_news)
 
-                    if predicted_label != -1 and prob_label != -1:
-                        self._dao.update_news_labels(id_news, bool(predicted_label), None, prob_label)
+                    # se algum usuário reputado compartilhou a notícia, ela é atualizada no banco de dados.
+                    if predicted_prob_label != (-1, -1):
+                        self._dao.update_news_labels(id_news, bool(predicted_prob_label[0]), None, predicted_prob_label[1])
                         news.add(id_news)
                 
                 if len(news):
                     self._logger.info("The following news were updated:")
                     self._logger.info(f"{news}.")
+                
+                else: self._logger.info("No news were updated.")
         
         except Exception as e:
             self._logger.error(f"An error occurred during the news' updating process: {e.args}")

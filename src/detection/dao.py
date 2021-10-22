@@ -50,7 +50,7 @@ class DAO:
 
     def get_unlabeled_news_shared_by_reputed_users(self):
         """
-        Recupera as notícias sem rótulos compartilhadas por contas de usuários reputados.
+        Recupera as notícias sem rótulos ('ground_truth_label == null') compartilhadas por contas de usuários reputados.
         """
 
         query = "SELECT q.id_social_media_account, q.probalphan, q.probbetan, q.probumalphan, q.probumbetan, post.id_post, news.id_news, \
