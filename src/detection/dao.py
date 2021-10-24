@@ -96,7 +96,7 @@ class DAO:
                                     
         return list(press_media_accounts['id_social_media_account'])
     
-    def get_users_which_shared_the_news(self, id_news, all_users=True):
+    def get_accounts_which_shared_the_news(self, id_news, all_users=True):
         """
         Retorna as contas de usuários reputados que compartilharam a notícia, representada por 'id_news'.
 
