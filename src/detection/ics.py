@@ -1,6 +1,8 @@
-import math
 import logging
+import numpy as np
 import pandas as pd
+import multiprocessing as mp
+import dask.dataframe as ddf
 from src.detection.dao import DAO
 from src.config import Config as config
 
@@ -52,76 +54,80 @@ class ICS:
 
         df_labeled_news = self._dao.get_labeled_news()
         list_social_media_accounts = []
-        # l = 0
         
         if df_labeled_news.empty:
             self._logger.info("There are no labeled news to repute social media accounts.")
 
         else:
-            qtd_V = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == False])
+            qtd_V = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == False])            
             qtd_F = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == True])
             
-            #TODO: Início da paralelismo
-
             for _, row_labeled_news in df_labeled_news.iterrows():
-
+                
                 id_news = row_labeled_news["id_news"]
-                df_users_which_shared_the_news = self._dao.get_users_which_shared_the_news(id_news, all_users=True)
-
-                if not df_users_which_shared_the_news.empty:
-
-                    for j, _ in df_users_which_shared_the_news.iterrows():
-
-                        id_social_media_account = df_users_which_shared_the_news.loc[j,"id_social_media_account"][0]
-                        df_news_shared_by_the_user = self._dao.get_labels_of_news_shared_by_user(id_social_media_account)
-
-                        # calcula a matriz de opinião para cada usuário.
-                        # total de notícias 'not fake' compartilhadas pelo usuário.
-                        totR        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == False]) 
-                        # total de notícias 'fake' compartilhadas pelo usuário.
-                        totF        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == True])
+                df_accounts_which_shared_the_news = self._dao.get_accounts_which_shared_the_news(id_news, all_users=True)
+                
+                if not df_accounts_which_shared_the_news.empty:
+                    
+                    with mp.Pool(mp.cpu_count()) as pool:
                         
-                        alphaN      = totR + self._smoothing
-                        umAlphaN    = ((totF + self._smoothing) / (qtd_F + self._smoothing)) * (qtd_V + self._smoothing)
-                        betaN       = (umAlphaN * (totR + self._smoothing)) / (totF + self._smoothing)
-                        umBetaN     = totF + self._smoothing
-
-                        # calcula as probabilidades para cada usuário.
-                        probAlphaN      = alphaN / (alphaN + umAlphaN)
-                        probUmAlphaN    = 1 - probAlphaN
-                        probBetaN       = betaN / (betaN + umBetaN)
-                        probUmBetaN     = 1 - probBetaN
-
-                        df_users_which_shared_the_news.loc[j, "probalphan"]   = probAlphaN
-                        df_users_which_shared_the_news.loc[j, "probbetan"]    = probBetaN
-                        df_users_which_shared_the_news.loc[j, "probumalphan"] = probUmAlphaN
-                        df_users_which_shared_the_news.loc[j, "probumBetan"]  = probUmBetaN
-
-                        tuple_social_media_accounts = (1, #TODO: alterar isso quando trabalharmos com mais redes sociais.
-                                df_users_which_shared_the_news.loc[j,"id_owner"],
-                                df_users_which_shared_the_news.loc[j,"screen_name"],
-                                str(df_users_which_shared_the_news.loc[j,"date_creation"]),
-                                df_users_which_shared_the_news.loc[j,"blue_badge"],
-                                df_users_which_shared_the_news.loc[j,"probalphan"],
-                                df_users_which_shared_the_news.loc[j,"probbetan"],
-                                df_users_which_shared_the_news.loc[j,"probumalphan"],
-                                df_users_which_shared_the_news.loc[j,"probumbetan"],
-                                df_users_which_shared_the_news.loc[j,"id_account_social_media"],
-                                id_social_media_account
-                            )
+                        tuple_social_media_accounts = pool.map(_func_wrapper,
+                            [(self._smoothing, qtd_V, qtd_F, row_account) 
+                            for _, row_account in df_accounts_which_shared_the_news.iterrows()])
 
                         list_social_media_accounts.append(tuple_social_media_accounts)
-                    
-            #TODO: Fim do paralelismo.
-                # l+=1                
-                # if l>500: break
-
+                        
             self._logger.info("Social media accounts have been reputed successfully!")       
             self._logger.info("Saving probabilities in database...")
 
             try:
-                self._dao.update_social_media_accounts(list_social_media_accounts)
+                flat_list_sma = [account for sublist in list_social_media_accounts for account in sublist]
+                self._dao.update_social_media_accounts(flat_list_sma)
                 self._logger.info("Social media accounts' probabilities saved successfully!")
 
             except Exception as e:
                 self._logger.error(f"An error occurred when updating social media accounts' probabilities in database: {e.args}")
+                
+def _func_wrapper(params):
+    return _compute_reputations(*params)
+    
+def _compute_reputations(smoothing, qtd_F, qtd_V, row_account):
+    
+    dao = DAO()
+    
+    id_social_media_account = row_account["id_social_media_account"][0]
+    df_news_shared_by_the_user = dao.get_labels_of_news_shared_by_user(id_social_media_account)
+
+    # calcula a matriz de opinião para cada usuário.
+    # total de notícias 'not fake' compartilhadas pelo usuário.
+    totR        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == False]) 
+    # total de notícias 'fake' compartilhadas pelo usuário.
+    totF        = len(df_news_shared_by_the_user.loc[df_news_shared_by_the_user["ground_truth_label"] == True])
+    
+    alphaN      = totR + smoothing
+    umAlphaN    = ((totF + smoothing) / (qtd_F + smoothing)) * (qtd_V + smoothing)
+    betaN       = (umAlphaN * (totR + smoothing)) / (totF + smoothing)
+    umBetaN     = totF + smoothing
+
+    # calcula as probabilidades para cada usuário.
+    probAlphaN      = alphaN / (alphaN + umAlphaN)
+    probUmAlphaN    = 1 - probAlphaN
+    probBetaN       = betaN / (betaN + umBetaN)
+    probUmBetaN     = 1 - probBetaN
+
+    tuple_account = (1, #TODO: alterar isso quando trabalharmos com mais redes sociais.
+            row_account["id_owner"],
+            row_account["screen_name"],
+            str(row_account["date_creation"]),
+            row_account["blue_badge"],
+            probAlphaN, # 5
+            probBetaN, # 6
+            probUmAlphaN, # 7
+            probUmBetaN, # 8
+            row_account["id_account_social_media"],
+            id_social_media_account
+        )
+    
+    del dao
+    return tuple_account
+        
