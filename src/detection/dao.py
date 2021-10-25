@@ -48,7 +48,7 @@ class DAO:
 
         return self.query_to_dataframe(query)
 
-    def get_unlabeled_news_shared_by_reputed_users(self):
+    def get_unlabeled_news_shared_by_reputed_accounts(self):
         """
         Recupera as notícias sem rótulos ('ground_truth_label == null') compartilhadas por contas de usuários reputados.
         """

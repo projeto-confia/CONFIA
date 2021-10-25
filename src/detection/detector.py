@@ -13,7 +13,7 @@ class Detector:
     def run(self):
         
         try:
-            self._unlabeled_news_shared_by_reputed_users = self._dao.get_unlabeled_news_shared_by_reputed_users()
+            self._unlabeled_news_shared_by_reputed_users = self._dao.get_unlabeled_news_shared_by_reputed_accounts()
 
             if self._unlabeled_news_shared_by_reputed_users.empty:
                 self._logger.info("There are no unlabeled news shared by reputed social media accounts.")
