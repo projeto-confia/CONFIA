@@ -18,7 +18,7 @@ class ICS:
     def predict(self, id_news):
 
         # aqui já são removidas as contas dos veículos de imprensa.
-        df_reputed_users_which_shared_the_news = self._dao.get_users_which_shared_the_news(id_news, all_users=False)
+        df_reputed_users_which_shared_the_news = self._dao.get_accounts_which_shared_the_news(id_news, all_users=False)
 
         if not df_reputed_users_which_shared_the_news.empty:
 
