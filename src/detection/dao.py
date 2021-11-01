@@ -21,7 +21,7 @@ class DAO:
         self._db.commit()
 
     # TODO: testar funcionalidade no painel administrativo.
-    def get_top_users_which_shared_news_ics(self, num_users):
+    def get_top_accounts_which_shared_news_ics(self, num_users):
         """
         Recupera os top usuários com maiores taxas de compartilhamento de notícias fake e not fake.
 

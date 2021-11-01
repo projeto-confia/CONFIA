@@ -1,3 +1,4 @@
+# import traceback
 import logging
 from src.detection.ics import ICS
 from src.detection.dao import DAO
@@ -21,7 +22,7 @@ class Detector:
             else:
                 news = set()
 
-                for _, row in self._unlabeled_news_shared_by_reputed_users:
+                for _, row in self._unlabeled_news_shared_by_reputed_users.iterrows():
                     id_news = row["id_news"]
                     predicted_prob_label = self.predict(id_news)
 
@@ -32,12 +33,13 @@ class Detector:
                 
                 if len(news):
                     self._logger.info("The following news were updated:")
-                    self._logger.info(f"{news}.")
+                    self._logger.info(f"{sorted(news)}.")
                 
                 else: self._logger.info("No news were updated.")
         
         except Exception as e:
             self._logger.error(f"An error occurred during the news' updating process: {e.args}")
+            # traceback.print_tb(e.__traceback__)
 
     def fit(self):
         
