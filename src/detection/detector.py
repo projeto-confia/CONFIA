@@ -26,8 +26,10 @@ class Detector:
                     id_news = row["id_news"]
                     predicted_prob_label = self.predict(id_news)
 
-                    # se algum usuário reputado compartilhou a notícia, ela é atualizada no banco de dados.
-                    if predicted_prob_label != (-1, -1):
+                    # atualiza a notícia no banco de dados se: 
+                    # (1) pelo menos um usuário reputado a compartilhou;
+                    # (2) a notícia ainda não foi enviada para checagem ou curadoria.
+                    if predicted_prob_label != (-1, -1):    
                         self._dao.update_news_labels(id_news, bool(predicted_prob_label[0]), None, predicted_prob_label[1])
                         news.add(id_news)
                 
