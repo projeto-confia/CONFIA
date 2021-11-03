@@ -1,8 +1,5 @@
 import logging
-import numpy as np
-import pandas as pd
 import multiprocessing as mp
-import dask.dataframe as ddf
 from src.detection.dao import DAO
 from src.config import Config as config
 
@@ -13,7 +10,6 @@ class ICS:
         self._omega = omega
         self._smoothing = laplace_smoothing
         self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._press_media_accounts_ids = self._dao.get_list_of_ids_press_media_accounts()
 
     def predict(self, id_news):
 

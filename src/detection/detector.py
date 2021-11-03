@@ -39,7 +39,6 @@ class Detector:
         
         except Exception as e:
             self._logger.error(f"An error occurred during the news' updating process: {e.args}")
-            # traceback.print_tb(e.__traceback__)
 
     def fit(self):
         
