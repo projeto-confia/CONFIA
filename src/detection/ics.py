@@ -10,51 +10,73 @@ class ICS:
         self._omega = omega
         self._smoothing = laplace_smoothing
         self._logger = logging.getLogger(config.LOGGING.NAME)
+        self._list_of_news_sent_to_curatorship_or_fact_checking_agencies = \
+            self._dao.get_ids_of_news_sent_to_curatorship_or_fact_checking_agencies()
 
     def predict(self, id_news):
+        """
+        Atribui uma probabilidade e um rótulo de 'False' (not fake) ou 'True' (fake) a uma notícia representada por 'id_news'.
 
-        # aqui já são removidas as contas dos veículos de imprensa.
-        df_reputed_users_which_shared_the_news = self._dao.get_accounts_which_shared_the_news(id_news, all_users=False)
+        Args:
+            id_news (int): o id da notícia no banco de dados.
 
-        if not df_reputed_users_which_shared_the_news.empty:
-
-            productAlphaN    = 1.0
-            productUmAlphaN  = 1.0
-            productBetaN     = 1.0
-            productUmBetaN   = 1.0
-
-            for _, row in df_reputed_users_which_shared_the_news.iterrows():
-                productAlphaN   = productAlphaN  * row["probalphan"]
-                productUmBetaN  = productUmBetaN * row["probumbetan"]
-
-            # inferência bayesiana.
-            reputation_news_tn = (self._omega * productAlphaN * productUmAlphaN) * 100
-            reputation_news_fn = ((1 - self._omega) * productBetaN * productUmBetaN) * 100
-
-            # calculando o grau de probabilidade da predição.
-            prob = 0
-            total = reputation_news_tn + reputation_news_fn
+        Returns:
+            tuple: (rótulo, probabilidade) 
+                    ou (-1, -1) se nenhum usuário reputado a compartilhou ou a notícia ainda não foi enviada para checagem ou curadoria.
+        """
+        
+        #TODO: testar esta funcionalidade.
+        # verifica se a notícia já foi enviada para a curadoria ou alguma agência de checagem.
+        if id_news not in self._list_of_news_sent_to_curatorship_or_fact_checking_agencies:
             
-            if reputation_news_tn >= reputation_news_fn:
-                prob = reputation_news_tn / total
-                return (0, prob) # notícia classificada como legítima.
+            # aqui já são removidas as contas dos veículos de imprensa.
+            df_reputed_users_which_shared_the_news = self._dao.get_accounts_which_shared_the_news(id_news, all_users=False)
 
+            if not df_reputed_users_which_shared_the_news.empty:
+
+                productAlphaN    = 1.0
+                productUmAlphaN  = 1.0
+                productBetaN     = 1.0
+                productUmBetaN   = 1.0
+
+                for _, row in df_reputed_users_which_shared_the_news.iterrows():
+                    productAlphaN   = productAlphaN  * row["probalphan"]
+                    productUmBetaN  = productUmBetaN * row["probumbetan"]
+
+                # inferência bayesiana.
+                reputation_news_tn = (self._omega * productAlphaN * productUmAlphaN) * 100
+                reputation_news_fn = ((1 - self._omega) * productBetaN * productUmBetaN) * 100
+
+                # calculando o grau de probabilidade da predição.
+                prob = 0
+                total = reputation_news_tn + reputation_news_fn
+                
+                if reputation_news_tn >= reputation_news_fn:
+                    prob = reputation_news_tn / total
+                    return (0, prob) # notícia classificada como legítima.
+
+                else:
+                    prob = reputation_news_fn / total
+                    return (1, prob) # notícia classificada como fake.
+                
             else:
-                prob = reputation_news_fn / total
-                return (1, prob) # notícia classificada como fake.
-
+                return (-1, -1) # nenhum usuário reputado compartilhou a notícia.
+        
         else:
-            return (-1, -1) # nenhum usuário reputado compartilhou a notícia.
+            return (-1, -1) # a notícia já foi enviada para a checagem ou curadoria.
 
     def fit(self):
+        """
+        Atualiza as probabilidades das contas de usuário que compartilharam notícias reputadas.
+        """
 
         df_labeled_news = self._dao.get_labeled_news()
         list_social_media_accounts = []
-        
+                
         if df_labeled_news.empty:
             self._logger.info("There are no labeled news to repute social media accounts.")
 
-        else:
+        else:            
             qtd_V = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == False])            
             qtd_F = len(df_labeled_news.loc[df_labeled_news["ground_truth_label"] == True])
             

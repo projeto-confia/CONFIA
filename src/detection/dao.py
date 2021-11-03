@@ -83,7 +83,7 @@ class DAO:
 
         self._db.commit()
 
-    def get_list_of_ids_press_media_accounts(self):
+    def get_list_of_ids_belonging_to_press_media_accounts(self):
         """Retorna uma lista com os id's das contas de mídias sociais que representam veículos de imprensa.
 
         Returns:
@@ -138,6 +138,16 @@ class DAO:
                 sma.id_social_media_account = %s;"
 
         return self.query_to_dataframe(query, id_social_media_account)
+    
+    def get_ids_of_news_sent_to_curatorship_or_fact_checking_agencies(self):
+        """
+        Retorna os id's das notícias enviadas para as agências de checagem e curadoria.
+
+        Returns:
+            list: uma lista ordenada contendo os id's das notícias enviada paras a curadoria e agências de checagem.
+        """
+        df_id_news = self.query_to_dataframe("select id_news from detectenv.checking_outcome union select id_news from detectenv.curatorship")
+        return sorted(df_id_news["id_news"])
 
     def get_labeled_news(self):
         """
