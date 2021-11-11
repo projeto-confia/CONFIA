@@ -84,6 +84,7 @@ class TwitterStreamStatusProcessor(TwitterStatusProcessor):
     def process(self, status):
         if status.author.id in self._media_ids:
             return
+        
         tweet = super().process(status)
         # TODO: change database name column and table to social_network
         tweet['name_social_media'] = self._name_social_network
@@ -134,6 +135,7 @@ class TwitterCollector(Collector):
         super().__init__()
         self._name_social_network = 'twitter'
         self._media_accounts = self._dao.get_media_accounts(self._name_social_network)
+        # print(self._media_accounts)
         self._media_ids = [media[2] for media in self._media_accounts]
         self._twitter_api = TwitterAPI()
         
@@ -175,20 +177,22 @@ class TwitterMediaCollector(TwitterCollector):
         regex_string = '|'.join(tags)
         pattern = re.compile(regex_string)
         data = list()
-        for id_social_media_account, screen_name, _, initial_load in self._media_accounts:
+        
+        for id_social_media_account, screen_name, _, is_reliable, initial_load in self._media_accounts:           
             if not initial_load:
                 self._logger.info('Updating data from {}'.format(screen_name))
-                data += self._update_data(id_social_media_account, screen_name, pattern)
+                data += self._update_data(id_social_media_account, screen_name, is_reliable, pattern)
             else:
                 self._logger.info('Fetching data from {}'.format(screen_name))
-                data += self._fetch_data(id_social_media_account, screen_name, pattern, limit=1000)  # TODO: parametrize limit?
+                data += self._fetch_data(id_social_media_account, screen_name, is_reliable, pattern, limit=1000)  # TODO: parametrize limit?
+                            
         if data:
             self._logger.info(f'{len(data)} posts collected from media')
             self._dao.write_in_pkl(data)
         # TODO: Implement and call method disconnect()
         
         
-    def _fetch_data(self, id_social_media_account, screen_name, pattern, limit=0, datetime_limit=None):
+    def _fetch_data(self, id_social_media_account, screen_name, is_reliable, pattern, limit=0, datetime_limit=None):
         """Fetch tweets from account timeline and store in file
 
         Args:
@@ -206,22 +210,28 @@ class TwitterMediaCollector(TwitterCollector):
         try:
             tweets = list()
             self._status_processor.id_social_media_account = id_social_media_account
+            
             for status in self._twitter_api.fetch_timeline(screen_name=screen_name, limit=limit):
                 tweet = self._status_processor.process(status)
                 text_post = self._normalize_text(tweet['text_post']).lower()
+                
                 if datetime_limit and tweet['datetime_post'] <= datetime_limit:
                     break
+                
                 if pattern.search(text_post):
+                    tweet['is_reliable'] = is_reliable
                     tweets.append(tweet)
+                    
             return tweets
+        
         except:
             self._logger.error('Exception while trying colect twitter statuses from {}'.format(screen_name))
             raise
         
     
-    def _update_data(self, id_social_media_account, screen_name, pattern):
+    def _update_data(self, id_social_media_account, screen_name, is_reliable, pattern):
         last_post_datetime = self._dao.get_last_media_post(id_social_media_account)
-        return self._fetch_data(id_social_media_account, screen_name, pattern, datetime_limit=last_post_datetime)
+        return self._fetch_data(id_social_media_account, screen_name, is_reliable, pattern, datetime_limit=last_post_datetime)
         
         
     def _process_data(self):

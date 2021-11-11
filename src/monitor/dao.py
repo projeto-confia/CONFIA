@@ -1,7 +1,7 @@
+import os
 import logging
 import pandas as pd
 import multiprocessing as mp
-import os
 from operator import itemgetter
 from datetime import datetime, timedelta
 from src.config import Config as config
@@ -36,7 +36,7 @@ class MonitorDAO(object):
             
             
     def get_media_accounts(self, name_social_network):
-        sql_string = 'select sma.id_social_media_account, sma.screen_name, sma.id_account_social_media, \
+        sql_string = 'select sma.id_social_media_account, sma.screen_name, sma.id_account_social_media, o.is_reliable, \
                         CASE WHEN count(p.*) > 0 THEN false ELSE true END as initial_load \
                       from detectenv.owner o inner join detectenv.social_media_account sma on \
                                                   sma.id_owner = o.id_owner \
@@ -48,7 +48,7 @@ class MonitorDAO(object):
                               (select sm.id_social_media \
                                from detectenv.social_media sm \
                                where upper(sm.name_social_media) = upper(%s)) \
-                      group by sma.id_social_media_account, sma.screen_name, sma.id_account_social_media;'
+                      group by sma.id_social_media_account, sma.screen_name, sma.id_account_social_media, o.is_reliable;'
 
         with DatabaseWrapper() as db:
             return db.query(sql_string, (name_social_network,))
@@ -77,32 +77,39 @@ class MonitorDAO(object):
     def insert_media_posts(self):
         """Persist pickle file content into database
         """
-        
         df = self._load_pkl()
+        
         if not isinstance(df, pd.DataFrame):
             return
-        df['ground_truth_label'] = False
+        
         df['id_news'] = 0
+        df['ground_truth_label'] = list(~df['is_reliable'])
         id_news_col_idx = df.columns.get_loc('id_news')
         groups = df.groupby(['group']).groups
+                
         try:
             with DatabaseWrapper() as db:
+                
                 if self._text_news_cleaned:
                     df_news = self._extract_df_news_groups_firsts(df, has_ground_truth_label=True)
                     self._update_dataframe_with_similar_id_news(df, df_news, groups, id_news_col_idx)
                     df_news = self._extract_df_news_groups_firsts(df, has_ground_truth_label=True)
+                    
                     if not df_news.empty:
                         id_news_list = self._insert_news_in_db(df_news, db, has_ground_truth_label=True)
                         self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                        
                 else:
                     df_news = self._extract_df_news_groups_firsts(df, has_ground_truth_label=True)
                     id_news_list = self._insert_news_in_db(df_news, db, has_ground_truth_label=True)
                     self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                
                 self._insert_posts_in_db(df, db)
+            
             os.remove(self._tweet_filepath)
+            
         except:
             raise
-        
         
     def insert_stream_posts(self):
         """Persist pickle file content into database
@@ -115,8 +122,10 @@ class MonitorDAO(object):
         df['id_social_media_account'] = None
         id_news_col_idx = df.columns.get_loc('id_news')
         groups = df.groupby(['group']).groups
+        
         try:
             with DatabaseWrapper() as db:
+                
                 if self._text_news_cleaned:
                     df_news = self._extract_df_news_groups_firsts(df)
                     self._update_dataframe_with_similar_id_news(df, df_news, groups, id_news_col_idx)
@@ -124,17 +133,23 @@ class MonitorDAO(object):
                     if not df_news.empty:
                         id_news_list = self._insert_news_in_db(df_news, db)
                         self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                        
                 else:
                     df_news = self._extract_df_news_groups_firsts(df)
                     id_news_list = self._insert_news_in_db(df_news, db)
                     self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
                 df = self._update_dataframe_with_social_network_accounts(df, db)
                 self._insert_posts_in_db(df, db)
+                
             os.remove(self._tweet_filepath)
+            
         except:
             raise
-            
         
+    def _get_owner_reliability(self, id_owner):
+        pass
+        
+            
     def _extract_df_news_groups_firsts(self, df:pd.DataFrame, has_ground_truth_label=False):
         ground_truth_label = ['ground_truth_label'] if has_ground_truth_label else []
         cols = ['text_post', 'datetime_post', 'text_prep'] + ground_truth_label
