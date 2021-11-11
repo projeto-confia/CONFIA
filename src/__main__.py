@@ -39,7 +39,6 @@ def init_log(verbose=False, smtp_log=False):
 
 
 if __name__ == '__main__':
-    init_log(verbose=config.LOGGING.VERBOSE, 
-             smtp_log=config.LOGGING.SMTP_LOG)
+    init_log(verbose=config.LOGGING.VERBOSE, smtp_log=config.LOGGING.SMTP_LOG)
     e = Engine()
     e.run()
