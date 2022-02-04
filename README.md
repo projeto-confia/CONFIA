@@ -1,103 +1,67 @@
-# Projeto CONFIA
+# AUTOMATA
 
-*Detectando e interceptando Fake News em Redes Sociais*
+Aplicação que monitora redes sociais virtuais (RSV) com a finalidade de detectar Fake News e gerar alertas nas RSV.
 
-## 1. Pré-requisitos
+# Dependências com Componentes do Ambiente
+Esta aplicação depende da componente [database](https://github.com/projeto-confia/database).
+
+# Instalação
 
 Abra um terminal Linux e execute os seguintes comandos para a instalação e configuração do projeto:
 
-#### 1.1. Instale os pacotes necessários para o build
+Instale os pacotes necessários para o build
 
 ```
-sudo apt install build-essential python3-dev libpq-dev
+    sudo apt install build-essential python3-dev libpq-dev
 ```
 
-#### 1.2. Faça o clone do repositório
+Instale o [venv](https://docs.python.org/3/library/venv.html):
 
 ```
-git clone https://github.com/projeto-confia/CONFIA
+    sudo apt install python3-venv
 ```
 
-#### 1.3. Configure o banco de dados (docker e docker-compose devem estar instalados)
-
-- Faça uma cópia do arquivo `docker.env.example` e renomeie a cópia para `docker.env`. Edite este novo arquivo inserindo seu e-mail e uma senha definida por você. Estas serão as credenciais para acessar o pgAdmin.
-
-- Inicialize os serviços `postgreSQL` e `pgAdmin`. Abra um terminal, acesse o diretório que contém o arquivo `docker-compose.yml` e execute:
+Crie o ambiente virtual para o AUTOMATA:
 
 ```
-docker-compose up -d
+    python3 -m venv .venv
 ```
 
-Se tudo correr bem, você verá as seguintes mensagens no terminal
+Ative o ambiente virtual
 
 ```
-Starting postgres ... done
-Starting pgadmin  ... done
+    source .venv/bin/activate
 ```
 
-Para criar o banco de dados, execute o seguinte comando no terminal:
+Instale as dependências:
 
 ```
-./pg_create.sh
+    pip install -r requirements.txt
 ```
 
-Os backups são armazenados na pasta `pg_backup`. Para fazer backup do banco de dados, execute o seguinte comando no terminal:
+# Configuração das variáveis de ambiente
+Crie um arquivo `config.py` usando o arquivo `config.py.example` como base. A maioria dos parâmetros já estão calibrados para um melhor desempenho do AUTOMATA, apesar de você poder mudá-los conforme as orientações presentes da documentação.
+
+De todo modo, você deverá editar os seguintes parãmetros usando suas credenciais de acesso:
+
+* `EMAIL` - conta de e-mail que será empregada para disparo e recebimento de notificações.
+* `TWITTER_CREDENTIAL` - credenciais que devem ser obtidas por você por meio de [solicitação ao Twitter](https://developer.twitter.com/en/docs/twitter-api/getting-started/getting-access-to-the-twitter-api).
+* `DATABASE` - parâmetros que você configurou na instalação da componente [database](https://github.com/projeto-confia/database).
+
+Caso deseje uma execução em modo `verbose`, certifique-se de habilitar a variável `LOGGING.VERBOSE`.
+
+# Inicialização do AUTOMATA
+
+Para inicializar o AUTOMATA certifique-se que o ambiente virtual está ativado e, em seguida, execute no terminal:
 
 ```
-./pg_backup.sh
+    python3 -m src
 ```
 
-Para restaurar um backup, execute o seguinte comando no terminal, substituindo `dump.sql.gz` pelo nome do arquivo de backup que deseja restaurar:
+# Desativar o ambiente virtual
+
+No terminal, execute:
 
 ```
-./pg_restore.sh pg_backup/dump.sql.gz
-```
-
-Se quiser utilizar o `pgAdmin`, acesse o serviço pelo browser (localhost:16543) e faça o login com as credencias que você configurou no arquivo `docker.env`. Após o login, clique em `Add New Server` e além do nome do server (escolhido por você), na aba `Connection` insira os seguintes dados:
-
-```
-Host name/address: postgres
-Usarname: admin
-Password: postgres
-```
-
-Para encerrar os serviços `postgreSQL` e `pgAdmin`, abra um terminal, acesse o diretório que contém o arquivo `docker-compose.yml` e execute:
-
-```
-docker-compose stop
-```
-
-Se tudo correr bem, você verá as seguintes mensagens no terminal
-
-```
-Stopping pgadmin  ... done
-Stopping postgres ... done
-```
-
-#### 1.4. Instale o [venv](https://docs.python.org/3/library/venv.html):
-
-```
-sudo apt install python3-venv
-```
-
-#### 1.5. Ative o ambiente
-
-```
-source confia/bin/activate
-```
-
-#### 1.6. Instale as demais dependências:
-
-```
-sudo pip3 install -r requirements.txt
-```
-
-*Caso seja necessário, digite `deactivate` no terminal para desativar o ambiente.* 
-
-## 2. Rodando o projeto
-
-Para rodar o projeto, verifique se o ambiente está ativado e, em seguida, digite no terminal:
-
-```
-python3 -m confia
+    deactivate
 ```
