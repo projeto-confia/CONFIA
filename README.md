@@ -40,7 +40,7 @@ Instale as dependências:
 ```
 
 # Configuração das variáveis de ambiente
-Crie um arquivo `config.py` usando o arquivo `config.py.example` como base. A maioria dos parâmetros já estão calibrados para um melhor desempenho do AUTOMATA, apesar de você poder mudá-los conforme as orientações presentes da documentação.
+Crie um arquivo `config.py` usando o arquivo `config.py.example` como base. A maioria dos parâmetros já estão calibrados para um melhor desempenho do AUTOMATA, apesar de você poder mudá-los conforme o [documento de especificação](/docs/environment_variables.md).
 
 De todo modo, você deverá editar os seguintes parãmetros usando suas credenciais de acesso:
 
