@@ -1,7 +1,7 @@
 <!-- # DICIONÁRIO DE DADOS DE VARIÁVEIS DE AMBIENTE -->
 # Dicionário de dados de variáveis de ambiente
 
-Este documento detalha as variáveis de ambiente do AUTOMATA. As variáveis de ambiente devem ser configuradas no arquivo `config.py` gerado por você com base no arquivo [src/config.py.example](src/config.py.example).
+Este documento detalha as variáveis de ambiente do AUTOMATA. As variáveis de ambiente devem ser configuradas no arquivo `config.py` gerado por você com base no arquivo [src/config.py.example](/src/config.py.example).
 
 # Variáveis de ambiente
 
