@@ -45,27 +45,36 @@ class TwitterStatusProcessor(TwitterStatusProcessorInterface):
         tweet['num_likes'] = 0
         tweet['num_shares'] = 0
         tweet['id_post_social_media'] = status.id
-        if hasattr(status, "retweeted_status"):  # if is retweet
+        
+        if hasattr(status, "retweeted_status"):  # if is a retweet
+            
             tweet['parent_id_post_social_media'] = status.retweeted_status.id
+            
             try:
                 tweet['text_post'] = status.retweeted_status.extended_tweet["full_text"]
-            except AttributeError:
+            
+            except AttributeError:    
                 try:
                     tweet['text_post'] = status.retweeted_status.full_text
                 except AttributeError:
                     tweet['text_post'] = status.retweeted_status.text
+            
             finally:
                 tweet['num_likes'] = status.retweeted_status.favorite_count
                 tweet['num_shares'] = status.retweeted_status.retweet_count
+        
         else:
             tweet['parent_id_post_social_media'] = None
+            
             try:
                 tweet['text_post'] = status.extended_tweet["full_text"]
+            
             except AttributeError:
                 try:
                     tweet['text_post'] = status.full_text
                 except AttributeError:
                     tweet['text_post'] = status.text
+        
         tweet['text_post'] = tweet['text_post'].replace("\n", " ")
         tweet['datetime_post'] = status.created_at
         return tweet
@@ -79,6 +88,7 @@ class TwitterStreamStatusProcessor(TwitterStatusProcessor):
         self._dao = dao
         self._media_ids = media_ids
         self._processed_tweets = list()
+        self._total_unprocessed_tweets: int = 0
     
     
     def process(self, status):
@@ -86,6 +96,12 @@ class TwitterStreamStatusProcessor(TwitterStatusProcessor):
             return
         
         tweet = super().process(status)
+        
+        # checks if the streamed tweet has enough number of shares in order to persist it in the database.
+        if tweet["num_shares"] < config.MONITOR.STREAM_FILTER_OF_SHARES:
+            self._total_unprocessed_tweets += 1
+            return
+        
         # TODO: change database name column and table to social_network
         tweet['name_social_media'] = self._name_social_network
         tweet['id_account_social_media'] = status.author.id_str
@@ -93,6 +109,7 @@ class TwitterStreamStatusProcessor(TwitterStatusProcessor):
         tweet['date_creation'] = status.author.created_at
         tweet['blue_badge'] = status.author.verified
         tweet['datetime_post'] = status.created_at
+        
         self._processed_tweets.append(tweet)
         
         
@@ -225,7 +242,7 @@ class TwitterMediaCollector(TwitterCollector):
             return tweets
         
         except:
-            self._logger.error('Exception while trying colect twitter statuses from {}'.format(screen_name))
+            self._logger.error('An exception occurred when trying to collect twitter statuses from {}'.format(screen_name))
             raise
         
     
@@ -267,7 +284,8 @@ class TwitterStreamCollector(TwitterCollector):
         self._twitter_api.fetch_stream(self._search_tags, 
                                        self.stream_time,
                                        self.status_processor)
-        self._logger.info(f'{len(self.status_processor._processed_tweets)} posts collected from stream.')
+        self._logger.info(f'{len(self.status_processor._processed_tweets)} posts collected from streaming.')
+        self._logger.info(f'{self.status_processor._total_unprocessed_tweets} posts collected from streaming did not have at least {config.MONITOR.STREAM_FILTER_OF_SHARES} shares and were rejected.')
         self.status_processor._store()
 
     
