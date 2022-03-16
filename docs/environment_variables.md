@@ -56,9 +56,9 @@ Este documento especifica as variáveis de ambiente do AUTOMATA. As variáveis d
 > Valores aceitos: `{True, False}`. 
 <br>Se habilitado ativa o módulo de _scraping_. Este módulo realiza o download automático de análises de Fake News publicadas pelas agências de checagem de fatos. Os dados obtidos são armazenados no banco de dados do AUTOMATA.
 
-`MONTIOR.STREAM_FILTER_OF_SHARES`
+`MONITOR.STREAM_FILTER_OF_SHARES`
 > valores aceitos: `int`
-<br>Valor numérico inteiro **maior ou igual a 0**. Atua como um limiar para descarte dos *tweets* colhidos via *streaming* que possuem um número de compartilhamentos menor do que o valor definido em `MONTIOR.STREAM_FILTER_OF_SHARES`.
+<br>Valor numérico inteiro **maior ou igual a 0**. Atua como um limiar para descarte dos *tweets* colhidos via *streaming* que possuem um número de compartilhamentos menor do que o valor definido em `MONITOR.STREAM_FILTER_OF_SHARES`.
 
 `MONITOR.STREAM_TIME`
 > Valores aceitos: `int`. 
