@@ -285,7 +285,10 @@ class TwitterStreamCollector(TwitterCollector):
                                        self.stream_time,
                                        self.status_processor)
         self._logger.info(f'{len(self.status_processor._processed_tweets)} posts collected from streaming.')
-        self._logger.info(f'{self.status_processor._total_unprocessed_tweets} posts collected from streaming did not have at least {config.MONITOR.STREAM_FILTER_OF_SHARES} shares and were rejected.')
+        
+        if config.MONITOR.STREAM_FILTER_OF_SHARES > 0:
+            self._logger.info(f'{self.status_processor._total_unprocessed_tweets} posts collected from streaming did not have at least {config.MONITOR.STREAM_FILTER_OF_SHARES} shares and were rejected.')
+            
         self.status_processor._store()
 
     
