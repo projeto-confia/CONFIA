@@ -168,3 +168,15 @@ class Interventor(object):
             self._dao.close_curations(tuple(curations_id))
         else:
             self._logger.info('No more curations to be process.')
+
+
+class InterventorManager(object):
+    
+    def __init__(self):
+        pass
+        
+        
+    def run(self):
+        print('Executing Interventor Manager')
+        # Executar queue de envios para ACF
+        # Executar queue de alertas na rede social
