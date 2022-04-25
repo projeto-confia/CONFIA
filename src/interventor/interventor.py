@@ -1,21 +1,52 @@
 import logging
-from src.config import Config as config
-from src.interventor.dao import InterventorDAO
-from src.apis.twitter import TwitterAPI
+from enum import Enum, auto
+from src.schedule import Schedule
+from src.job import Job, Job_Manager
 from src.utils.email import EmailAPI
+from src.config import Config as config
+from src.apis.twitter import TwitterAPI
+from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
+
+class SocialMediaAlertType(Enum):
+    LABELED = auto()
+    DETECTED = auto()
+    SIMILARITY = auto()
+    
+
+class InterventorJobFCA(Job):
+    
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE) -> None:
+        super().__init__(schedule_type)
+        
+    def create_job(self, dao) -> None:
+        pass
+    
+
+class InterventorJobSocialMedia(Job):
+    
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE) -> None:
+        super().__init__(schedule_type)
+        
+    def create_job(self, dao) -> None:
+        pass
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
 class Interventor(object):
     
     def __init__(self):
-        self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._twitter_api = TwitterAPI()
         self._email_api = EmailAPI()
-        self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
+        self._twitter_api = TwitterAPI()
         self._text_preprocessor = TextPreprocessing()
         self._all_fca_news = self._get_all_agency_news()
+        self._logger = logging.getLogger(config.LOGGING.NAME)
+        self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
+        
+        # objects for creating the jobs.
+        self._job_fca = InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA)
+        self._job_social_media = InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA)
+        
         self._logger.info("Interventor initialized.")
         
         
@@ -39,9 +70,11 @@ class Interventor(object):
         if not candidates:
             self._logger.info('No news to be verified.')
             return
+        
         if config.INTERVENTOR.CURATOR:
             self._persist_news_to_curatorship(candidates)
             return
+        
         self._persist_news(candidates)
                 
                 
@@ -68,13 +101,16 @@ class Interventor(object):
         similars, not_similars = list(), list()
         for i, (_, text_news) in enumerate(news):
             text_news_cleaned = self._text_preprocessor.text_cleaning(text_news)
+        
             for id_news_checked, _, _, publication_title_cleaned in self._all_fca_news:
                 is_similar, _ = self._text_preprocessor.check_duplications(text_news_cleaned, publication_title_cleaned)
+        
                 if is_similar:
                     similars.append(news[i] + (id_news_checked,))
                     break
             else:
                 not_similars.append(news[i])
+        
         return (similars, not_similars)
     
     
@@ -98,17 +134,22 @@ class Interventor(object):
         self._dao.persist_similar_news(similars)
         # TODO: implement create alert job function
         # self._create_alert_job(similars, alert_type='similar')
+        self._job_social_media.create_job(self._dao, similars, SocialMediaAlertType.SIMILARITY)
     
         
     def _process_candidates_to_check(self, candidates_to_check):
         self._logger.info('Processing news to be checked...')
+        
         if config.INTERVENTOR.CURATOR:
             curated = [c for c in candidates_to_check if c[3] != None]
             candidates_to_check = [c for c in candidates_to_check if c[3] == None]
+        
             if curated:
                 self._process_labeled_curatorship(curated)
+        
             if not candidates_to_check:
                 return
+        
         candidates_id = [c[0] for c in candidates_to_check]
         id_trusted_agency,_,_,_ = self._dao.get_data_from_agency('Boatos.org')
         self._dao.persist_candidates_to_check(candidates_id, id_trusted_agency)
@@ -116,14 +157,16 @@ class Interventor(object):
         # file_id = self._build_excel(candidates_to_check)
         # self._create_send_job(file_id)
         # self._create_alert_job(candidates_to_check, alert_type='detected')
+        self._job_fca.create_job(self._dao, candidates_to_check, SocialMediaAlertType.DETECTED)
         
         
     def _process_labeled_curatorship(self, curated):
         news = [(c[0], c[3]) for c in curated]
         self._dao.update_ground_truth_label(news)
         # TODO: implement function
-        # fake_news = [c[0] for c in curated if c[3]]
+        fake_news = [c[0] for c in curated if c[3]]
         # self._create_alert_job(fake_news, alert_type='labeled')
+        self._job_social_media.create_job(self._dao, fake_news, SocialMediaAlertType.LABELED)
     
     
     def _build_excel(self, candidates_to_check):
@@ -161,13 +204,17 @@ class Interventor(object):
             curations_id = [curation[5] for curation in curations]
             similars = [curation[:3] for curation in curations if curation[4]]
             candidates_to_check = [curation[:4] for curation in curations if not curation[4]]
+            
             if similars:
                 self._process_similars(similars)
+                
             if candidates_to_check:
                 self._process_candidates_to_check(candidates_to_check)
+                
             self._dao.close_curations(tuple(curations_id))
+        
         else:
-            self._logger.info('No more curations to be process.')
+            self._logger.info('No more curations to process.')
 
 
 class InterventorManager(object):
