@@ -20,6 +20,7 @@ class InterventorJobFCA(Job):
         super().__init__(schedule_type)
         
     def create_job(self, dao) -> None:
+        
         pass
     
 

@@ -1,12 +1,15 @@
+import logging
 from typing import List
 from dataclasses import field
 from src.job import Job_Manager
+from src.config import Config as config
 from src.interventor.facade import InterventorFacade
 
-class Schedule(object):
+class Schedule:
     
     _failed_jobs: int = 0
     _subscribed_jobs: List[Job_Manager] = field(default_factory=list)
+    _logger = logging.getLogger(config.LOGGING.NAME)
     
     @staticmethod
     def subscribe_job(job: Job_Manager) -> None:
@@ -16,7 +19,7 @@ class Schedule(object):
     def run():
         # InterventorFacade().run_manager()
         if not len(Schedule._subscribed_jobs):
-            print("There are no scheduled jobs to be executed.")
+            Schedule._logger.info("There are no scheduled jobs to be executed.")
             
         else:
             for job_manager in Schedule._subscribed_jobs:
@@ -28,5 +31,5 @@ class Schedule(object):
                 
                 
 if __name__ == '__main__':
-    print('Starting schedule...')
+    Schedule._logger.info('Starting schedule...')
     Schedule.run()

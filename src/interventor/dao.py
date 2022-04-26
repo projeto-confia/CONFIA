@@ -1,8 +1,9 @@
 import os, shutil
-import pandas as pd
 import xlsxwriter
-from datetime import datetime
+import pandas as pd
 from src.job import Job
+from datetime import datetime
+from config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
 
 
@@ -280,6 +281,44 @@ class InterventorDAO(object):
             raise
         
     
+    def get_all_interventor_jobs(self, queue_type: config.SCHEDULE.QUEUE) -> list:
+        """Selects from Job table all the jobs concerning the queue named 'queue_type'.
+        
+        Args:
+            queue_type (config.SCHEDULE.QUEUE): the name of the queue containing the jobs to be selected.
+            
+        Returns:
+            A list containing all the jobs related to 'queue_type'.
+        """
+        
+        try:
+            sql_str = "SELECT * FROM detectenv.job WHERE queue = %s;"
+            
+            with DatabaseWrapper() as db:
+                return db.query(sql_str, (queue_type,))
+        except:
+            raise
+    
+    
+    def get_all_interventor_failed_jobs(self, queue_type: config.SCHEDULE.QUEUE) -> list:
+        """Selects from Failed_Job table all the failed jobs concerning the queue named 'queue_type'.
+        
+        Args:
+            queue_type (config.SCHEDULE.QUEUE): the name of the queue containing the failed jobs to be selected.
+            
+        Returns:
+            A list containing all the failed jobs related to 'queue_type'.
+        """
+        
+        try:
+            sql_str = "SELECT * FROM detectenv.failed_job WHERE queue = %s;"
+            
+            with DatabaseWrapper() as db:
+                return db.query(sql_str, (queue_type,))
+        except:
+            raise
+    
+    
     def create_interventor_job(self, job: Job) -> None:
         """Persists a novel job instance in the Job table.
 
@@ -290,7 +329,7 @@ class InterventorDAO(object):
             sql_str = "INSERT INTO detectenv.job (queue, queue_description, payload) VALUES (%s, %s, %s);"
                         
             with DatabaseWrapper() as db:
-                db.execute(sql_str, (job.queue, job._description, job.payload,))
+                db.execute(sql_str, (job.queue, job.description, job.payload,))
         except:
             raise
         

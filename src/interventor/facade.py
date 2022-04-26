@@ -1,6 +1,6 @@
 import logging
-from src.interventor.interventor import Interventor, InterventorManager
 from src.config import Config as config
+from src.interventor.interventor import Interventor, InterventorManager
 
 
 class InterventorFacade(object):
