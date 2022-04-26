@@ -295,7 +295,8 @@ class InterventorDAO(object):
             sql_str = "SELECT * FROM detectenv.job WHERE queue = %s;"
             
             with DatabaseWrapper() as db:
-                return db.query(sql_str, (queue_type,))
+                jobs = db.query(sql_str, (queue_type,))
+            return jobs            
         except:
             raise
     
@@ -314,7 +315,8 @@ class InterventorDAO(object):
             sql_str = "SELECT * FROM detectenv.failed_job WHERE queue = %s;"
             
             with DatabaseWrapper() as db:
-                return db.query(sql_str, (queue_type,))
+                failed_jobs = db.query(sql_str, (queue_type,))
+            return failed_jobs
         except:
             raise
     
