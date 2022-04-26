@@ -1,10 +1,12 @@
 import abc
+import datetime
+import pandas as pd
 from src.config import Config as config
 
 class Job(abc.ABC):
 
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE) -> None:
-        """Abstract base class representation for creating specific classes to persist different jobs in the database.
+        """Abstract base class representation for creating specific concrete classes to persist different jobs in the database.
 
         Args:
             schedule_type (config.SCHEDULE.QUEUE): the type of job belonging to a particular queue.
@@ -12,10 +14,14 @@ class Job(abc.ABC):
         
         self.id: int = 0
         self.payload: str = ""
+        self.attempts: int = 0
+        self.error_message: str = ""
         self.queue = schedule_type.name
-        self._periodicity = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["periodicity"]
-        self._description = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["description"]
-        self._max_attempts = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["max_attempts"]
+        self.created_at: datetime.datetime = pd.NaT
+        self.updated_at: datetime.datetime = pd.NaT
+        self.periodicity = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["periodicity"]
+        self.description = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["description"]
+        self.max_attempts = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["max_attempts"]
         
     
     @abc.abstractmethod
@@ -23,7 +29,7 @@ class Job(abc.ABC):
         """Persists the job on its corresponding queue in the database.
         
         Args:
-            *args: (list): a list containing custom parameters, such as a DAO instance or other information.
+            *args: (list): a list containing custom parameters, such as a DAO instance or other relevant information.
         """
         ...
         

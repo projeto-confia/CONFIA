@@ -280,7 +280,7 @@ class InterventorDAO(object):
             raise
         
     
-    def create_interventor_job(self, job: Job):
+    def create_interventor_job(self, job: Job) -> None:
         """Persists a novel job instance in the Job table.
 
         Args:
@@ -295,23 +295,78 @@ class InterventorDAO(object):
             raise
         
     
-    def update_number_of_attempts(self, id_job: int, num_attempts: int):
-        """Increments the number of attempts of a particular job after trying to execute it without success.
+    def update_number_of_attempts(self, id: int, num_attempts: int, job_table: bool) -> None:
+        """Increments the number of attempts of a particular job after trying to execute it without success. The field 'updated_at' is also updated with the current time when the attempt actually occurred.
         
         Args:
-            id_job (int): the id of the job to get its number of attempts updated.
+            id (int): the id of the job to get its number of attempts updated.
             num_attempts (int): an updated number that represents the failed attempts to execute this job.
+            job_table (bool): if 'True' the register of Job table is updated; if 'False', updates the register of Failed_Job table instead.
         """
         
         try:
-            sql_str = "UPDATE detectenv.job SET attempts = %s WHERE id_job = %s;"
+            sql_str = "UPDATE detectenv.job SET attempts = %s, updated_at = %s WHERE id_job = %s;" if job_table else "UPDATE detectenv.failed_job SET attempts = %s, updated_at = %s WHERE id_failed_job = %s;"
             
             with DatabaseWrapper() as db:
-                db.execute(sql_str, (id_job, num_attempts,))
+                db.execute(sql_str, (id, num_attempts, datetime.now(),))
         
         except:
             raise
     
     
-    def delete_interventor_job(self, job: Job):
-        pass
+    def delete_interventor_job(self, id_job: int) -> tuple:
+        """Deletes a job from the Job table and returns its information.
+
+        Args:
+            id_job (int): the id of the job to be deleted from Job table.
+            
+        Returns:
+            a tuple containing all the attributes regarding the deleted job.
+        """
+        
+        sql_str = "DELETE FROM detectenv.job WHERE id_job = %s RETURNING *;"
+        
+        try:
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (id_job,))
+                return db.fetchone()
+        except:
+            raise
+        
+    
+    def insert_interventor_failed_job(self, failed_job: Job) -> None:
+        """Creates a register in Failed_Job table, which represents a Job that has exceeded its maximum number of attempts.
+
+        Args:
+            failed_job (Job): the job object that has excceded its amount of attempts, therefore being declared as a failed job.
+        """
+        
+        try:
+            sql_str = "INSERT INTO detectenv.failed_job (id_job, queue, queue_description, payload, attempts, created_at, error_message) \
+                    VALUES (%s, %s, %s, %s, %s, %s, %s);"
+                    
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (failed_job.id, failed_job.queue, failed_job.description, failed_job.payload, failed_job.attempts, failed_job.created_at, failed_job.error_message,))
+                
+        except:
+            raise
+        
+            
+    def delete_interventor_failed_job(self, id_failed_job: int) -> tuple:
+        """Deletes a job from the Failed_Job table and returns its original identifier (id_job).
+
+        Args:
+            id_failed_job (int): the id of the failed job to be deleted from Failed_Job table.
+            
+        Returns:
+            a tuple containing the original identifier of the job deleted from Failed_Job.
+        """
+        
+        sql_str = "DELETE FROM detectenv.failed_job WHERE id_failed_job = %s RETURNING id_failed_job;"
+        
+        try:
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (id_failed_job,))
+                return db.fetchone()
+        except:
+            raise
