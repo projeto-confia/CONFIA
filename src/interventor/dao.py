@@ -2,6 +2,7 @@ import os, shutil
 import pandas as pd
 import xlsxwriter
 from datetime import datetime
+from src.job import Job
 from src.orm.db_wrapper import DatabaseWrapper
 
 
@@ -277,3 +278,40 @@ class InterventorDAO(object):
             return df.to_dict(orient='index')
         except:
             raise
+        
+    
+    def create_interventor_job(self, job: Job):
+        """Persists a novel job instance in the Job table.
+
+        Args:
+            job (Job): a Job object containing all the information regarding the novel job to be persisted.
+        """
+        try:
+            sql_str = "INSERT INTO detectenv.job (queue, queue_description, payload) VALUES (%s, %s, %s);"
+                        
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (job.queue, job._description, job.payload,))
+        except:
+            raise
+        
+    
+    def update_number_of_attempts(self, id_job: int, num_attempts: int):
+        """Increments the number of attempts of a particular job after trying to execute it without success.
+        
+        Args:
+            id_job (int): the id of the job to get its number of attempts updated.
+            num_attempts (int): an updated number that represents the failed attempts to execute this job.
+        """
+        
+        try:
+            sql_str = "UPDATE detectenv.job SET attempts = %s WHERE id_job = %s;"
+            
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (id_job, num_attempts,))
+        
+        except:
+            raise
+    
+    
+    def delete_interventor_job(self, job: Job):
+        pass

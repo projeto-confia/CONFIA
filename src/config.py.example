@@ -79,3 +79,29 @@ class Config(object):
         NAME = 'db_name_here'
         USER = 'db_user_here'
         PASSWORD = 'db_user_password_here'
+
+    class SCHEDULE:
+        """Class responsible for defining the configuration parameters for each scheduled job that will be persisted and consumed from AUTOMATA.
+        """
+        class QUEUE(Enum):
+            INTERVENTOR_SEND_NEWS_TO_FCA = auto()
+            INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA = auto()
+        
+        """For each schedule type, the following parameters were defined:
+            - max_attempts: the maximum number of attempts before considering the job a failed job;
+            - periodicity: when the scheduler will trigger the job and consume it based on its date of creation that is persisted in Job/Failed_Job tables.
+        """
+        SCHEDULE_PARAMS = {
+            
+            QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA: {
+                "max_attempts": 5,
+                "periodicity": 3, # in days.
+                "description": "Send possible fake news to be verified by fact-checking agencies through an Excel file."
+            },
+            
+            QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA: {
+                "max_attempts": 5,
+                "periodicity": 1, # in days.
+                "description": "Send alerts to social media regarding fake news recently discovered."
+            }
+        }
