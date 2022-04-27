@@ -328,10 +328,10 @@ class InterventorDAO(object):
             job (Job): a Job object containing all the information regarding the novel job to be persisted.
         """
         try:
-            sql_str = "INSERT INTO detectenv.job (queue, queue_description, payload) VALUES (%s, %s, %s);"
+            sql_str = "INSERT INTO detectenv.job (queue, payload) VALUES (%s, %s);"
                         
             with DatabaseWrapper() as db:
-                db.execute(sql_str, (job.queue, job.description, job.payload,))
+                db.execute(sql_str, (job.queue, job.payload,))
         except:
             raise
         
@@ -383,11 +383,11 @@ class InterventorDAO(object):
         """
         
         try:
-            sql_str = "INSERT INTO detectenv.failed_job (id_job, queue, queue_description, payload, attempts, created_at, error_message) \
-                    VALUES (%s, %s, %s, %s, %s, %s, %s);"
+            sql_str = "INSERT INTO detectenv.failed_job (id_job, queue, payload, attempts, created_at, error_message) \
+                    VALUES (%s, %s, %s, %s, %s, %s);"
                     
             with DatabaseWrapper() as db:
-                db.execute(sql_str, (failed_job.id, failed_job.queue, failed_job.description, failed_job.payload, failed_job.attempts, failed_job.created_at, failed_job.error_message,))
+                db.execute(sql_str, (failed_job.id, failed_job.queue, failed_job.payload, failed_job.attempts, failed_job.created_at, failed_job.error_message,))
                 
         except:
             raise

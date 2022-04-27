@@ -1,6 +1,7 @@
 import abc
 import datetime
 import pandas as pd
+from typing import Tuple
 from src.config import Config as config
 
 class Job(abc.ABC):
@@ -19,17 +20,18 @@ class Job(abc.ABC):
         self.queue = schedule_type.name
         self.created_at: datetime.datetime = pd.NaT
         self.updated_at: datetime.datetime = pd.NaT
-        self.periodicity = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["periodicity"]
-        self.description = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["description"]
-        self.max_attempts = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["max_attempts"]
+        self.periodicity: int = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["periodicity"]
+        self.max_attempts: int = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["max_attempts"]
+        self.payload_keys: Tuple[str] = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["payload_keys"]
         
     
     @abc.abstractmethod
-    def create_job(self, *args) -> None:
+    def create_job(self, dao, **payload_kwargs) -> None:
         """Persists the job on its corresponding queue in the database.
         
         Args:
-            *args: (list): a list containing custom parameters, such as a DAO instance or other relevant information.
+            dao: a DAO instance related to the respective module;
+            payload_args: the payload content that will be stored as JSON format.
         """
         ...
         
@@ -45,7 +47,7 @@ class Job_Manager(abc.ABC):
         self._job = job
         
     def __str__(self) -> str:
-        return f"{self.queue} - Nº {self.id} executed successfully."
+        return f"{self.queue} - Nº {self._job.id} executed successfully."
     
     @abc.abstractmethod
     def _check_number_of_max_attempts(self) -> bool:
