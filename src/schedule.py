@@ -2,14 +2,35 @@ import logging
 from typing import Dict
 from src.job import JobManager
 from src.config import Config as config
-# from src.interventor.facade import InterventorFacade
+
+
+def init_log(verbose=False, smtp_log=False):
+    # Create a custom logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)  # global level
+
+    # file handler
+    file_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler = logging.FileHandler(config.LOGGING.FILE_PATH)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(file_format)
+    logger.addHandler(file_handler)
+    
+    # stream handler
+    if verbose:
+        stream_format = logging.Formatter('%(levelname)s - %(message)s')
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.NOTSET)
+        stream_handler.setFormatter(stream_format)
+        logger.addHandler(stream_handler)
+        
 
 class Schedule:
     
     _failed_jobs: int = 0
     _subscribed_jobs: Dict[int, JobManager] = {}
     _subscribed_failed_jobs: Dict[int, JobManager] = {}
-    _logger = logging.getLogger(config.LOGGING.NAME)
+    _logger = logging.getLogger(__name__)
     
     
     @staticmethod
@@ -60,5 +81,7 @@ class Schedule:
         Schedule._failed_jobs = 0
                 
 if __name__ == '__main__':
+    init_log(verbose=config.LOGGING.VERBOSE, smtp_log=config.LOGGING.SMTP_LOG)
     Schedule._logger.info('Starting schedule...')
+
     Schedule.run()

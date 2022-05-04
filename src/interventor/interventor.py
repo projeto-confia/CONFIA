@@ -82,7 +82,6 @@ class Interventor(object):
         # assigns each Interventor job to a job manager and subscribe it into the scheduler.
         self._assign_jobs_to_schedule()
         self._logger.info("Interventor initialized.")
-        quit()
         
         
     def run(self):
