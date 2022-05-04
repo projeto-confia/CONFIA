@@ -1,6 +1,6 @@
 import abc
 import datetime
-import queue
+from pathlib import Path
 import pandas as pd
 from typing import List, Tuple
 from src.config import Config as config
@@ -42,21 +42,26 @@ class Job:
         ...
         
 
-class JobManager:
+class JobManager(abc.ABC):
     
-    def __init__(self, job: Job) -> None:
+    def __init__(self, job: Job, file_path: str) -> None:
         """Abstract base classe representation for creating specific classes responsible for managing and executing a job. 
 
         Args:
             job (Job): An instance of a job to be managed or executed.
+            file_path (str): a Path object with the location where the serialized file containing all the jobs will be saved for being loaded later by the scheduler.
         """
         self._job = job
+        self.file_path = file_path
         
-    def __str__(self) -> str:
-        return f"{self.queue} - Nº {self._job.id}."
     
-    def return_id_job(self) -> int:
+    def __str__(self) -> str:
+        return f"{self._job.queue} - Nº {self._job.id_job}."
+    
+    
+    def get_id_job(self) -> int:
         return self._job.id_job
+    
     
     @abc.abstractmethod
     def check_number_of_max_attempts(self) -> bool:

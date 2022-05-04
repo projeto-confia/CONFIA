@@ -2,7 +2,7 @@ import os, shutil
 from typing import List
 import xlsxwriter
 import pandas as pd
-from src.job import Job
+from jobs.job import Job
 from datetime import datetime
 from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper

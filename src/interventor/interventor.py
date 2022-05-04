@@ -1,7 +1,9 @@
-import logging
+from importlib.resources import path
+import logging, pickle
+from pathlib import Path
 from enum import Enum, auto
 from src.schedule import Schedule
-from src.job import Job, JobManager
+from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
@@ -42,20 +44,20 @@ class InterventorJobSocialMedia(Job):
 
 class InterventorManager(JobManager):
     
-    def __init__(self, job: Job) -> None:
-        super().__init__(job)
+    def __init__(self, job: Job, file_path: str) -> None:
+        super().__init__(job, file_path)
     
 
-    def _check_number_of_max_attempts(self) -> bool:
-        ...
+    def check_number_of_max_attempts(self) -> bool:
+        pass
 
 
     def manage_failed_job(self) -> None:
-        ...
+        pass
 
 
     def run_manager(self) -> bool:
-        print('Executing job {self}')
+        print(f'Executing job {self}')
         
         
     # def run(self):
@@ -80,7 +82,7 @@ class Interventor(object):
         self._social_media_job = InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA)
         
         # assigns each Interventor job to a job manager and subscribe it into the scheduler.
-        self._assign_jobs_to_schedule()
+        self._assign_interventor_jobs_to_scheduler()
         self._logger.info("Interventor initialized.")
         
         
@@ -89,12 +91,22 @@ class Interventor(object):
         self._process_curatorship()
     
     
-    def _assign_jobs_to_schedule(self) -> None:
+    def _assign_interventor_jobs_to_scheduler(self) -> None:
         
-        job_managers = [JobManager(job) for job in self._dao.get_all_interventor_jobs()]
+        path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
         
-        for job_manager in job_managers:
-            Schedule.subscribe_job(job_manager)
+        job_managers = {job.id_job: InterventorManager(job, path) for job in self._dao.get_all_interventor_jobs()}
+        failed_job_managers = {job.id_job: InterventorManager(job, path) for job in self._dao.get_all_interventor_failed_jobs()}
+        
+        job_managers.update(failed_job_managers)
+        
+        try:
+            with open(path, 'wb') as file:
+                pickle.dump(job_managers, file)
+        
+        except Exception as e:
+            self._logger.error(f"An error occurred when trying to save the jobs in {path}:\n{e}")
+            
     
     
     def _get_all_agency_news(self):
@@ -176,9 +188,12 @@ class Interventor(object):
         self._dao.persist_similar_news(similars)
         # TODO: implement create alert job function
         # self._create_alert_job(similars, alert_type='similar')
+        
         for similar_news in similars:
             self._social_media_job.create_job(
                 self._dao, **dict(zip(self._social_media_job.payload_keys, (similar_news, SocialMediaAlertType.SIMILARITY.name))))
+            
+        self._assign_interventor_jobs_to_scheduler()
     
         
     def _process_candidates_to_check(self, candidates_to_check):
@@ -209,6 +224,8 @@ class Interventor(object):
             
             self._fca_job.create_job(
                 self._dao, **dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTED.name))))
+
+        self._assign_interventor_jobs_to_scheduler()
         
         
     def _process_labeled_curatorship(self, curated):
@@ -221,6 +238,8 @@ class Interventor(object):
         for news in fake_news:
             self._social_media_job.create_job(
                 self._dao, **dict(zip(self._social_media_job.payload_keys, (news, SocialMediaAlertType.LABELED.name))))
+            
+        self._assign_interventor_jobs_to_scheduler()
     
     
     def _build_excel(self, candidates_to_check):
