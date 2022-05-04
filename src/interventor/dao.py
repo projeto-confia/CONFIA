@@ -1,9 +1,10 @@
 import os, shutil
+from typing import List
 import xlsxwriter
 import pandas as pd
 from src.job import Job
 from datetime import datetime
-from config import Config as config
+from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
 
 
@@ -281,7 +282,69 @@ class InterventorDAO(object):
             raise
         
     
-    def get_all_interventor_jobs(self, queue_type: config.SCHEDULE.QUEUE) -> list:
+    def get_all_interventor_jobs(self) -> List[Job]:
+        """Selects from Job table all the jobs regarding the Interventor module.
+            
+        Returns:
+            A list containing all the jobs related to the Interventor module.
+        """
+        
+        try:
+            sql_str = "select * from detectenv.job where queue ~ '^INTERVENTOR\w{1,}$';"
+            jobs = []            
+            
+            with DatabaseWrapper() as db:
+                results = db.query(sql_str)
+                
+            for result in results:
+                job = Job(config.SCHEDULE.QUEUE[result[1]])
+                job.id_job = result[0]
+                job.payload = result[2]
+                job.attempts = result[3]
+                job.created_at = result[4]
+                job.updated_at = result[5]
+                
+                jobs.append(job)
+            
+            return jobs            
+        
+        except:
+            raise
+        
+    
+    def get_all_interventor_failed_jobs(self) -> List[Job]:
+        """Selects from Failed_Job table all the jobs regarding the Interventor module.
+            
+        Returns:
+            A list containing all the jobs related to the Interventor module.
+        """
+        
+        try:
+            sql_str = "select * from detectenv.failed_job where queue ~ '^INTERVENTOR\w{1,}$';"
+            jobs = []
+            
+            with DatabaseWrapper() as db:
+                results = db.query(sql_str)
+            
+            for result in results:
+                job = Job(config.SCHEDULE.QUEUE[result[2]])
+                job.id_failed_job = result[0]
+                job.id_job = result[1]
+                job.payload = result[3]
+                job.attempts = result[4]
+                job.created_at = result[5]
+                job.updated_at = result[6]
+                job.error_message = result[7]
+                
+                jobs.append(job)
+            
+            return jobs           
+        
+        except:
+            raise
+        
+    
+    def get_all_interventor_jobs_based_on_queue(self, queue_type: config.SCHEDULE.QUEUE) -> List[tuple]:
         """Selects from Job table all the jobs concerning the queue named 'queue_type'.
         
         Args:
@@ -295,13 +358,14 @@ class InterventorDAO(object):
             sql_str = "SELECT * FROM detectenv.job WHERE queue = %s;"
             
             with DatabaseWrapper() as db:
-                jobs = db.query(sql_str, (queue_type,))
+                jobs = db.query(sql_str, (queue_type.name,))
             return jobs            
+        
         except:
             raise
     
     
-    def get_all_interventor_failed_jobs(self, queue_type: config.SCHEDULE.QUEUE) -> list:
+    def get_all_interventor_failed_jobs_based_on_queue(self, queue_type: config.SCHEDULE.QUEUE) -> List[tuple]:
         """Selects from Failed_Job table all the failed jobs concerning the queue named 'queue_type'.
         
         Args:
@@ -315,8 +379,10 @@ class InterventorDAO(object):
             sql_str = "SELECT * FROM detectenv.failed_job WHERE queue = %s;"
             
             with DatabaseWrapper() as db:
-                failed_jobs = db.query(sql_str, (queue_type,))
+                failed_jobs = db.query(sql_str, (queue_type.name,))
+        
             return failed_jobs
+        
         except:
             raise
     
@@ -326,12 +392,18 @@ class InterventorDAO(object):
 
         Args:
             job (Job): a Job object containing all the information regarding the novel job to be persisted.
+            
+        Returns:
+            id_job (Job): the identifier created for the new job.
         """
         try:
-            sql_str = "INSERT INTO detectenv.job (queue, payload) VALUES (%s, %s);"
+            sql_str = "INSERT INTO detectenv.job (queue, payload) VALUES (%s, %s) RETURNING id_job;"
                         
             with DatabaseWrapper() as db:
                 db.execute(sql_str, (job.queue, job.payload,))
+                
+            return db.fetchone()
+        
         except:
             raise
         

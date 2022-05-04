@@ -1,7 +1,7 @@
 import logging
 from enum import Enum, auto
 from src.schedule import Schedule
-from src.job import Job, Job_Manager
+from src.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
@@ -40,6 +40,29 @@ class InterventorJobSocialMedia(Job):
             return f"Um erro ocorreu ao persistir o job '{self.queue}' do módulo Interventor: {e}"
 
 
+class InterventorManager(JobManager):
+    
+    def __init__(self, job: Job) -> None:
+        super().__init__(job)
+    
+
+    def _check_number_of_max_attempts(self) -> bool:
+        ...
+
+
+    def manage_failed_job(self) -> None:
+        ...
+
+
+    def run_manager(self) -> bool:
+        print('Executing job {self}')
+        
+        
+    # def run(self):
+    #     # Executar queue de envios para ACF
+    #     # Executar queue de alertas na rede social
+
+
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
 class Interventor(object):
     
@@ -47,22 +70,34 @@ class Interventor(object):
         self._email_api = EmailAPI()
         self._twitter_api = TwitterAPI()
         self._text_preprocessor = TextPreprocessing()
+        self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
         self._all_fca_news = self._get_all_agency_news()
         self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
         
-        # objects for creating the jobs.
+        
+        # objects for creating specific jobs.
         self._fca_job = InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA)
         self._social_media_job = InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA)
         
+        # assigns each Interventor job to a job manager and subscribe it into the scheduler.
+        self._assign_jobs_to_schedule()
         self._logger.info("Interventor initialized.")
+        quit()
         
         
     def run(self):
         self._process_news()
         self._process_curatorship()
+    
+    
+    def _assign_jobs_to_schedule(self) -> None:
         
+        job_managers = [JobManager(job) for job in self._dao.get_all_interventor_jobs()]
         
+        for job_manager in job_managers:
+            Schedule.subscribe_job(job_manager)
+    
+    
     def _get_all_agency_news(self):
         all_fca_news = self._dao.get_all_agency_news()
         for i, (_, publication_title, _) in enumerate(all_fca_news):
@@ -235,15 +270,3 @@ class Interventor(object):
         
         else:
             self._logger.info('No more curations to process.')
-
-
-class InterventorManager(object):
-    
-    def __init__(self):
-        pass
-        
-        
-    def run(self):
-        print('Executing Interventor Manager')
-        # Executar queue de envios para ACF
-        # Executar queue de alertas na rede social

@@ -1,10 +1,11 @@
 import abc
 import datetime
+import queue
 import pandas as pd
-from typing import Tuple
+from typing import List, Tuple
 from src.config import Config as config
 
-class Job(abc.ABC):
+class Job:
 
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE) -> None:
         """Abstract base class representation for creating specific concrete classes to persist different jobs in the database.
@@ -13,7 +14,8 @@ class Job(abc.ABC):
             schedule_type (config.SCHEDULE.QUEUE): the type of job belonging to a particular queue.
         """
         
-        self.id: int = 0
+        self.id_job: int = 0
+        self.id_failed_job = 0
         self.payload: str = ""
         self.attempts: int = 0
         self.error_message: str = ""
@@ -23,6 +25,10 @@ class Job(abc.ABC):
         self.periodicity: int = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["periodicity"]
         self.max_attempts: int = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["max_attempts"]
         self.payload_keys: Tuple[str] = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["payload_keys"]
+        
+        
+    def __str__(self) -> str:
+        return f"Job {self.id_job}, queue: {self.queue}, created at: {self.created_at}."
         
     
     @abc.abstractmethod
@@ -36,10 +42,10 @@ class Job(abc.ABC):
         ...
         
 
-class Job_Manager(abc.ABC):
+class JobManager:
     
     def __init__(self, job: Job) -> None:
-        """Abstract base classe representation for creating specific classes responsible to manage and execute a job. 
+        """Abstract base classe representation for creating specific classes responsible for managing and executing a job. 
 
         Args:
             job (Job): An instance of a job to be managed or executed.
@@ -47,10 +53,13 @@ class Job_Manager(abc.ABC):
         self._job = job
         
     def __str__(self) -> str:
-        return f"{self.queue} - Nº {self._job.id} executed successfully."
+        return f"{self.queue} - Nº {self._job.id}."
+    
+    def return_id_job(self) -> int:
+        return self._job.id_job
     
     @abc.abstractmethod
-    def _check_number_of_max_attempts(self) -> bool:
+    def check_number_of_max_attempts(self) -> bool:
         ...
 
     @abc.abstractmethod
@@ -60,3 +69,5 @@ class Job_Manager(abc.ABC):
     @abc.abstractmethod        
     def run_manager(self) -> bool:
         ...
+    
+    

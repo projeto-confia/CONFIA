@@ -21,5 +21,5 @@ class InterventorFacade(object):
             raise
         
         
-    def run_manager(self):
-        InterventorManager().run()
+    # def run_manager(self):
+    #     InterventorManager().run()
