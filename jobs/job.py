@@ -56,7 +56,7 @@ class JobManager(abc.ABC):
         
     
     def __str__(self) -> str:
-        return f"{self._job.queue} - Nº {self._job.id_job}."
+        return f"{self._job.queue} - Nº {self._job.id_job}"
     
     
     def get_id_job(self) -> int:

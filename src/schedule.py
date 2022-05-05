@@ -45,13 +45,15 @@ class Schedule:
         Schedule.load_all_jobs()
         
         if not len(Schedule._subscribed_jobs):
-            Schedule._logger.info("There are no scheduled jobs to be executed.")
+            Schedule._logger.info("There aren't scheduled jobs to be executed.")
             
         else:
             for id, job_manager in Schedule._subscribed_jobs.items():
                 
+                Schedule._logger.info(f"Running job {job_manager}...")
+                
                 if not job_manager.run_manager():
-                    job_manager.manage_failed_job()                    
+                    job_manager.manage_failed_job()
                     Schedule._failed_jobs += 1
                     
                 else:
@@ -63,5 +65,4 @@ class Schedule:
 if __name__ == '__main__':
     init_log(verbose=config.LOGGING.VERBOSE)
     Schedule._logger.info('Starting schedule...')
-
     Schedule.run()
