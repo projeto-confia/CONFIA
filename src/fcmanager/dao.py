@@ -1,6 +1,9 @@
 import os, shutil
 import pandas as pd
+from typing import List
+from jobs.job import Job
 from datetime import datetime
+from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
 
 
@@ -10,6 +13,89 @@ class FactCheckManagerDAO(object):
         self.excel_filepath_received = os.path.join('src', 'data', 'acf', 'received', 'confia.xlsx')
         self._excel_filepath_processed = os.path.join('src', 'data', 'acf', 'received', 'processed')
         
+    
+    def get_all_fcmanager_jobs(self) -> List[Job]:
+        """Selects from Job table all the jobs regarding the FCAManager module.
+            
+        Returns:
+            A list containing all the jobs related to the FCAManager module.
+        """
+        
+        try:
+            sql_str = "select * from detectenv.job where queue ~ '^FCAMANAGER\w{1,}$';"
+            jobs = []            
+            
+            with DatabaseWrapper() as db:
+                results = db.query(sql_str)
+                
+            for result in results:
+                job = Job(config.SCHEDULE.QUEUE[result[1]])
+                job.id_job = result[0]
+                job.payload = result[2]
+                job.attempts = result[3]
+                job.created_at = result[4]
+                job.updated_at = result[5]
+                
+                jobs.append(job)
+            
+            return jobs            
+        
+        except:
+            raise    
+        
+        
+    def get_all_fcmanager_failed_jobs(self) -> List[Job]:
+        """Selects from Failed_Job table all the jobs regarding the FCAManager module.
+            
+        Returns:
+            A list containing all the jobs related to the FCAManager module.
+        """
+    
+        try:
+            sql_str = "select * from detectenv.failed_job where queue ~ '^FCAMANAGER\w{1,}$';"
+            jobs = []
+            
+            with DatabaseWrapper() as db:
+                results = db.query(sql_str)
+            
+            for result in results:
+                job = Job(config.SCHEDULE.QUEUE[result[2]])
+                job.id_failed_job = result[0]
+                job.id_job = result[1]
+                job.payload = result[3]
+                job.attempts = result[4]
+                job.created_at = result[5]
+                job.updated_at = result[6]
+                job.error_message = result[7]
+                
+                jobs.append(job)
+            
+            return jobs           
+        
+        except:
+            raise
+
+    
+    def create_fcmanager_job(self, job: Job):
+        """Persists a novel job instance in the Job table.
+
+        Args:
+            job (Job): a Job object containing all the information regarding the novel job to be persisted.
+            
+        Returns:
+            id_job (Job): the identifier created for the new job.
+        """
+        try:
+            sql_str = "INSERT INTO detectenv.job (queue, payload) VALUES (%s, %s) RETURNING id_job;"
+                        
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (job.queue, job.payload,))
+                
+            return db.fetchone()
+        
+        except:
+            raise
+    
     
     def has_excel_file(self):
         return os.path.exists(self.excel_filepath_received)

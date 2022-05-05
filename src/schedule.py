@@ -34,7 +34,8 @@ class Schedule:
         
         for jobs in pathlib.Path('jobs/').glob('*.pkl'):
             with open(jobs, 'rb') as file:
-                Schedule._subscribed_jobs = pickle.load(file)
+                jobs_dict = pickle.load(file)
+                Schedule._subscribed_jobs.update(jobs_dict)
 
     
     @staticmethod
