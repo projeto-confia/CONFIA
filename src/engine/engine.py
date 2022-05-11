@@ -6,6 +6,16 @@ from src.scraping.facade import ScrapingFacade
 from src.fcmanager.facade import FactCheckManagerFacade
 from src.interventor.facade import InterventorFacade
 from src.config import Config as config
+from jobs.job import Job, JobManager
+
+
+class EngineJobUpdateConfig(Job):
+    # pegar as mudanças do usuário e serializar em um arquivo pickle.
+    # salvar o arquivo pickle na pasta jobs (config_params_update.pkl)
+    pass
+
+
+
 
 
 class Engine(object):

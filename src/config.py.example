@@ -1,5 +1,7 @@
 # system configuration parameters
 
+from enum import Enum, auto
+
 class Config(object):
     
     # logging

@@ -40,7 +40,6 @@ class Schedule:
     
     @staticmethod
     def run():
-        # InterventorFacade().run_manager()
         
         Schedule.load_all_jobs()
         
