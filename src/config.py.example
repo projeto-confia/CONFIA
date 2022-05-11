@@ -83,25 +83,44 @@ class Config(object):
     class SCHEDULE:
         """Class responsible for defining the configuration parameters for each scheduled job that will be persisted and consumed from AUTOMATA.
         """
+        
+        INTERVENTOR_JOBS_FILE = 'jobs/interventor_jobs.pkl'
+        FCMANAGER_JOBS_FILE   = 'jobs/fcmanager_jobs.pkl'
+        
         class QUEUE(Enum):
+            """
+            IMPORTANT: when defining a new queue, please create it with a prefix named after the corresponding module which it refers to. Follow the examples below already defined.
+            """
+            
             INTERVENTOR_SEND_NEWS_TO_FCA = auto()
             INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA = auto()
+            FCAMANAGER_RECEIVE_LABELED_NEWS_IN_XLSX = auto() #! test purposes only.
         
         """For each schedule type, the following parameters were defined:
             - max_attempts: the maximum number of attempts before considering the job a failed job;
-            - periodicity: when the scheduler will trigger the job and consume it based on its date of creation that is persisted in Job/Failed_Job tables.
+            
+            - periodicity: when the scheduler will trigger the job and consume it based on its date of creation that is persisted in Job/Failed_Job tables;
+            
+            - payload_keys: the keys that will keep track of their corresponding information in JSON format.
         """
         SCHEDULE_PARAMS = {
             
             QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA: {
                 "max_attempts": 5,
                 "periodicity": 3, # in days.
-                "description": "Send possible fake news to be verified by fact-checking agencies through an Excel file."
+                "payload_keys": ("news", "alert_type"),
             },
             
             QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA: {
                 "max_attempts": 5,
                 "periodicity": 1, # in days.
-                "description": "Send alerts to social media regarding fake news recently discovered."
+                "payload_keys": ("news", "alert_type"),
+            },
+            
+            #! test purposes only.
+            QUEUE.FCAMANAGER_RECEIVE_LABELED_NEWS_IN_XLSX: {
+                "max_attempts": 4,
+                "periodicity": 2, # in days.
+                "payload_keys": ("news", "label"),
             }
         }
