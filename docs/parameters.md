@@ -1,8 +1,8 @@
-# Documento de especificação das variáveis de ambiente
+# Documento de especificação dos parâmetros da aplicação AUTOMATA
 
-Este documento especifica as variáveis de ambiente do AUTOMATA. As variáveis de ambiente devem ser configuradas no arquivo `config.py` gerado por você com base no arquivo [src/config.py.example](/src/config.py.example).
+Este documento especifica os parâmetros da aplicação AUTOMATA. Os parâmetros devem ser configurados no arquivo `config.py` gerado por você com base no arquivo [src/config.py.example](/src/config.py.example).
 
-# Variáveis de ambiente
+# Parâmetros
 
 `LOGGING.VERBOSE`
 > Valores aceitos: `{True, False}`. 
