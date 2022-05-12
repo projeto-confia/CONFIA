@@ -26,6 +26,7 @@ class Config(object):
         
     # monitor
     class MONITOR(object):
+        STREAM_FILTER_OF_SHARES = 0
         STREAM_TIME = 1200  # 1.200 seconds == 20 minutes
         SEARCH_TAGS = ["COVID", "covid", "Covid",
                        "CORONAVIRUS", "Coronavirus", "coronavirus",
