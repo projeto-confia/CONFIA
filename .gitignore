@@ -157,5 +157,8 @@ data/
 # vscode stuff
 .vscode
 
-# nohup
+# log stuff
 logs/*.out
+
+# engine status
+src/engine/status
