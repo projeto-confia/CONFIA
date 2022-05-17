@@ -6,17 +6,40 @@ from src.scraping.facade import ScrapingFacade
 from src.fcmanager.facade import FactCheckManagerFacade
 from src.interventor.facade import InterventorFacade
 from src.config import Config as config
-from jobs.job import Job, JobManager
+from src.engine.dao import EngineDAO
 
 
-class EngineJobUpdateConfig(Job):
-    # pegar as mudanças do usuário e serializar em um arquivo pickle.
-    # salvar o arquivo pickle na pasta jobs (config_params_update.pkl)
-    pass
+class EngineManager(object):
+    
+    def __init__(self) -> None:
+        self._dao = EngineDAO()
+        # self._logger = logging.getLogger()
 
-
-
-
+    
+    def run(self):
+        print('Running Engine Manager...')
+        # 1) Verificar se o processo do automata está em execução no S.O.
+        # 2) Caso negativo:
+            # Remover dados não processados (diretório data)
+            # Backup do arquivo nohup.out
+            # Iniciar o processo do automata no S.O. 
+            # Disparar notificação
+        # Verificar status da Engine (stopped, running, error)
+            # OBS1: Essa verificação será realizada por meio de arquivo que será mantido pela Engine do ciclo principal
+            # OBS2: A localização do arquivo ainda será definada.
+        # Caso status == error
+            # Parar o processo do automata no S.O.
+            # Go to 2)
+        # Caso status == stopped
+            # Recuperar do banco de dados possível nova configuração a ser aplicada
+        params_to_update = self._dao.get_params_to_update()
+        for param in params_to_update:
+            print('Param:', param)
+            # Caso exista:
+                # Parar o processo do automata no S.O.
+                # Reescrever o arquivo config.py com a nova configuração
+                # Iniciar o processo do automata no S.O.
+                # Atualizar no banco de dados o status da aplicação dos novos parâmetros
 
 class Engine(object):
     """
