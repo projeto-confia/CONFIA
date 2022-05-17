@@ -65,5 +65,5 @@ class Schedule:
 if __name__ == '__main__':
     init_log(verbose=config.LOGGING.VERBOSE)
     EngineManager().run()
-    # Schedule._logger.info('Starting schedule...')
-    # Schedule.run()
+    Schedule._logger.info('Starting schedule...')
+    Schedule.run()

@@ -156,3 +156,6 @@ data/
 
 # vscode stuff
 .vscode
+
+# nohup
+logs/*.out
