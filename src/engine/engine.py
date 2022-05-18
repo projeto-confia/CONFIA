@@ -11,6 +11,7 @@ from src.utils.process import get_processes
 import os, subprocess
 from datetime import datetime
 from src.utils.email import EmailAPI
+from src.engine.configbuilder import ConfigBuilder
 
 
 class EngineManager(object):
@@ -30,16 +31,15 @@ class EngineManager(object):
             print('Automata in error state. Starting recovery...')
             self._stop_automata_process()
             self._recover_automata()
-        # Caso status == stopped
-            # Recuperar do banco de dados possível nova configuração a ser aplicada
-        params_to_update = self._dao.get_params_to_update()
-        for param in params_to_update:
-            print('Param:', param)
-            # Caso exista:
-                # Parar o processo do automata no S.O.
-                # Reescrever o arquivo config.py com a nova configuração
-                # Iniciar o processo do automata no S.O.
-                # Atualizar no banco de dados o status da aplicação dos novos parâmetros
+        if automata_status == config.STATUS.STOPPED:
+            params_to_update = self._dao.get_params_to_update()
+            if params_to_update:
+                self._stop_automata_process()
+                print('Building new config file...')
+                ConfigBuilder().build(params_to_update)
+                self._start_automata()
+                self._log_params_update()
+                self._update_params_status_in_db(params_to_update)
     
                 
     def _is_automata_process_running(self):
@@ -125,6 +125,28 @@ class EngineManager(object):
                     subprocess.run(["kill", f'{pid}'])
         except:
             print('Error while trying to stop automata process.')
+            raise
+        
+        
+    def _log_params_update(self):
+        print('Logging params update...')
+        try:
+            filepath = os.path.join('logs', 'schedule.log')
+            with open(filepath, 'a+') as f:
+                f.write(f'## PARAMS UPDATED AT {datetime.now()}')
+                f.write('\n')
+        except:
+            print('Error while trying to log params update.')
+            raise
+    
+    
+    def _update_params_status_in_db(self, params_to_update):
+        print('Updating params status in db...')
+        try:
+            params_ids = tuple([v[0] for v in params_to_update])
+            self._dao.update_params_status_in_db(params_ids)
+        except:
+            print('Error while trying to update params status in db.')
             raise
 
 

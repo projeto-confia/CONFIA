@@ -1,6 +1,4 @@
-import os
 import logging
-# from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
 
 
@@ -13,9 +11,6 @@ class EngineDAO(object):
 
     def __init__(self):
         self._logger = logging.getLogger('schedule')
-        self._config_file = 'config.py'
-        self._config_filepath = os.path.join("src", self._config_file)
-        self._logger.info('Dao constructor')
         
         
     def get_params_to_update(self):
@@ -25,6 +20,19 @@ class EngineDAO(object):
                             WHERE env.updated"
             with DatabaseWrapper() as db:
                 return db.query(sql_string)
+        else:
+            return None
+    
+    
+    def update_params_status_in_db(self, params_ids):
+        sql_string = "UPDATE admin_panel.env_variable \
+                SET updated = false \
+                WHERE id in %s;"
+        try:
+            with DatabaseWrapper() as db:
+                db.execute(sql_string, (params_ids, ))
+        except:
+            raise
 
 
     def _environ_table_exists(self):
