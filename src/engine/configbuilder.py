@@ -33,13 +33,14 @@ class ConfigBuilder(object):
     
     def _build_header(self):
         self.fileheader += f'# Created at {datetime.now()}'
-        self.fileheader += '\n\n'
+        self.fileheader += '\n'
 
 
     def _build_body(self):
         class_pattern = re.compile('\s+class\s+(\w+)\(')
         attr_pattern = re.compile('\s+(\w+)\s+=\s+(.*)')
         with open('src/config.py', 'r') as f:
+            f.readline()  # discard "Created at..." line
             current_class = None
             while line := f.readline():
                 class_match = re.search(class_pattern, line)
@@ -50,7 +51,7 @@ class ConfigBuilder(object):
                     if attr_match and attr_match.group(1) in self.params_to_update[current_class].keys():
                         prefix = line.split('=')[0]
                         value = self._parse_value(self.params_to_update[current_class][attr_match.group(1)])
-                        line = prefix + ' = ' + value + ' ####### MODIFIED' + '\n'
+                        line = prefix + ' = ' + value + '\n'
                 self.filebody += line
     
     
