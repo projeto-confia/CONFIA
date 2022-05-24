@@ -24,8 +24,8 @@ def init_log(verbose=False):
 
 class Schedule:
     
-    _failed_jobs: int = 0
-    _subscribed_jobs: Dict[int, JobManager] = {}
+    _subscribed_jobs_dict: Dict[int, JobManager] = {}
+    _subscribed_failed_jobs_dict: Dict[int, JobManager] = {}
     _logger = logging.getLogger(__name__)
             
             
@@ -35,7 +35,7 @@ class Schedule:
         for jobs in pathlib.Path('jobs/').glob('*.pkl'):
             with open(jobs, 'rb') as file:
                 jobs_dict = pickle.load(file)
-                Schedule._subscribed_jobs.update(jobs_dict)
+                Schedule._subscribed_jobs_dict.update(jobs_dict)
 
     
     @staticmethod
@@ -43,23 +43,25 @@ class Schedule:
         
         Schedule.load_all_jobs()
         
-        if not len(Schedule._subscribed_jobs):
+        if not len(Schedule._subscribed_jobs_dict):
             Schedule._logger.info("There aren't scheduled jobs to be executed.")
             
         else:
-            for id, job_manager in Schedule._subscribed_jobs.items():
+            for id, job_manager in Schedule._subscribed_jobs_dict.items():
                 
                 Schedule._logger.info(f"Running job {job_manager}...")
                 
                 if not job_manager.run_manager():
+                    #! verificar número máximo de tentativas para, se for o caso, migrar os jobs para a tabela 'failed_jobs'.
+                    Schedule._subscribed_failed_jobs_dict[id] = job_manager
                     job_manager.manage_failed_job()
-                    Schedule._failed_jobs += 1
                     
                 else:
-                    del Schedule._subscribed_jobs[id]
+                    #! apagar job do banco de dados.
+                    Schedule._logger.info(f"Job {job_manager} has been executed successfully.")
         
         # Schedule._logger.info("--- Message to failed jobs to be completed... ---")
-        Schedule._failed_jobs = 0
+        
                 
 if __name__ == '__main__':
     init_log(verbose=config.LOGGING.VERBOSE)

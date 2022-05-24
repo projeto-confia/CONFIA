@@ -58,6 +58,7 @@ class InterventorManager(JobManager):
 
     def run_manager(self) -> bool:
         print(f'Executing job {self}')
+        return True
         
         
     # def run(self):
