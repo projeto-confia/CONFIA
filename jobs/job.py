@@ -59,6 +59,7 @@ class JobManager(abc.ABC):
         return f"{self._job.queue} - Nº {self._job.id_job}"
     
     
+    @property
     def get_id_job(self) -> int:
         return self._job.id_job
     

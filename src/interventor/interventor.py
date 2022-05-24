@@ -1,14 +1,12 @@
-from importlib.resources import path
 import logging, pickle
-from pathlib import Path
 from enum import Enum, auto
-from src.schedule import Schedule
 from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
+
 
 class SocialMediaAlertType(Enum):
     LABELED = auto()
@@ -26,7 +24,7 @@ class InterventorJobFCA(Job):
             dao.create_interventor_job(self)
         
         except Exception as e:
-            return f"Um erro ocorreu ao persistir o job '{self.queue}' do módulo Interventor: {e}"
+            return f"An error has occurred when persisting the job '{self.queue}' from Interventor's module: {e}"
         
 
 class InterventorJobSocialMedia(Job):
@@ -39,7 +37,7 @@ class InterventorJobSocialMedia(Job):
             dao.create_interventor_job(self)
         
         except Exception as e:
-            return f"Um erro ocorreu ao persistir o job '{self.queue}' do módulo Interventor: {e}"
+            return f"An error has occurred when persisting the job '{self.queue}' from Interventor's module: {e}"
 
 
 class InterventorManager(JobManager):
@@ -60,7 +58,7 @@ class InterventorManager(JobManager):
         print(f'Executing job {self}')
         return True
         
-        
+    #! TAREFAS A SEREM CONCLUÍDAS
     # def run(self):
     #     # Executar queue de envios para ACF
     #     # Executar queue de alertas na rede social
