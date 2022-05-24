@@ -10,7 +10,7 @@ def init_log(verbose=False, smtp_log=False):
 
     # file handler
     file_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler(config.LOGGING.FILE_PATH)
+    file_handler = logging.FileHandler(config.LOGGING.AUTOMATA_FILE_PATH)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(file_format)
     logger.addHandler(file_handler)

@@ -9,7 +9,7 @@ def init_log(verbose=False):
     logger.setLevel(logging.INFO)
 
     file_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler(config.LOGGING.FILE_PATH)
+    file_handler = logging.FileHandler(config.LOGGING.SCHEDULER_FILE_PATH)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(file_format)
     logger.addHandler(file_handler)
