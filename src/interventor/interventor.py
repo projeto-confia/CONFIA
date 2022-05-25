@@ -1,5 +1,6 @@
 import logging, pickle
 from enum import Enum, auto
+from typing import Callable
 from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
@@ -7,6 +8,10 @@ from src.apis.twitter import TwitterAPI
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
 
+#! TAREFAS A SEREM CONCLUÍDAS
+# def run(self):
+#     # Executar queue de envios para ACF
+#     # Executar queue de alertas na rede social
 
 class SocialMediaAlertType(Enum):
     LABELED = auto()
@@ -16,12 +21,13 @@ class SocialMediaAlertType(Enum):
 
 class InterventorJobFCA(Job):
     
-    def __init__(self, schedule_type: config.SCHEDULE.QUEUE) -> None:
-        super().__init__(schedule_type)
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable = None) -> None:
+        super().__init__(schedule_type, fn_update_pickle_file)
         
-    def create_job(self, dao) -> None:
+    def create_job(self, dao, payload) -> str:
         try:
-            dao.create_interventor_job(self)
+            self.payload = payload
+            return str(dao.create_interventor_job(self)[0])
         
         except Exception as e:
             return f"An error has occurred when persisting the job '{self.queue}' from Interventor's module: {e}"
@@ -29,12 +35,13 @@ class InterventorJobFCA(Job):
 
 class InterventorJobSocialMedia(Job):
     
-    def __init__(self, schedule_type: config.SCHEDULE.QUEUE) -> None:
-        super().__init__(schedule_type)
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable = None) -> None:
+        super().__init__(schedule_type, fn_update_pickle_file)
         
-    def create_job(self, dao) -> None:
+    def create_job(self, dao, payload) -> str:
         try:
-            dao.create_interventor_job(self)
+            self.payload = payload
+            return str(dao.create_interventor_job(self)[0])
         
         except Exception as e:
             return f"An error has occurred when persisting the job '{self.queue}' from Interventor's module: {e}"
@@ -57,11 +64,6 @@ class InterventorManager(JobManager):
     def run_manager(self) -> bool:
         print(f'Executing job {self}')
         return True
-        
-    #! TAREFAS A SEREM CONCLUÍDAS
-    # def run(self):
-    #     # Executar queue de envios para ACF
-    #     # Executar queue de alertas na rede social
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
@@ -75,22 +77,17 @@ class Interventor(object):
         self._all_fca_news = self._get_all_agency_news()
         self._logger = logging.getLogger(config.LOGGING.NAME)
         
-        
-        # objects for creating specific jobs.
-        self._fca_job = InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA)
-        self._social_media_job = InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA)
-        
         # assigns each Interventor job to a job manager and subscribe it into the scheduler.
-        self._assign_interventor_jobs_to_scheduler()
+        self.assign_interventor_jobs_to_pickle_file()
         self._logger.info("Interventor initialized.")
         
         
     def run(self):
         self._process_news()
-        self._process_curatorship()
+        self._process_curatorship()            
     
     
-    def _assign_interventor_jobs_to_scheduler(self) -> None:
+    def assign_interventor_jobs_to_pickle_file(self) -> None:
         
         path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
         
@@ -104,8 +101,8 @@ class Interventor(object):
                 pickle.dump(job_managers, file)
         
         except Exception as e:
-            self._logger.error(f"An error occurred when trying to save the jobs in {path}:\n{e}")
-            
+            raise Exception(f"An error occurred when trying to save the jobs in {path}:\n{e}")
+
     
     
     def _get_all_agency_news(self):
@@ -191,8 +188,6 @@ class Interventor(object):
         for similar_news in similars:
             self._social_media_job.create_job(
                 self._dao, **dict(zip(self._social_media_job.payload_keys, (similar_news, SocialMediaAlertType.SIMILARITY.name))))
-            
-        self._assign_interventor_jobs_to_scheduler()
     
         
     def _process_candidates_to_check(self, candidates_to_check):
@@ -218,13 +213,10 @@ class Interventor(object):
         # self._create_alert_job(candidates_to_check, alert_type='detected')
         
         for candidate_news in candidates_to_check:
-            self._social_media_job.create_job(
-                self._dao, **dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTED.name))))
+            self._social_media_job.create_job(self._dao, dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTED.name))))
             
             self._fca_job.create_job(
                 self._dao, **dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTED.name))))
-
-        self._assign_interventor_jobs_to_scheduler()
         
         
     def _process_labeled_curatorship(self, curated):
@@ -233,12 +225,17 @@ class Interventor(object):
         # TODO: implement function
         fake_news = [c[0] for c in curated if c[3]]
         
-        # self._create_alert_job(fake_news, alert_type='labeled')
         for news in fake_news:
-            self._social_media_job.create_job(
-                self._dao, **dict(zip(self._social_media_job.payload_keys, (news, SocialMediaAlertType.LABELED.name))))
             
-        self._assign_interventor_jobs_to_scheduler()
+            with InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA, \
+                self.assign_interventor_jobs_to_pickle_file) as job:  
+                
+                try:
+                    id = job[1].create_job(self._dao, str(dict(zip(job[1].payload_keys, (news, SocialMediaAlertType.LABELED.name)))))
+                    self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted.")            
+            
+                except Exception as e:
+                    self._logger.error(e)
     
     
     def _build_excel(self, candidates_to_check):

@@ -401,8 +401,9 @@ class InterventorDAO(object):
                         
             with DatabaseWrapper() as db:
                 db.execute(sql_str, (job.queue, job.payload,))
-                
-            return db.fetchone()
+                id = db.fetchone()
+        
+            return id
         
         except:
             raise
@@ -442,7 +443,10 @@ class InterventorDAO(object):
         try:
             with DatabaseWrapper() as db:
                 db.execute(sql_str, (id_job,))
-                return db.fetchone()
+                job = db.fetchone()
+                
+            return job
+        
         except:
             raise
         
@@ -480,6 +484,9 @@ class InterventorDAO(object):
         try:
             with DatabaseWrapper() as db:
                 db.execute(sql_str, (id_failed_job,))
-                return db.fetchone()
+                id = db.fetchone()
+                
+            return id
+        
         except:
             raise

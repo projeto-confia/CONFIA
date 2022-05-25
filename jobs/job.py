@@ -1,13 +1,12 @@
 import abc
 import datetime
-from pathlib import Path
 import pandas as pd
-from typing import List, Tuple
+from typing import Any, Callable, Tuple
 from src.config import Config as config
 
 class Job:
 
-    def __init__(self, schedule_type: config.SCHEDULE.QUEUE) -> None:
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable = None) -> None:
         """Abstract base class representation for creating specific concrete classes to persist different jobs in the database.
 
         Args:
@@ -26,18 +25,30 @@ class Job:
         self.max_attempts: int = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["max_attempts"]
         self.payload_keys: Tuple[str] = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["payload_keys"]
         
+        self.fn_update_pickle_file = fn_update_pickle_file
+        
         
     def __str__(self) -> str:
         return f"Job {self.id_job}, queue: {self.queue}, created at: {self.created_at}."
-        
     
+    
+    def __enter__(self) -> Tuple[str, Any]:
+        return f"Creating/updating file", self
+    
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        try:
+            self.fn_update_pickle_file()
+        except:
+            raise
+            
     @abc.abstractmethod
-    def create_job(self, dao, **payload_kwargs) -> None:
+    def create_job(self, dao, payload: dict) -> None:
         """Persists the job on its corresponding queue in the database.
         
         Args:
             dao: a DAO instance related to the respective module;
-            payload_args: the payload content that will be stored as JSON format.
+            payload: the payload content that will be stored as JSON format.
         """
         ...
         
