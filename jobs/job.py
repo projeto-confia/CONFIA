@@ -84,7 +84,7 @@ class JobManager(abc.ABC):
         ...
 
     @abc.abstractmethod        
-    def run_manager(self) -> bool:
+    def run_manager(self) -> str:
         ...
     
     

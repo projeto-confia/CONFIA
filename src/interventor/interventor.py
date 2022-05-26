@@ -51,19 +51,24 @@ class InterventorManager(JobManager):
     
     def __init__(self, job: Job, file_path: str) -> None:
         super().__init__(job, file_path)
-    
 
     def check_number_of_max_attempts(self) -> bool:
         pass
 
 
     def manage_failed_job(self) -> None:
-        pass
+        #! verificar numero máximo de tentativas.
+        print(f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt will be scheduled.")
 
 
-    def run_manager(self) -> bool:
-        print(f'Executing job {self}')
-        return True
+    def run_manager(self) -> str:
+        try:
+            dao = InterventorDAO(config.INTERVENTOR.CURATOR)
+            deleted_job = dao.delete_interventor_job(self.get_id_job)
+            return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully."
+        
+        except Exception as e:
+            raise Exception(f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}")
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA

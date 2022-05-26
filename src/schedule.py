@@ -51,14 +51,14 @@ class Schedule:
                 
                 Schedule._logger.info(f"Running job {job_manager}...")
                 
-                if not job_manager.run_manager():
-                    #! verificar número máximo de tentativas para, se for o caso, migrar os jobs para a tabela 'failed_jobs'.
+                try:
+                    message = job_manager.run_manager()
+                    Schedule._logger.info(message)
+                
+                except Exception as e:
+                    Schedule._logger.error(e)
                     Schedule._subscribed_failed_jobs_dict[id] = job_manager
                     job_manager.manage_failed_job()
-                    
-                else:
-                    #! apagar job do banco de dados.
-                    Schedule._logger.info(f"Job {job_manager} has been executed successfully.")
         
         # Schedule._logger.info("--- Message to failed jobs to be completed... ---")
         

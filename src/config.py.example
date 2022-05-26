@@ -8,8 +8,8 @@ class Config(object):
     # APIs' addresses
     @dataclass(frozen=True)
     class CONFIA_API:
-        SITE_URL = "https://hmg.projetoconfia.info/"
-        CMS_URL  = "https://confia-api-hmg-herokuapp.com/"
+        SITE_URL = "https://hmg.projetoconfia.info/fake-news-detectadas"
+        CMS_URL  = "http://confia-api-hmg.herokuapp.com/"
     
 
     # logging
