@@ -160,7 +160,7 @@ class TwitterCollector(Collector):
     def _process_data(self):
         self._logger.info('Processing data...')
         df = self._dao._load_pkl()
-        if not isinstance(df, pd.DataFrame):
+        if not isinstance(df, pd.DataFrame) or df.empty:
             return
         text_preprocessing = TextPreprocessing()
         df['text_prep'] = df['text_post'].apply(text_preprocessing.text_cleaning)
