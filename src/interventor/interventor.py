@@ -19,6 +19,23 @@ class SocialMediaAlertType(Enum):
     SIMILARITY = auto()
     
 
+def assign_interventor_jobs_to_pickle_file(dao) -> None:
+    
+    path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
+    
+    job_managers = {job.id_job: InterventorManager(job, path) for job in dao.get_all_interventor_jobs()}
+    failed_job_managers = {job.id_job: InterventorManager(job, path) for job in dao.get_all_interventor_failed_jobs()}
+    
+    job_managers.update(failed_job_managers)
+    
+    try:
+        with open(path, 'wb') as file:
+            pickle.dump(job_managers, file)
+    
+    except Exception as e:
+        raise Exception(f"An error occurred when trying to save the jobs in {path}:\n{e}")
+    
+
 class InterventorJobFCA(Job):
     
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable = None) -> None:
@@ -65,6 +82,8 @@ class InterventorManager(JobManager):
         try:
             dao = InterventorDAO(config.INTERVENTOR.CURATOR)
             deleted_job = dao.delete_interventor_job(self.get_id_job)
+            assign_interventor_jobs_to_pickle_file(dao)
+            
             return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully."
         
         except Exception as e:
@@ -83,32 +102,15 @@ class Interventor(object):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         
         # assigns each Interventor job to a job manager and subscribe it into the scheduler.
-        self.assign_interventor_jobs_to_pickle_file()
+        assign_interventor_jobs_to_pickle_file(self._dao)
         self._logger.info("Interventor initialized.")
         
         
     def run(self):
         self._process_news()
         self._process_curatorship()            
-    
-    
-    def assign_interventor_jobs_to_pickle_file(self) -> None:
-        
-        path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
-        
-        job_managers = {job.id_job: InterventorManager(job, path) for job in self._dao.get_all_interventor_jobs()}
-        failed_job_managers = {job.id_job: InterventorManager(job, path) for job in self._dao.get_all_interventor_failed_jobs()}
-        
-        job_managers.update(failed_job_managers)
-        
-        try:
-            with open(path, 'wb') as file:
-                pickle.dump(job_managers, file)
-        
-        except Exception as e:
-            raise Exception(f"An error occurred when trying to save the jobs in {path}:\n{e}")
 
-    
+
     
     def _get_all_agency_news(self):
         all_fca_news = self._dao.get_all_agency_news()
@@ -233,7 +235,7 @@ class Interventor(object):
         for news in fake_news:
             
             with InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA, \
-                self.assign_interventor_jobs_to_pickle_file) as job:  
+                lambda: assign_interventor_jobs_to_pickle_file(self._dao)) as job:
                 
                 try:
                     id = job[1].create_job(self._dao, str(dict(zip(job[1].payload_keys, (news, SocialMediaAlertType.LABELED.name)))))
