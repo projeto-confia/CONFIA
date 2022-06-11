@@ -12,10 +12,10 @@ class InterventorFacade(object):
         self._logger = logging.getLogger(config.LOGGING.NAME)
 
 
-    def run(self):
+    async def run(self):
         try:
             self._logger.info('Running Interventor...')
-            Interventor().run()
+            await Interventor().run()
             self._logger.info('Interventor finished.')
         except:
             raise

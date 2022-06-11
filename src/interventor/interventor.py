@@ -1,12 +1,13 @@
-import logging, pickle
 from enum import Enum, auto
 from typing import Callable
 from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
+import logging, pickle, asyncio, requests
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
+
 
 #! TAREFAS A SEREM CONCLUÍDAS
 # def run(self):
@@ -18,9 +19,21 @@ class SocialMediaAlertType(Enum):
     DETECTED = auto()
     SIMILARITY = auto()
     
+    
+async def get_fake_news_from_confia_portal() -> list[dict]:
+    
+    loop = asyncio.get_event_loop()
+    request = loop.run_in_executor(None, requests.get, f"{config.CONFIA_API.CMS_URL}fake-news-notifications")
+    
+    print("Getting all fake news from CONFIA's portal...")
+    await asyncio.sleep(5)
+    response = await request
+    
+    return response.json()
+    
 
 def assign_interventor_jobs_to_pickle_file() -> None:
-    """Method used to keep the Interventor module's pickle file up-to-date after insertions and deletions in the Job and Failed_Job's tables.
+    """Helper function for keeping the Interventor module's pickle file up-to-date after insertions and deletions in both Job and Failed_Job's tables.
 
     Args:
         dao (DAO): the dao object of the Interventor module.
@@ -100,23 +113,28 @@ class InterventorManager(JobManager):
 class Interventor(object):
     
     def __init__(self):
+        
         self._email_api = EmailAPI()
+        self._dao = InterventorDAO()
         self._twitter_api = TwitterAPI()
         self._text_preprocessor = TextPreprocessing()
-        self._dao = InterventorDAO()
         
         self._all_fca_news = self._get_all_agency_news()
         self._logger = logging.getLogger(config.LOGGING.NAME)
         
         # assigns each Interventor job to a job manager and subscribe it into the scheduler.
         assign_interventor_jobs_to_pickle_file()
-        self._logger.info("Interventor initialized.")
+        self._logger.info("Interventor initialized.")        
         
         
-    def run(self):
+    async def run(self):
+        all_fake_news_json_task = asyncio.create_task(get_fake_news_from_confia_portal())
+        
         self._process_news()
-        self._process_curatorship()            
-
+        self._process_curatorship()
+        
+        response = await all_fake_news_json_task
+        print(response)
 
     
     def _get_all_agency_news(self):

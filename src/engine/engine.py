@@ -39,7 +39,7 @@ class Engine(object):
         # load config
 
 
-    def run(self):
+    async def run(self):
         """
         docstring
         """
@@ -47,12 +47,12 @@ class Engine(object):
         if self.engine_status == config.STATUS.RUNNING :
             self._logger.warning("Engine in processing. Impossible start a new one.")
         elif self.engine_status == config.STATUS.STOPPED:
-            self.run_process()
+            await self.run_process()
         else:
             self._logger.error("Engine unavailable.")
 
 
-    def run_process(self):
+    async def run_process(self):
         try:
             self._logger.info('Running process...')
             self.engine_status = config.STATUS.RUNNING
@@ -66,7 +66,7 @@ class Engine(object):
             if config.ENGINE.DETECTOR_ACTIVATED:
                 DetectorFacade().run()
             if config.ENGINE.INTERVENTOR_ACTIVATED:
-                InterventorFacade().run()
+                await InterventorFacade().run()
             
             self.engine_status = config.STATUS.STOPPED
             self._logger.info('Process finished.')

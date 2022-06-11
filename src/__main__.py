@@ -1,6 +1,6 @@
 from src.engine.engine import Engine
 from src.config import Config as config
-import logging, logging.handlers
+import logging, logging.handlers, asyncio
 
 
 def init_log(verbose=False, smtp_log=False):
@@ -36,9 +36,13 @@ def init_log(verbose=False, smtp_log=False):
         logger.addHandler(stream_handler)
 
     logger.info('Booting the system.')
+    
+
+async def main():
+    init_log(verbose=config.LOGGING.VERBOSE, smtp_log=config.LOGGING.SMTP_LOG)
+    e = Engine()
+    await e.run()
 
 
 if __name__ == '__main__':
-    init_log(verbose=config.LOGGING.VERBOSE, smtp_log=config.LOGGING.SMTP_LOG)
-    e = Engine()
-    e.run()
+    asyncio.run(main())
