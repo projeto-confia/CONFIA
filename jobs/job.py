@@ -1,16 +1,17 @@
 import abc
 import datetime
 import pandas as pd
-from typing import Any, Callable, Tuple
 from src.config import Config as config
+from typing import Any, Callable, Tuple
 
 class Job:
 
-    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable = None) -> None:
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
         """Abstract base class representation for creating specific concrete classes to persist different jobs in the database.
 
         Args:
             schedule_type (config.SCHEDULE.QUEUE): the type of job belonging to a particular queue.
+            fn_update_pickle_file: (Callable([Any],None)): a function containing a dao object for synchronizing the pickle object of the module with the Job table.
         """
         
         self.id_job: int = 0

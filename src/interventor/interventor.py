@@ -19,9 +19,15 @@ class SocialMediaAlertType(Enum):
     SIMILARITY = auto()
     
 
-def assign_interventor_jobs_to_pickle_file(dao) -> None:
+def assign_interventor_jobs_to_pickle_file() -> None:
+    """Method used to keep the Interventor module's pickle file up-to-date after insertions and deletions in the Job and Failed_Job's tables.
+
+    Args:
+        dao (DAO): the dao object of the Interventor module.
+    """
     
     path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
+    dao = InterventorDAO()
     
     job_managers = {job.id_job: InterventorManager(job, path) for job in dao.get_all_interventor_jobs()}
     failed_job_managers = {job.id_job: InterventorManager(job, path) for job in dao.get_all_interventor_failed_jobs()}
@@ -38,7 +44,7 @@ def assign_interventor_jobs_to_pickle_file(dao) -> None:
 
 class InterventorJobFCA(Job):
     
-    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable = None) -> None:
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
         super().__init__(schedule_type, fn_update_pickle_file)
         
     def create_job(self, dao, payload) -> str:
@@ -52,7 +58,7 @@ class InterventorJobFCA(Job):
 
 class InterventorJobSocialMedia(Job):
     
-    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable = None) -> None:
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
         super().__init__(schedule_type, fn_update_pickle_file)
         
     def create_job(self, dao, payload) -> str:
@@ -75,14 +81,14 @@ class InterventorManager(JobManager):
 
     def manage_failed_job(self) -> None:
         #! verificar numero máximo de tentativas.
-        print(f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt will be scheduled.")
+        print(f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt were scheduled already.")
 
 
     def run_manager(self) -> str:
         try:
-            dao = InterventorDAO(config.INTERVENTOR.CURATOR)
+            dao = InterventorDAO()
             deleted_job = dao.delete_interventor_job(self.get_id_job)
-            assign_interventor_jobs_to_pickle_file(dao)
+            assign_interventor_jobs_to_pickle_file()
             
             return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully."
         
@@ -97,12 +103,13 @@ class Interventor(object):
         self._email_api = EmailAPI()
         self._twitter_api = TwitterAPI()
         self._text_preprocessor = TextPreprocessing()
-        self._dao = InterventorDAO(config.INTERVENTOR.CURATOR)
+        self._dao = InterventorDAO()
+        
         self._all_fca_news = self._get_all_agency_news()
         self._logger = logging.getLogger(config.LOGGING.NAME)
         
         # assigns each Interventor job to a job manager and subscribe it into the scheduler.
-        assign_interventor_jobs_to_pickle_file(self._dao)
+        assign_interventor_jobs_to_pickle_file()
         self._logger.info("Interventor initialized.")
         
         
@@ -235,11 +242,11 @@ class Interventor(object):
         for news in fake_news:
             
             with InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA, \
-                lambda: assign_interventor_jobs_to_pickle_file(self._dao)) as job:
+                lambda: assign_interventor_jobs_to_pickle_file()) as job:
                 
                 try:
                     id = job[1].create_job(self._dao, str(dict(zip(job[1].payload_keys, (news, SocialMediaAlertType.LABELED.name)))))
-                    self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted.")            
+                    self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
             
                 except Exception as e:
                     self._logger.error(e)

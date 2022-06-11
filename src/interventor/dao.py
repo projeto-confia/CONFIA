@@ -1,20 +1,38 @@
 import os, shutil
-from typing import List
 import xlsxwriter
 import pandas as pd
 from jobs.job import Job
+from typing import List
 from datetime import datetime
 from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
 
+class Singleton(type):
+    """Creates a singleton object for the InterventorDAO class.
 
-class InterventorDAO(object):
+    Returns:
+        InterventorDAO: the same singleton object if it has been already created. Otherwise, it creates a new one.
+    """
     
-    def __init__(self, curator):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        
+        if cls not in cls._instances:
+            
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+            
+        return cls._instances[cls]
+
+
+class InterventorDAO(metaclass=Singleton):
+    
+    def __init__(self):
         self.excel_filepath_to_send = os.path.join('src', 'data', 'acf', 'to_send', 'confia.xlsx')
         self._excel_filepath_sent = os.path.join('src', 'data', 'acf', 'to_send', 'sent')
         self._excel_filepath_to_curator = os.path.join('src', 'data', 'acf', 'to_curator', 'confia.xlsx')
-        self._curator = curator
+        self._curator = config.INTERVENTOR.CURATOR
         self._workbook = None
     
     

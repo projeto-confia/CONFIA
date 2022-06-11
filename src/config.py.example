@@ -17,7 +17,7 @@ class Config(object):
     class LOGGING(object):
         VERBOSE = False
         SMTP_LOG = False
-        AUTOMATA_FILE_PATH = 'logs/automata.log'
+        AUTOMATA_FILE_PATH  = 'logs/automata.log'
         SCHEDULER_FILE_PATH = 'logs/scheduler.log'
         NAME = 'automata'
     
@@ -148,7 +148,7 @@ class Config(object):
             QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA: {
                 "max_attempts": 5,
                 "periodicity": 1, # in days.
-                "payload_keys": ("news", "alert_type"),
+                "payload_keys": ("title", "slug", "content"),
             },
             
             #! test purposes only.
