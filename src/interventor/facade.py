@@ -15,7 +15,7 @@ class InterventorFacade(object):
     async def run(self):
         try:
             self._logger.info('Running Interventor...')
-            await Interventor().run()
+            Interventor().run()
             self._logger.info('Interventor finished.')
         except:
             raise

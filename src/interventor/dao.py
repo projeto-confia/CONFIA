@@ -298,7 +298,28 @@ class InterventorDAO(metaclass=Singleton):
             return df.to_dict(orient='index')
         except:
             raise
+    
+    
+    def get_clean_text_news_from_id(self, id_news: int) -> str:
+        """Returns the cleaned text of a news given its id.
+
+        Args:
+            id_news (int): the id of the news.
+
+        Returns:
+            str: the news' clean content.
+        """
+        try:
+            sql_str = "select text_news_cleaned from detectenv.news where id_news = %s;"
+            
+            with DatabaseWrapper() as db:
+                text_cleaned = db.query(sql_str, (id_news,))
+            
+            return text_cleaned[0][0]
         
+        except:
+            raise
+    
     
     def get_all_interventor_jobs(self) -> List[Job]:
         """Selects from Job table all the jobs regarding the Interventor module.

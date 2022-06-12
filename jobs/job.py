@@ -85,7 +85,7 @@ class JobManager(abc.ABC):
         ...
 
     @abc.abstractmethod        
-    def run_manager(self) -> str:
+    async def run_manager(self) -> str:
         ...
     
     

@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict
 from jobs.job import JobManager
 import logging, pickle, pathlib
@@ -39,7 +40,7 @@ class Schedule:
 
     
     @staticmethod
-    def run():
+    async def run():
         
         Schedule.load_all_jobs()
         
@@ -52,7 +53,7 @@ class Schedule:
                 Schedule._logger.info(f"Running job {job_manager}...")
                 
                 try:
-                    message = job_manager.run_manager()
+                    message = await job_manager.run_manager()
                     Schedule._logger.info(message)
                 
                 except Exception as e:
@@ -66,4 +67,4 @@ class Schedule:
 if __name__ == '__main__':
     init_log(verbose=config.LOGGING.VERBOSE)
     Schedule._logger.info('Starting schedule...')
-    Schedule.run()
+    asyncio.run(Schedule.run())

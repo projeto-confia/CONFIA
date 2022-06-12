@@ -4,9 +4,9 @@ from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
-import logging, pickle, asyncio, requests
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
+import logging, pickle, asyncio, slugify, src.interventor.interventor_api_utils as api_utils
 
 
 #! TAREFAS A SEREM CONCLUÍDAS
@@ -15,21 +15,9 @@ from src.utils.text_preprocessing import TextPreprocessing
 #     # Executar queue de alertas na rede social
 
 class SocialMediaAlertType(Enum):
-    LABELED = auto()
-    DETECTED = auto()
-    SIMILARITY = auto()
-    
-    
-async def get_fake_news_from_confia_portal() -> list[dict]:
-    
-    loop = asyncio.get_event_loop()
-    request = loop.run_in_executor(None, requests.get, f"{config.CONFIA_API.CMS_URL}fake-news-notifications")
-    
-    print("Getting all fake news from CONFIA's portal...")
-    await asyncio.sleep(5)
-    response = await request
-    
-    return response.json()
+    VERIFICADO = auto()
+    DETECTADO = auto()
+    SIMILARIDADE = auto()
     
 
 def assign_interventor_jobs_to_pickle_file() -> None:
@@ -60,6 +48,7 @@ class InterventorJobFCA(Job):
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
         super().__init__(schedule_type, fn_update_pickle_file)
         
+    
     def create_job(self, dao, payload) -> str:
         try:
             self.payload = payload
@@ -74,6 +63,7 @@ class InterventorJobSocialMedia(Job):
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
         super().__init__(schedule_type, fn_update_pickle_file)
         
+    
     def create_job(self, dao, payload) -> str:
         try:
             self.payload = payload
@@ -81,12 +71,14 @@ class InterventorJobSocialMedia(Job):
         
         except Exception as e:
             return f"An error has occurred when persisting the job '{self.queue}' from Interventor's module: {e}"
+        
 
 
 class InterventorManager(JobManager):
     
     def __init__(self, job: Job, file_path: str) -> None:
         super().__init__(job, file_path)
+        self.dao = InterventorDAO()
 
     def check_number_of_max_attempts(self) -> bool:
         pass
@@ -97,13 +89,17 @@ class InterventorManager(JobManager):
         print(f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt were scheduled already.")
 
 
-    def run_manager(self) -> str:
+    async def run_manager(self) -> str:
         try:
-            dao = InterventorDAO()
-            deleted_job = dao.delete_interventor_job(self.get_id_job)
+            deleted_job = self.dao.delete_interventor_job(self.get_id_job)
             assign_interventor_jobs_to_pickle_file()
             
-            return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully."
+            #! USAR OS DOIS ENDPOINTS: DE  CRIAÇÂO E ATUALIZAÇÃO; (PARALELIZAR)
+            
+            
+            all_fake_news_json_task = asyncio.create_task(api_utils.get_fake_news_from_confia_portal())
+            response = await all_fake_news_json_task
+            return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully.\n{response}"
         
         except Exception as e:
             raise Exception(f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}")
@@ -124,19 +120,14 @@ class Interventor(object):
         
         # assigns each Interventor job to a job manager and subscribe it into the scheduler.
         assign_interventor_jobs_to_pickle_file()
-        self._logger.info("Interventor initialized.")        
+        self._logger.info("Interventor initialized.")
         
         
-    async def run(self):
-        all_fake_news_json_task = asyncio.create_task(get_fake_news_from_confia_portal())
-        
+    def run(self):
         self._process_news()
         self._process_curatorship()
         
-        response = await all_fake_news_json_task
-        print(response)
 
-    
     def _get_all_agency_news(self):
         all_fca_news = self._dao.get_all_agency_news()
         for i, (_, publication_title, _) in enumerate(all_fca_news):
@@ -219,7 +210,7 @@ class Interventor(object):
         
         for similar_news in similars:
             self._social_media_job.create_job(
-                self._dao, **dict(zip(self._social_media_job.payload_keys, (similar_news, SocialMediaAlertType.SIMILARITY.name))))
+                self._dao, **dict(zip(self._social_media_job.payload_keys, (similar_news, SocialMediaAlertType.SIMILARIDADE.name))))
     
         
     def _process_candidates_to_check(self, candidates_to_check):
@@ -245,10 +236,10 @@ class Interventor(object):
         # self._create_alert_job(candidates_to_check, alert_type='detected')
         
         for candidate_news in candidates_to_check:
-            self._social_media_job.create_job(self._dao, dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTED.name))))
+            self._social_media_job.create_job(self._dao, dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
             
             self._fca_job.create_job(
-                self._dao, **dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTED.name))))
+                self._dao, **dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
         
         
     def _process_labeled_curatorship(self, curated):
@@ -263,7 +254,13 @@ class Interventor(object):
                 lambda: assign_interventor_jobs_to_pickle_file()) as job:
                 
                 try:
-                    id = job[1].create_job(self._dao, str(dict(zip(job[1].payload_keys, (news, SocialMediaAlertType.LABELED.name)))))
+                    text_news_cleaned = self._dao.get_clean_text_news_from_id(news)
+                    title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
+                    
+                    payload = str(dict(zip(job[1].payload_keys, \
+                        (f"{SocialMediaAlertType.VERIFICADO.name} - {title}", slugify.slugify(title.lower()), text_news_cleaned))))
+                    
+                    id = job[1].create_job(self._dao, payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
             
                 except Exception as e:
