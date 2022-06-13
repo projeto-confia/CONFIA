@@ -6,7 +6,7 @@ from src.config import Config as config
 from src.apis.twitter import TwitterAPI
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
-import logging, pickle, asyncio, slugify, src.interventor.interventor_api_utils as api_utils
+import logging, pickle, asyncio, json, slugify, src.interventor.endpoints as endpoints
 
 
 #! TAREFAS A SEREM CONCLUÍDAS
@@ -86,20 +86,27 @@ class InterventorManager(JobManager):
 
     def manage_failed_job(self) -> None:
         #! verificar numero máximo de tentativas.
-        print(f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt were scheduled already.")
+        print(f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled.")
 
 
     async def run_manager(self) -> str:
         try:
+            #! USAR OS DOIS ENDPOINTS: DE CRIAÇÂO E ATUALIZAÇÃO;
+            deleted_job = self.dao.get_interventor_job(self.get_id_job)
+            payload = deleted_job[2]
+            
+            request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
+            response, slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
+            
+            print(slug)
+            
             deleted_job = self.dao.delete_interventor_job(self.get_id_job)
             assign_interventor_jobs_to_pickle_file()
             
-            #! USAR OS DOIS ENDPOINTS: DE  CRIAÇÂO E ATUALIZAÇÃO; (PARALELIZAR)
-            
-            
-            all_fake_news_json_task = asyncio.create_task(api_utils.get_fake_news_from_confia_portal())
-            response = await all_fake_news_json_task
-            return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully.\n{response}"
+            return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: status {response.status_code}"
+        
+        except endpoints.InvalidResponseError as e:
+            raise Exception(e)
         
         except Exception as e:
             raise Exception(f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}")

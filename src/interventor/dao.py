@@ -321,6 +321,33 @@ class InterventorDAO(metaclass=Singleton):
             raise
     
     
+    def get_interventor_job(self, id_job: int) -> tuple[str]:
+        try:
+            sql_str = "select * from detectenv.job where id_job = %s;"
+            
+            with DatabaseWrapper() as db:
+                job = db.query(sql_str, (id_job,))
+            
+            return job[0]
+        
+        except:
+            raise
+    
+    
+    def get_failed_interventor_job(self, id_job: int) -> tuple[str]:
+        try:
+            sql_str = "select * from detectenv.failed_job where id_job = %s;"
+            
+            with DatabaseWrapper() as db:
+                job = db.query(sql_str, (id_job,))
+            
+            return job[0]
+        
+        except:
+            raise
+    
+    
+    
     def get_all_interventor_jobs(self) -> List[Job]:
         """Selects from Job table all the jobs regarding the Interventor module.
             
