@@ -1,6 +1,5 @@
-import asyncio, requests, ast
-import json
 from typing import Tuple
+import asyncio, requests, ast, json
 from src.config import Config as config
 
 class InvalidResponseError(Exception):

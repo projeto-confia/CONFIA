@@ -98,8 +98,6 @@ class InterventorManager(JobManager):
             request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
             response, slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
             
-            print(slug)
-            
             deleted_job = self.dao.delete_interventor_job(self.get_id_job)
             assign_interventor_jobs_to_pickle_file()
             
