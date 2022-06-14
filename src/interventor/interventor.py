@@ -92,7 +92,8 @@ class InterventorManager(JobManager):
 
     async def run_manager(self) -> str:
         try:
-            
+            #! FAZER TRATAMENTO DOS ERROS INCREMENTANDO O NÚMERO DE TENTATIVAS (utilizar 'manage_failed_job' e 'check_number_of_max_attempts').
+            #! FAZER UM IF COM BASE NO TIPO DE QUEUE PARA TRATAR CADA CATEGORIA DE SCHEDULE.
             deleted_job = self.dao.get_interventor_job(self.get_id_job)
             payload = payload = ast.literal_eval(deleted_job[2])
             
