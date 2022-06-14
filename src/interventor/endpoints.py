@@ -1,5 +1,5 @@
 from typing import Tuple
-import asyncio, requests, ast, json
+import asyncio, requests, json
 from src.config import Config as config
 
 class InvalidResponseError(Exception):
@@ -39,7 +39,6 @@ async def post_new_fake_news_in_confia_portal(payload: list[dict]) -> list[dict]
     """
     
     loop = asyncio.get_event_loop()
-    payload = ast.literal_eval(payload)
     request = loop.run_in_executor(None, lambda: requests.post(f"{config.CONFIA_API.CMS_URL}fake-news-notifications", data=payload))
     
     response = await request
@@ -54,7 +53,7 @@ async def update_fake_news_in_confia_portal(payload: list[dict]) -> Tuple[int, s
     """Endpoint: 'Atualizar página de notificação de fake news.'
 
     Args:
-        payload (list[dict]): the JSON containing the id of the new persisted news in CONFIA's portal.
+        payload (list[dict]): a JSON containing the id of the new persisted news in CONFIA's portal.
         
     Returns:
         a tuple containing (i) the URL with the slug concatenated for publishing in Twitter; (ii) the response's status code.
@@ -72,4 +71,4 @@ async def update_fake_news_in_confia_portal(payload: list[dict]) -> Tuple[int, s
     if response.status_code != 200:
         raise InvalidResponseError(f"Put request denied: response status code: {response.status_code}")
 
-    return response, f"{config.CONFIA_API.SITE_URL_HMG}{slug}"
+    return response, slug

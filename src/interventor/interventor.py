@@ -6,7 +6,7 @@ from src.config import Config as config
 from src.apis.twitter import TwitterAPI
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
-import logging, pickle, asyncio, json, slugify, src.interventor.endpoints as endpoints
+import ast, logging, pickle, src.interventor.endpoints as endpoints
 
 
 #! TAREFAS A SEREM CONCLUÍDAS
@@ -79,6 +79,7 @@ class InterventorManager(JobManager):
     def __init__(self, job: Job, file_path: str) -> None:
         super().__init__(job, file_path)
         self.dao = InterventorDAO()
+        self._twitter_api = TwitterAPI()
 
     def check_number_of_max_attempts(self) -> bool:
         pass
@@ -91,17 +92,23 @@ class InterventorManager(JobManager):
 
     async def run_manager(self) -> str:
         try:
-            #! USAR OS DOIS ENDPOINTS: DE CRIAÇÂO E ATUALIZAÇÃO;
+            
             deleted_job = self.dao.get_interventor_job(self.get_id_job)
-            payload = deleted_job[2]
+            payload = payload = ast.literal_eval(deleted_job[2])
+            
+            title = payload["title"]
+            content = payload["content"]
             
             request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
             response, slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
             
+            tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
+            message = self._twitter_api.tweet(tweet)
+            
             deleted_job = self.dao.delete_interventor_job(self.get_id_job)
             assign_interventor_jobs_to_pickle_file()
             
-            return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: status {response.status_code}"
+            return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: status {response.status_code}\n\n{message}"
         
         except endpoints.InvalidResponseError as e:
             raise Exception(e)
@@ -263,7 +270,7 @@ class Interventor(object):
                     title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
                     
                     payload = str(dict(zip(job[1].payload_keys, \
-                        (f"{SocialMediaAlertType.VERIFICADO.name} - {title}", slugify.slugify(title.lower()), text_news_cleaned))))
+                        (f"FAKE NEWS - {title}", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
                     
                     id = job[1].create_job(self._dao, payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            

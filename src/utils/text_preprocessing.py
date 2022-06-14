@@ -1,15 +1,13 @@
-from googletrans import Translator
-from nltk.tokenize import TweetTokenizer
-from nltk.corpus import stopwords
-from nltk.tag import pos_tag
-from nltk.stem.wordnet import WordNetLemmatizer
+from functools import total_ordering
+from math import remainder
 from fuzzywuzzy import fuzz
-import emoji
-import nltk
-import re
-import string
-import re
+from nltk.tag import pos_tag
+from nltk.corpus import stopwords
+from googletrans import Translator
+import emoji, nltk, re, string, slugify
 from src.config import Config as config
+from nltk.tokenize import TweetTokenizer
+from nltk.stem.wordnet import WordNetLemmatizer
 
 class TextPreprocessing:
 
@@ -34,6 +32,7 @@ class TextPreprocessing:
             nltk.download('wordnet')
             nltk.download('stopwords')
 
+    
     
     def text_cleaning(self, text):
         """remove hyperlinks, nomes de usuário precedidos pelo '@', pontuações e caracteres especiais."""
@@ -96,3 +95,22 @@ class TextPreprocessing:
         
         value = fuzz.token_sort_ratio(news1_cleaned, news2_cleaned)
         return value >= self._threshold, value
+    
+    @staticmethod
+    def slugify(text: str) -> str:
+        return slugify.slugify(text.lower())
+    
+    
+    @staticmethod
+    def prepare_tweet_for_posting(title: str, content: str, slug: str) -> str:
+        
+        title = title + "\n\n"
+        allowed_length = config.TWITTER_SETTINGS.TWEET_MAX_CHARS
+        
+        link_info = f"... Saiba mais em: {config.CONFIA_API.SITE_URL_HMG + slug}"
+                
+        total_length_without_content = len(title) + len(link_info)
+        remainder_chars_for_content = allowed_length - total_length_without_content
+        
+        return title + content[:remainder_chars_for_content] + link_info \
+            if remainder_chars_for_content > len(title) else title + link_info

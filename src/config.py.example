@@ -8,9 +8,9 @@ class Config(object):
     # APIs' addresses
     @dataclass(frozen=True)
     class CONFIA_API:
-        SITE_URL_HMG = 'https://hmg.projetoconfia.info/fake-news-detectadas'
-        SITE_URL_PRD = 'https://projetoconfia.info/fake-news-detectadas'
-        CMS_URL  = 'http://confia-api-hmg.herokuapp.com/' # incluir '/admin' para acesso manual às fake news postadas no CMS.
+        SITE_URL_HMG = 'https://hmg.projetoconfia.info/fake-news-detectadas/'
+        SITE_URL_PRD = 'https://projetoconfia.info/fake-news-detectadas/'
+        CMS_URL      = 'http://confia-api-hmg.herokuapp.com/' # incluir '/admin' para acesso manual às fake news postadas no CMS.
     
 
     # logging
@@ -92,11 +92,17 @@ class Config(object):
 
     # twitter credentials
     @dataclass(frozen=True)
-    class TWITTER_CREDENTIAL:
+    class TWITTER_CREDENTIALS:
         CONSUMER_KEY = "consumer_key_here"
         CONSUMER_SECRET = "consumer_secret_here"
         ACCESS_TOKEN = "access_token_here"
         ACCESS_TOKEN_SECRET = "access_token_secret_here"
+
+
+    @dataclass(frozen=True)
+    class TWITTER_SETTINGS:
+        TWEET_MAX_CHARS = 280
+        USERNAME = "@ConfiaProjeto"
 
         
     # text preprocessor
