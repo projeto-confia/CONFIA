@@ -59,7 +59,9 @@ class Schedule:
                 except Exception as e:
                     Schedule._logger.error(e)
                     Schedule._subscribed_failed_jobs_dict[id] = job_manager
-                    job_manager.manage_failed_job()
+                    
+                    message = job_manager.manage_failed_job()
+                    Schedule._logger.info(message)                    
         
         # Schedule._logger.info("--- Message to failed jobs to be completed... ---")
         

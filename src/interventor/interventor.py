@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from tabnanny import check
 from typing import Callable
 from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
@@ -15,8 +16,8 @@ import ast, logging, pickle, src.interventor.endpoints as endpoints
 #     # Executar queue de alertas na rede social
 
 class SocialMediaAlertType(Enum):
-    VERIFICADO = auto()
     DETECTADO = auto()
+    CONFIRMADO = auto()
     SIMILARIDADE = auto()
     
 
@@ -81,41 +82,88 @@ class InterventorManager(JobManager):
         self.dao = InterventorDAO()
         self._twitter_api = TwitterAPI()
 
-    def check_number_of_max_attempts(self) -> bool:
-        pass
+    
+    def check_number_of_max_attempts(self, count: bool = True) -> bool:
+        
+        if count:
+            self._job.__dict__["attempts"] += 1
+            
+        current_attempts = self._job.__dict__["attempts"]
+        max_attempts = self._job.__dict__["max_attempts"]
+        
+        return True if current_attempts > max_attempts else False
+            
 
+    def manage_failed_job(self) -> str:
+        
+        has_exceeded = self.check_number_of_max_attempts()
+        attempts = self._job.__dict__["attempts"]
+        max_attempts = self._job.__dict__["max_attempts"]
+        
+        if not has_exceeded:
+            self.dao.update_number_of_attempts_job(self._job)
+            message = f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
+            
+        else:
+            first_time: bool = False
+            try:
+                _ = self.dao.get_failed_interventor_job(self.get_id_job)
+            
+            except IndexError:
+                id_failed_job = self.dao.create_interventor_failed_job(self._job)
+                first_time = True
+            
+            if not first_time:
+                self.dao.update_number_of_attempts_failed_job(self._job)
+                message = f"Interventor's failed job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled."
+            
+            else:
+                message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attemps and it was moved to the Failed Jobs table with id {id_failed_job[0]}. A novel execution attempt was already scheduled."
+                self.dao.delete_interventor_job(self.get_id_job)
 
-    def manage_failed_job(self) -> None:
-        #! verificar numero máximo de tentativas.
-        print(f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled.")
-
+        assign_interventor_jobs_to_pickle_file()
+        
+        return message
 
     async def run_manager(self) -> str:
         try:
-            #! FAZER TRATAMENTO DOS ERROS INCREMENTANDO O NÚMERO DE TENTATIVAS (utilizar 'manage_failed_job' e 'check_number_of_max_attempts').
             #! FAZER UM IF COM BASE NO TIPO DE QUEUE PARA TRATAR CADA CATEGORIA DE SCHEDULE.
-            deleted_job = self.dao.get_interventor_job(self.get_id_job)
-            payload = payload = ast.literal_eval(deleted_job[2])
+            
+            if not self.check_number_of_max_attempts(False):
+                deleted_job = self.dao.get_interventor_job(self.get_id_job)
+                payload = payload = ast.literal_eval(deleted_job[2])
+            else:
+                deleted_job = self.dao.get_failed_interventor_job(self.get_id_job)
+                payload = payload = ast.literal_eval(deleted_job[3])
             
             title = payload["title"]
             content = payload["content"]
             
             request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
-            response, slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
+            slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
             
             tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
             message = self._twitter_api.tweet(tweet)
             
-            deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+            if not self.check_number_of_max_attempts(False):
+                deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+                message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
+            else:
+                message = f"Job {deleted_job[2]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
+                deleted_job = self.dao.delete_interventor_failed_job(self.get_id_job)
+                
             assign_interventor_jobs_to_pickle_file()
             
-            return f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: status {response.status_code}\n\n{message}"
+            return message
         
         except endpoints.InvalidResponseError as e:
+            self._job.error_message = e
             raise Exception(e)
         
         except Exception as e:
-            raise Exception(f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}")
+            error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
+            self._job.error_message = error
+            raise Exception(error)
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
@@ -256,6 +304,7 @@ class Interventor(object):
         
         
     def _process_labeled_curatorship(self, curated):
+        
         news = [(c[0], c[3]) for c in curated]
         self._dao.update_ground_truth_label(news)
         # TODO: implement function
@@ -271,7 +320,7 @@ class Interventor(object):
                     title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
                     
                     payload = str(dict(zip(job[1].payload_keys, \
-                        (f"FAKE NEWS - {title}", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
+                        (f"❌ {SocialMediaAlertType.CONFIRMADO.name} COMO FAKE NEWS - {title}", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
                     
                     id = job[1].create_job(self._dao, payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            

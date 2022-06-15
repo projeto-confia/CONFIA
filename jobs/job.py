@@ -78,10 +78,15 @@ class JobManager(abc.ABC):
     
     @abc.abstractmethod
     def check_number_of_max_attempts(self) -> bool:
+        """Checks whether the number of attempts has exceeded.
+
+        Returns:
+            bool: returns True if the number of attempts has maxed out the limit of the queue; False otherwise.
+        """
         ...
 
     @abc.abstractmethod
-    def manage_failed_job(self) -> None:
+    def manage_failed_job(self) -> str:
         ...
 
     @abc.abstractmethod        

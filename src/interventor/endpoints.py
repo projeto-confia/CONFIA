@@ -71,4 +71,4 @@ async def update_fake_news_in_confia_portal(payload: list[dict]) -> Tuple[int, s
     if response.status_code != 200:
         raise InvalidResponseError(f"Put request denied: response status code: {response.status_code}")
 
-    return response, slug
+    return slug

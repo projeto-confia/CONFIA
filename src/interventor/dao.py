@@ -474,21 +474,57 @@ class InterventorDAO(metaclass=Singleton):
         except:
             raise
         
+        
+    def create_interventor_failed_job(self, job: Job) -> tuple[int]:
+        """Persists a novel job instance in the Job table.
+
+        Args:
+            job (Job): a Job object containing all the information regarding the novel job to be persisted.
+            
+        Returns:
+            id_failed_job (Job): the identifier created for the new failed job.
+        """
+        try:
+            sql_str = "INSERT INTO detectenv.failed_job (id_job, queue, payload, attempts, created_at, error_message) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_failed_job;"
+                        
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (job.id_job, job.queue, job.payload, job.attempts, datetime.now(), job.error_message.args,))
+                id = db.fetchone()
+        
+            return id
+        
+        except:
+            raise
+        
     
-    def update_number_of_attempts(self, id: int, num_attempts: int, job_table: bool) -> None:
+    def update_number_of_attempts_job(self, job: Job) -> None:
         """Increments the number of attempts of a particular job after trying to execute it without success. The field 'updated_at' is also updated with the current time when the attempt actually occurred.
         
         Args:
-            id (int): the id of the job to get its number of attempts updated.
-            num_attempts (int): an updated number that represents the failed attempts to execute this job.
-            job_table (bool): if 'True' the register of Job table is updated; if 'False', updates the register of Failed_Job table instead.
+            job (Job): the job that is being updated.
         """
         
         try:
-            sql_str = "UPDATE detectenv.job SET attempts = %s, updated_at = %s WHERE id_job = %s;" if job_table else "UPDATE detectenv.failed_job SET attempts = %s, updated_at = %s WHERE id_failed_job = %s;"
+            sql_str = "UPDATE detectenv.job SET attempts = %s, updated_at = %s WHERE id_job = %s;"
             
             with DatabaseWrapper() as db:
-                db.execute(sql_str, (id, num_attempts, datetime.now(),))
+                db.execute(sql_str, (job.attempts, datetime.now(), job.id_job,))
+        
+        except:
+            raise
+        
+    def update_number_of_attempts_failed_job(self, failed_job: Job) -> None:
+        """Increments the number of attempts of a particular failed job after trying to execute it without success. The field 'updated_at' is also updated with the current time when the attempt actually occurred.
+        
+        Args:
+            failed_job (Job): the failed job that is being updated.
+        """
+        
+        try:
+            sql_str = "UPDATE detectenv.failed_job SET attempts = %s, updated_at = %s, error_message = %s WHERE id_job = %s;"
+            
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (failed_job.attempts, datetime.now(), failed_job.error_message.args, failed_job.id_job,))
         
         except:
             raise
@@ -535,7 +571,7 @@ class InterventorDAO(metaclass=Singleton):
             raise
         
             
-    def delete_interventor_failed_job(self, id_failed_job: int) -> tuple:
+    def delete_interventor_failed_job(self, id_job: int) -> tuple:
         """Deletes a job from the Failed_Job table and returns its original identifier (id_job).
 
         Args:
@@ -545,14 +581,14 @@ class InterventorDAO(metaclass=Singleton):
             a tuple containing the original identifier of the job deleted from Failed_Job.
         """
         
-        sql_str = "DELETE FROM detectenv.failed_job WHERE id_failed_job = %s RETURNING id_failed_job;"
+        sql_str = "DELETE FROM detectenv.failed_job WHERE id_job = %s RETURNING *;"
         
         try:
             with DatabaseWrapper() as db:
-                db.execute(sql_str, (id_failed_job,))
-                id = db.fetchone()
+                db.execute(sql_str, (id_job,))
+                job = db.fetchone()
                 
-            return id
+            return job
         
         except:
             raise
