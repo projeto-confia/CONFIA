@@ -127,11 +127,13 @@ class InterventorManager(JobManager):
 
     async def run_manager(self) -> str:
         try:
+            #! VERIFICAR PERIODICIDADE;
             #! FAZER UM IF COM BASE NO TIPO DE QUEUE PARA TRATAR CADA CATEGORIA DE SCHEDULE.
             
             if not self.check_number_of_max_attempts(False):
                 deleted_job = self.dao.get_interventor_job(self.get_id_job)
                 payload = payload = ast.literal_eval(deleted_job[2])
+            
             else:
                 deleted_job = self.dao.get_failed_interventor_job(self.get_id_job)
                 payload = payload = ast.literal_eval(deleted_job[3])
