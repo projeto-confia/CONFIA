@@ -118,7 +118,7 @@ class InterventorManager(JobManager):
                 message = f"Interventor's failed job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled."
             
             else:
-                message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attemps and it was moved to the Failed Jobs table with id {id_failed_job[0]}. A novel execution attempt was already scheduled."
+                message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to the Failed Jobs table with id {id_failed_job[0]}. A novel execution attempt was already scheduled."
                 self.dao.delete_interventor_job(self.get_id_job)
 
         assign_interventor_jobs_to_pickle_file()
@@ -126,46 +126,56 @@ class InterventorManager(JobManager):
         return message
 
     async def run_manager(self) -> str:
-        try:
-            #! VERIFICAR PERIODICIDADE;
-            #! FAZER UM IF COM BASE NO TIPO DE QUEUE PARA TRATAR CADA CATEGORIA DE SCHEDULE.
+        
+        #! VERIFICAR PERIODICIDADE;
+        #! NÃO CONSUMIR OS JOBS EM FAILED_JOB.
+        
+        if config.SCHEDULE.QUEUE[self._job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA:
             
-            if not self.check_number_of_max_attempts(False):
-                deleted_job = self.dao.get_interventor_job(self.get_id_job)
-                payload = payload = ast.literal_eval(deleted_job[2])
+            if not config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
+                return "AUTOMATA is set to do not send alerts to social media."
             
-            else:
-                deleted_job = self.dao.get_failed_interventor_job(self.get_id_job)
-                payload = payload = ast.literal_eval(deleted_job[3])
-            
-            title = payload["title"]
-            content = payload["content"]
-            
-            request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
-            slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
-            
-            tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
-            message = self._twitter_api.tweet(tweet)
-            
-            if not self.check_number_of_max_attempts(False):
-                deleted_job = self.dao.delete_interventor_job(self.get_id_job)
-                message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
-            else:
-                message = f"Job {deleted_job[2]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
-                deleted_job = self.dao.delete_interventor_failed_job(self.get_id_job)
+            try:
+                if not self.check_number_of_max_attempts(False):
+                    deleted_job = self.dao.get_interventor_job(self.get_id_job)
+                    payload = payload = ast.literal_eval(deleted_job[2])
                 
-            assign_interventor_jobs_to_pickle_file()
+                else:
+                    deleted_job = self.dao.get_failed_interventor_job(self.get_id_job)
+                    payload = payload = ast.literal_eval(deleted_job[3])
+                
+                title = payload["title"]
+                content = payload["content"]
+                
+                request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
+                slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
+                
+                tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
+                message = self._twitter_api.tweet(tweet)
+                
+                if not self.check_number_of_max_attempts(False):
+                    deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+                    message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
+                else:
+                    message = f"Job {deleted_job[2]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
+                    deleted_job = self.dao.delete_interventor_failed_job(self.get_id_job)
+                    
+                assign_interventor_jobs_to_pickle_file()
+                return message
             
-            return message
+            except endpoints.InvalidResponseError as e:
+                self._job.error_message = e
+                raise Exception(e)
+            
+            except Exception as e:
+                error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
+                self._job.error_message = error
+                raise Exception(error)
+            
         
-        except endpoints.InvalidResponseError as e:
-            self._job.error_message = e
-            raise Exception(e)
-        
-        except Exception as e:
-            error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
-            self._job.error_message = error
-            raise Exception(error)
+        elif config.SCHEDULE.QUEUE[self._job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA:
+            print(f"{config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA.name} ")
+            quit()
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
@@ -193,8 +203,10 @@ class Interventor(object):
 
     def _get_all_agency_news(self):
         all_fca_news = self._dao.get_all_agency_news()
+        
         for i, (_, publication_title, _) in enumerate(all_fca_news):
             all_fca_news[i] += (self._text_preprocessor.text_cleaning(publication_title),)
+            
         return all_fca_news
         
         
@@ -233,7 +245,7 @@ class Interventor(object):
         Returns:
             tuple: (list of similars, list of not similars)
         """
-        
+        # TODO: verificar esse código.
         similars, not_similars = list(), list()
         for i, (_, text_news) in enumerate(news):
             text_news_cleaned = self._text_preprocessor.text_cleaning(text_news)
@@ -268,12 +280,24 @@ class Interventor(object):
     def _process_similars(self, similars):
         self._logger.info('Processing similar news...')
         self._dao.persist_similar_news(similars)
-        # TODO: implement create alert job function
-        # self._create_alert_job(similars, alert_type='similar')
         
         for similar_news in similars:
-            self._social_media_job.create_job(
-                self._dao, **dict(zip(self._social_media_job.payload_keys, (similar_news, SocialMediaAlertType.SIMILARIDADE.name))))
+            
+            with InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA, \
+                lambda: assign_interventor_jobs_to_pickle_file()) as job:
+                
+                try:
+                    text_news_cleaned = self._dao.get_clean_text_news_from_id(similar_news)
+                    title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
+                    
+                    payload = str(dict(zip(job[1].payload_keys, \
+                        (f"⚠️ ALERTA de {SocialMediaAlertType.SIMILARIDADE.name} - {title}", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
+                    
+                    id = job[1].create_job(self._dao, payload)
+                    self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
+            
+                except Exception as e:
+                    self._logger.error(e)
     
         
     def _process_candidates_to_check(self, candidates_to_check):
@@ -320,9 +344,8 @@ class Interventor(object):
                 try:
                     text_news_cleaned = self._dao.get_clean_text_news_from_id(news)
                     title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
-                    
                     payload = str(dict(zip(job[1].payload_keys, \
-                        (f"❌ {SocialMediaAlertType.CONFIRMADO.name} COMO FAKE NEWS - {title}", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
+                        (f"❗ {SocialMediaAlertType.CONFIRMADO.name} COMO FAKE NEWS - {title}", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
                     
                     id = job[1].create_job(self._dao, payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
