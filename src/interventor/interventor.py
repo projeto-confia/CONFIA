@@ -22,19 +22,12 @@ class SocialMediaAlertType(Enum):
     
 
 def assign_interventor_jobs_to_pickle_file() -> None:
-    """Helper function for keeping the Interventor module's pickle file up-to-date after insertions and deletions in both Job and Failed_Job's tables.
-
-    Args:
-        dao (DAO): the dao object of the Interventor module.
-    """
+    """Helper function for keeping the Interventor module's pickle file up-to-date after insertions and deletions in the Job table."""
     
     path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
     dao = InterventorDAO()
     
     job_managers = {job.id_job: InterventorManager(job, path) for job in dao.get_all_interventor_jobs()}
-    failed_job_managers = {job.id_job: InterventorManager(job, path) for job in dao.get_all_interventor_failed_jobs()}
-    
-    job_managers.update(failed_job_managers)
     
     try:
         with open(path, 'wb') as file:
@@ -79,8 +72,8 @@ class InterventorManager(JobManager):
     
     def __init__(self, job: Job, file_path: str) -> None:
         super().__init__(job, file_path)
-        self.dao = InterventorDAO()
         self._twitter_api = TwitterAPI()
+        self.dao = InterventorDAO()
 
     
     def check_number_of_max_attempts(self, count: bool = True) -> bool:
@@ -118,7 +111,7 @@ class InterventorManager(JobManager):
                 message = f"Interventor's failed job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled."
             
             else:
-                message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to the Failed Jobs table with id {id_failed_job[0]}. A novel execution attempt was already scheduled."
+                message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to the Failed Jobs table with id {id_failed_job[0]}."
                 self.dao.delete_interventor_job(self.get_id_job)
 
         assign_interventor_jobs_to_pickle_file()
