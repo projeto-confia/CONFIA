@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, datetime
 from typing import Dict
 from jobs.job import JobManager
 import logging, pickle, pathlib
@@ -53,6 +53,17 @@ class Schedule:
                 Schedule._logger.info(f"Running job {job_manager}...")
                 
                 try:
+                    last_update = job_manager.job.__dict__["updated_at"]
+                    job_periodicity = job_manager.job.__dict__["periodicity_in_minutes"]
+                    
+                    allowed_period_to_consume_job = last_update + datetime.timedelta(minutes=job_periodicity)
+                    
+                    if datetime.datetime.now() < allowed_period_to_consume_job:
+                        Schedule._logger.warning\
+                            (f"Job {job_manager} is scheduled to run only in {datetime.datetime.strftime(allowed_period_to_consume_job, '%d/%m/%Y %H:%M:%S')}")
+                        
+                        continue    
+                    
                     message = await job_manager.run_manager()
                     Schedule._logger.info(message)
                 

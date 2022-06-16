@@ -22,9 +22,9 @@ class Job:
         self.queue = schedule_type.name
         self.created_at: datetime.datetime = pd.NaT
         self.updated_at: datetime.datetime = pd.NaT
-        self.periodicity: int = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["periodicity"]
         self.max_attempts: int = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["max_attempts"]
         self.payload_keys: Tuple[str] = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["payload_keys"]
+        self.periodicity_in_minutes: int = config.SCHEDULE.SCHEDULE_PARAMS[schedule_type]["periodicity_in_minutes"]
         
         self.fn_update_pickle_file = fn_update_pickle_file
         
@@ -63,17 +63,17 @@ class JobManager(abc.ABC):
             job (Job): An instance of a job to be managed or executed.
             file_path (str): a Path object with the location where the serialized file containing all the jobs will be saved for being loaded later by the scheduler.
         """
-        self._job = job
+        self.job = job
         self.file_path = file_path
         
     
     def __str__(self) -> str:
-        return f"{self._job.queue} - Nº {self._job.id_job}"
+        return f"{self.job.queue} - Nº {self.job.id_job}"
     
     
     @property
     def get_id_job(self) -> int:
-        return self._job.id_job
+        return self.job.id_job
     
     
     @abc.abstractmethod

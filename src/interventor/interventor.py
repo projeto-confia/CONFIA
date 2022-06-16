@@ -79,10 +79,10 @@ class InterventorManager(JobManager):
     def check_number_of_max_attempts(self, count: bool = True) -> bool:
         
         if count:
-            self._job.__dict__["attempts"] += 1
+            self.job.__dict__["attempts"] += 1
             
-        current_attempts = self._job.__dict__["attempts"]
-        max_attempts = self._job.__dict__["max_attempts"]
+        current_attempts = self.job.__dict__["attempts"]
+        max_attempts = self.job.__dict__["max_attempts"]
         
         return True if current_attempts > max_attempts else False
             
@@ -90,11 +90,11 @@ class InterventorManager(JobManager):
     def manage_failed_job(self) -> str:
         
         has_exceeded = self.check_number_of_max_attempts()
-        attempts = self._job.__dict__["attempts"]
-        max_attempts = self._job.__dict__["max_attempts"]
+        attempts = self.job.__dict__["attempts"]
+        max_attempts = self.job.__dict__["max_attempts"]
         
         if not has_exceeded:
-            self.dao.update_number_of_attempts_job(self._job)
+            self.dao.update_number_of_attempts_job(self.job)
             message = f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
             
         else:
@@ -103,11 +103,11 @@ class InterventorManager(JobManager):
                 _ = self.dao.get_failed_interventor_job(self.get_id_job)
             
             except IndexError:
-                id_failed_job = self.dao.create_interventor_failed_job(self._job)
+                id_failed_job = self.dao.create_interventor_failed_job(self.job)
                 first_time = True
             
             if not first_time:
-                self.dao.update_number_of_attempts_failed_job(self._job)
+                self.dao.update_number_of_attempts_failed_job(self.job)
                 message = f"Interventor's failed job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled."
             
             else:
@@ -121,9 +121,8 @@ class InterventorManager(JobManager):
     async def run_manager(self) -> str:
         
         #! VERIFICAR PERIODICIDADE;
-        #! NÃO CONSUMIR OS JOBS EM FAILED_JOB.
         
-        if config.SCHEDULE.QUEUE[self._job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA:
+        if config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA:
             
             if not config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
                 return "AUTOMATA is set to do not send alerts to social media."
@@ -157,16 +156,16 @@ class InterventorManager(JobManager):
                 return message
             
             except endpoints.InvalidResponseError as e:
-                self._job.error_message = e
+                self.job.error_message = e
                 raise Exception(e)
             
             except Exception as e:
                 error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
-                self._job.error_message = error
+                self.job.error_message = error
                 raise Exception(error)
             
         
-        elif config.SCHEDULE.QUEUE[self._job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA:
+        elif config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA:
             print(f"{config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA.name} ")
             quit()
 
