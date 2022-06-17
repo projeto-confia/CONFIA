@@ -116,8 +116,10 @@ class MonitorDAO(object):
         """
         
         df = self._load_pkl()
+        
         if not isinstance(df, pd.DataFrame):
             return
+        
         df['id_news'] = 0
         df['id_social_media_account'] = None
         id_news_col_idx = df.columns.get_loc('id_news')
@@ -130,6 +132,7 @@ class MonitorDAO(object):
                     df_news = self._extract_df_news_groups_firsts(df)
                     self._update_dataframe_with_similar_id_news(df, df_news, groups, id_news_col_idx)
                     df_news = self._extract_df_news_groups_firsts(df)
+                    
                     if not df_news.empty:
                         id_news_list = self._insert_news_in_db(df_news, db)
                         self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
@@ -138,6 +141,7 @@ class MonitorDAO(object):
                     df_news = self._extract_df_news_groups_firsts(df)
                     id_news_list = self._insert_news_in_db(df_news, db)
                     self._update_dataframe_with_id_news(df_news, id_news_list, df, groups)
+                    
                 df = self._update_dataframe_with_social_network_accounts(df, db)
                 self._insert_posts_in_db(df, db)
                 
@@ -161,22 +165,28 @@ class MonitorDAO(object):
     def _update_dataframe_with_similar_id_news(self, df:pd.DataFrame, df_news:pd.DataFrame, groups, id_news_col_idx):
         self._logger.info('Identifying similar news into database')
         self._logger.info(f'Comparing with {len(self._text_news_cleaned)} stored news')
+        
         for group_key, group_row in df_news.iterrows():
             news_data = group_row.to_dict()
             id_news_db, _, is_similar = read_cleaned_news_db_in_parallel(news_data, self._text_news_cleaned)
+            
             if is_similar:
                 indices = groups[group_key]
                 df.iloc[indices, id_news_col_idx] = id_news_db
+        
         self._logger.info('Similar news identified')
                 
                 
     def _insert_news_in_db(self, df_news:pd.DataFrame, db:DatabaseWrapper, has_ground_truth_label=False):
         self._logger.info("Persisting news into database")
         arglist = df_news.to_records(index=False)
+        
         if has_ground_truth_label:
             arglist = [(a, pd.Timestamp(b).to_pydatetime(), c, d) for a, b, c, d in arglist]
+            
         else:
             arglist = [(a, pd.Timestamp(b).to_pydatetime(), c) for a, b, c in arglist]
+    
         id_news_list = self._insert_many_records('detectenv.news',
                                                     df_news.columns,
                                                     arglist,
@@ -191,7 +201,9 @@ class MonitorDAO(object):
                                        id_news_list:list,
                                        df:pd.DataFrame, 
                                        groups):
+        
         id_news_col_idx = df.columns.get_loc('id_news')
+        
         for group_key, id_news in zip(df_news.index, id_news_list):
             indices = groups[group_key]
             df.iloc[indices, id_news_col_idx] = id_news[0]

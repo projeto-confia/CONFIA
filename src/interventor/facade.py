@@ -1,6 +1,6 @@
 import logging
 from src.config import Config as config
-from src.interventor.interventor import Interventor, InterventorManager
+from src.interventor.interventor import Interventor
 
 
 class InterventorFacade(object):
@@ -13,13 +13,11 @@ class InterventorFacade(object):
 
 
     async def run(self):
+        
         try:
             self._logger.info('Running Interventor...')
             Interventor().run()
             self._logger.info('Interventor finished.')
+        
         except:
             raise
-        
-        
-    # def run_manager(self):
-    #     InterventorManager().run()

@@ -71,6 +71,8 @@ class Config(object):
     # interventor
     @dataclass(frozen=True)
     class INTERVENTOR(object):
+        PATH_NEWS_TO_SEND_AS_EXCEL_SHEET_TO_FCAs = "src/data/excel_sheets_fca/to_send"
+        PATH_NEWS_SENT_AS_EXCEL_SHEET_TO_FCAs = "src/data/excel_sheets_fca/sent"
         WINDOW_SIZE = 7
         PROB_CLASSIF_THRESHOLD = 0.9
         NUM_NEWS_TO_SELECT = 4

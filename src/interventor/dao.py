@@ -62,8 +62,7 @@ class InterventorDAO(metaclass=Singleton):
                         where n.datetime_publication > current_date - interval '" + str(window_size) + "' day \
                             and n.ground_truth_label is null \
                             and n.classification_outcome = True \
-                            and co.id_news is null \
-                            and cur.id_news is null \
+                            and cur.is_news is null \
                             and n.prob_classification > " + str(prob_classif_threshold) + " \
                         group by n.id_news, n.text_news, n.prob_classification \
                         order by max(p.num_shares) desc, n.prob_classification desc \
@@ -105,14 +104,13 @@ class InterventorDAO(metaclass=Singleton):
             raise
         
         
-    def persist_candidates_to_check(self, candidates_id, id_trusted_agency):
+    def persist_candidates_to_check(self, id_news, id_trusted_agency):
         sql_string = "INSERT INTO detectenv.checking_outcome \
                         (id_news, id_trusted_agency) \
                         VALUES (%s,%s);"
         try:
             with DatabaseWrapper() as db:
-                for id_news in candidates_id:
-                    db.execute(sql_string, (id_news, id_trusted_agency))
+                db.execute(sql_string, (id_news, id_trusted_agency))
         except:
             raise
         

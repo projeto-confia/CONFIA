@@ -1,14 +1,14 @@
 from enum import Enum, auto
-from tabnanny import check
 from typing import Callable
+from src.interventor import utils
 from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
+from psycopg2.errors import UniqueViolation
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
 import ast, logging, pickle, src.interventor.endpoints as endpoints
-
 
 #! TAREFAS A SEREM CONCLUÍDAS
 # def run(self):
@@ -37,6 +37,7 @@ def assign_interventor_jobs_to_pickle_file() -> None:
         raise Exception(f"An error occurred when trying to save the jobs in {path}:\n{e}")
     
 
+
 class InterventorJobFCA(Job):
     
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
@@ -50,6 +51,7 @@ class InterventorJobFCA(Job):
         
         except Exception as e:
             return f"An error has occurred when persisting the job '{self.queue}' from Interventor's module: {e}"
+        
         
 
 class InterventorJobSocialMedia(Job):
@@ -120,8 +122,6 @@ class InterventorManager(JobManager):
 
     async def run_manager(self) -> str:
         
-        #! VERIFICAR PERIODICIDADE;
-        
         if config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA:
             
             if not config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
@@ -183,7 +183,7 @@ class Interventor(object):
         self._all_fca_news = self._get_all_agency_news()
         self._logger = logging.getLogger(config.LOGGING.NAME)
         
-        # assigns each Interventor job to a job manager and subscribe it into the scheduler.
+        # assigns each Interventor job to a job manager and subscribes it into the scheduler.
         assign_interventor_jobs_to_pickle_file()
         self._logger.info("Interventor initialized.")
         
@@ -237,7 +237,8 @@ class Interventor(object):
         Returns:
             tuple: (list of similars, list of not similars)
         """
-        # TODO: verificar esse código.
+        #! VERIFICAR ESSE CÓDIGO.
+        
         similars, not_similars = list(), list()
         for i, (_, text_news) in enumerate(news):
             text_news_cleaned = self._text_preprocessor.text_cleaning(text_news)
@@ -255,7 +256,7 @@ class Interventor(object):
     
     
     def _persist_news(self, news):
-        """Process and persist selected classified fakenews
+        """Process and persist selected classified fake news
         
         News must be a list of tuples like (id_news, text_news)
 
@@ -268,7 +269,8 @@ class Interventor(object):
         self._process_similars(similars)
         self._process_candidates_to_check(candidates_to_check)
         
-        
+    
+    #! TESTAR ESSE CÓDIGO.
     def _process_similars(self, similars):
         self._logger.info('Processing similar news...')
         self._dao.persist_similar_news(similars)
@@ -291,7 +293,8 @@ class Interventor(object):
                 except Exception as e:
                     self._logger.error(e)
     
-        
+    
+    #! TESTAR ESSE CÓDIGO.
     def _process_candidates_to_check(self, candidates_to_check):
         self._logger.info('Processing news to be checked...')
         
@@ -307,18 +310,31 @@ class Interventor(object):
         
         candidates_id = [c[0] for c in candidates_to_check]
         id_trusted_agency,_,_,_ = self._dao.get_data_from_agency('Boatos.org')
-        self._dao.persist_candidates_to_check(candidates_id, id_trusted_agency)
+        
+        for id_news in candidates_id:
+            try:
+                self._dao.persist_candidates_to_check(id_news, id_trusted_agency)
+            
+            except UniqueViolation as e:
+                error = e.args[0].replace('\n', ' ')
+                self._logger.error(f"News with id {id_news} and FCA's id {id_trusted_agency} already exists in table 'detectenv.checking_outcome', thus violating the unique constraint pair: {error}")
+        
+        #! MONTAR PLANILHA AQUI!
+        for candidate_news in candidates_to_check:
+            ...
+        
+        utils.build_excel_sheet(candidates_to_check)
+            
+            # self._social_media_job.create_job(self._dao, dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
+            
+            # self._fca_job.create_job(
+            #     self._dao, **dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
         
         # TODO: implement functions        
         # file_id = self._build_excel(candidates_to_check)
         # self._create_send_job(file_id)
         # self._create_alert_job(candidates_to_check, alert_type='detected')
         
-        for candidate_news in candidates_to_check:
-            self._social_media_job.create_job(self._dao, dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
-            
-            self._fca_job.create_job(
-                self._dao, **dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
         
         
     def _process_labeled_curatorship(self, curated):
@@ -346,18 +362,6 @@ class Interventor(object):
                     self._logger.error(e)
     
     
-    def _build_excel(self, candidates_to_check):
-        """Build an excel file to be sent to FCA
-
-        Args:
-            candidates_to_check (list): list of candidate news to be check
-            
-        Returns:
-            int: id of excel file that has been created
-        """
-        pass
-
-
     def _create_alert_job(self, news, alert_type):
         """Add alerts in social media tasks into jobs queue
 
