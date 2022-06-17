@@ -118,6 +118,7 @@ class InterventorManager(JobManager):
         assign_interventor_jobs_to_pickle_file()
         
         return message
+    
 
     async def run_manager(self) -> str:
         
@@ -165,8 +166,8 @@ class InterventorManager(JobManager):
             
         
         elif config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA:
-            print(f"{config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA.name} ")
-            quit()
+            assign_interventor_jobs_to_pickle_file()
+            return f"Consuming job {config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA.name}, {self.job}"
 
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
@@ -319,33 +320,27 @@ class Interventor(object):
                 error = e.args[0].replace('\n', ' ')
                 self._logger.error(f"News with id {id_news} and FCA's id {id_trusted_agency} already exists in table 'detectenv.checking_outcome', thus violating the unique constraint pair: {error}")
         
-        
-        message = InterventorDAO.build_excel_sheet(candidates_to_check)
+        message, xlsx_path = InterventorDAO.build_excel_sheet(candidates_to_check)
         self._logger.info(message)
-        
-        quit()
-
-        # for candidate_news in candidates_to_check:
-        #     ...
-        
+    
         #! CRIAR ROTINA PARA ENVIO DA PLANILHA POR EMAIL.
         
         with InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA, \
             assign_interventor_jobs_to_pickle_file) as job:
             
-            
             for fca in config.INTERVENTOR.FACT_CHECK_AGENCIES:
+            
+                fca_info = self._dao.get_data_from_agency(fca)
+                payload = str(dict(zip(job[1].payload_keys, [fca_info[1], xlsx_path, len(candidates_id)])))
                 
-                fca_info = self._dao.get_data_from_agency('Boatos.org')
-                fca_email = fca_info[1]
-                
-                email = EmailAPI()
+                id = job[1].create_job(self._dao, payload)
+                self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")
+    
         
-            
-            # self._social_media_job.create_job(self._dao, dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
-            
-            # self._fca_job.create_job(
-            #     self._dao, **dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
+        #! CRIAR JOBS DE ENVIO DE ALERTA PARA O TWITTER.
+        # for candidate_news in candidates_to_check:
+        #     ...
+        
         
         # TODO: implement functions        
         # file_id = self._build_excel(candidates_to_check)

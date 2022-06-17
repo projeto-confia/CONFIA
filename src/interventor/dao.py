@@ -198,7 +198,7 @@ class InterventorDAO(metaclass=Singleton):
         
     
     @staticmethod
-    def build_excel_sheet(candidates_to_check: list[tuple[int, str]]) -> None:
+    def build_excel_sheet(candidates_to_check: list[tuple[int, str]]) -> tuple[str, str]:
         """Build an excel file containing the candidate news to be sent and checked by the FCAs.
 
         Args:
@@ -252,7 +252,7 @@ class InterventorDAO(metaclass=Singleton):
             for row_num in range(3, len(candidates_to_check) + 3):
                 worksheet.set_row(row_num, 35)
                 
-        return f"Planilha de notícias para checagem gerada com sucesso em {file_name}."
+        return f"Spreadsheet containing the candidate news to be sent to FCAs has been generated successfully in {file_name}.", str(file_name.resolve())
         
         
     def persist_excel_in_db(self):

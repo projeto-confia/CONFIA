@@ -151,7 +151,7 @@ class Config(object):
             QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA: {
                 "max_attempts": 5,
                 "periodicity": 3, # in days.
-                "payload_keys": ("news", "alert_type"),
+                "payload_keys": ("fca_email_address", "xlsx_path", "number_of_news_to_send"),
             },
             
             QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA: {
