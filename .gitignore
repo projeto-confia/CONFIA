@@ -145,6 +145,11 @@ cython_debug/
 __pycache__
 
 # dados
+data/excel_sheets_fca/received/
+data/excel_sheets_fca/received/processed/
+data/excel_sheets_fca/to_send/
+data/excel_sheets_fca/to_send/sent/
+data/excel_sheets_fca/to_curator/
 !data/.gitkeep
 !data/excel_sheets_fca/.gitkeep
 !data/excel_sheets_fca/received/.gitkeep
@@ -152,11 +157,6 @@ __pycache__
 !data/excel_sheets_fca/to_send/.gitkeep
 !data/excel_sheets_fca/to_send/sent/.gitkeep
 !data/excel_sheets_fca/to_curator/.gitkeep
-data/excel_sheets_fca/received/*.xlsx
-data/excel_sheets_fca/received/processed/*.xlsx
-data/excel_sheets_fca/to_send/*.xlsx
-data/excel_sheets_fca/to_send/sent/*.xlsx
-data/excel_sheets_fca/to_curator/*.xlsx
 
 
 # vscode stuff
