@@ -145,6 +145,7 @@ cython_debug/
 __pycache__
 
 # dados
+
 !data/.gitkeep
 !data/excel_sheets_fca/.gitkeep
 !data/excel_sheets_fca/received/.gitkeep
