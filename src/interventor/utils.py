@@ -54,5 +54,4 @@ def build_excel_sheet(candidates_to_check: list[tuple[int, str]]) -> None:
                 worksheet.set_column(1, 1, 250)
                 worksheet.set_column(2, 3, 30, format)
                 
-        print(df_news)
-        quit()
+        return f"Planilha de notícias para checagem gerada com sucesso em {file_name}."

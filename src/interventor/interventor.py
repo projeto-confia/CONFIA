@@ -323,7 +323,9 @@ class Interventor(object):
         for candidate_news in candidates_to_check:
             ...
         
-        utils.build_excel_sheet(candidates_to_check)
+        self._logger.info(utils.build_excel_sheet(candidates_to_check))
+        
+        #! CRIAR ROTINA PARA ENVIO DA PLANILHA POR EMAIL.
             
             # self._social_media_job.create_job(self._dao, dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
             
