@@ -1,0 +1,169 @@
+# system configuration parameters
+
+from dataclasses import dataclass
+from enum import Enum, auto
+
+class Config(object):
+    
+    # APIs' addresses
+    @dataclass(frozen=True)
+    class CONFIA_API:
+        SITE_URL_HMG = 'https://hmg.projetoconfia.info/fake-news-detectadas/'
+        SITE_URL_PRD = 'https://projetoconfia.info/fake-news-detectadas/'
+        CMS_URL      = 'http://confia-api-hmg.herokuapp.com/' # incluir '/admin' para acesso manual às fake news postadas no CMS.
+    
+
+    # logging
+    @dataclass(frozen=True)
+    class LOGGING(object):
+        VERBOSE = False
+        SMTP_LOG = False
+        AUTOMATA_FILE_PATH  = 'logs/automata.log'
+        SCHEDULER_FILE_PATH = 'logs/scheduler.log'
+        NAME = 'automata'
+    
+
+    # system
+    @dataclass(frozen=True)
+    class STATUS(object):
+        STOPPED = 0
+        RUNNING = 1
+        ERROR   = 2
+    
+
+    # engine
+    @dataclass(frozen=True)
+    class ENGINE(object):
+        FREQUENCY = 21600  # 21.600 seconds == 6 hours
+        MONITOR_ACTIVATED = True
+        FACT_CHECK_MANAGER_ACTIVATED = True
+        DETECTOR_ACTIVATED = True
+        INTERVENTOR_ACTIVATED = True
+        SCRAPING_ACTIVATED = True
+
+        
+    # monitor
+    @dataclass(frozen=True)
+    class MONITOR(object):
+        STREAM_FILTER_OF_SHARES = 0
+        STREAM_TIME = 1200  # 1.200 seconds == 20 minutes
+        SEARCH_TAGS = ["COVID", "covid", "Covid",
+                       "CORONAVIRUS", "Coronavirus", "coronavirus",
+                       "CORONAVÍRUS", "Coronavírus", "coronavírus",
+                       "COVID-19", "Covid-19", "covid-19",
+                       "VACINA", "Vacina", "vacina", 
+                       "PANDEMIA", "pandemia", "Pandemia",
+                       "PFIZER", "Pfizer", "pfizer", 
+                       "CORONAVAC", "coronavac", "Coronavac", "CoronaVac",
+                       "JOHNSON", "johnson", "Johnson",
+                       "OXFORD", "oxford", "Oxford",
+                       "ASTRAZENECA", "astrazeneca", "Astrazeneca", "AstraZeneca",
+                       "SPUTINIK", "sputinik", "Sputinik"]
+        WINDOW_SIZE = 30
+
+
+    # detector
+    @dataclass(frozen=True)
+    class DETECTOR(object):
+        TRAIN_ICS = False
+
+
+    # interventor
+    @dataclass(frozen=True)
+    class INTERVENTOR(object):
+        PATH_NEWS_TO_SEND_AS_EXCEL_SHEET_TO_FCAs = "src/data/excel_sheets_fca/to_send"
+        PATH_NEWS_SENT_AS_EXCEL_SHEET_TO_FCAs = "src/data/excel_sheets_fca/sent"
+        WINDOW_SIZE = 7
+        PROB_CLASSIF_THRESHOLD = 0.9
+        NUM_NEWS_TO_SELECT = 4
+        CURATOR = True
+        SOCIAL_MEDIA_ALERT_ACTIVATE = False
+
+
+    @dataclass(frozen=True)
+    class FCMANAGER(object):
+        SOCIAL_MEDIA_ALERT_ACTIVATE = False
+
+
+    # e-mail account
+    @dataclass(frozen=True)
+    class EMAIL(object):
+        ACCOUNT = 'account_name@server.com'
+        PASSWORD = 'there_is_no_spoon'
+
+
+    # twitter credentials
+    @dataclass(frozen=True)
+    class TWITTER_CREDENTIALS:
+        CONSUMER_KEY = "consumer_key_here"
+        CONSUMER_SECRET = "consumer_secret_here"
+        ACCESS_TOKEN = "access_token_here"
+        ACCESS_TOKEN_SECRET = "access_token_secret_here"
+
+
+    @dataclass(frozen=True)
+    class TWITTER_SETTINGS:
+        TWEET_MAX_CHARS = 280
+        USERNAME = "@ProjetoConfia"
+
+        
+    # text preprocessor
+    @dataclass(frozen=True)
+    class TEXT_PREPROCESSOR:
+        DEFAULT_THRESHOLD = 70
+
+
+    @dataclass(frozen=True)
+    class DATABASE:
+        HOST = 'localhost'
+        PORT = 'port_here'
+        NAME = 'db_name_here'
+        USER = 'db_user_here'
+        PASSWORD = 'db_user_password_here'
+
+
+    @dataclass(frozen=True)
+    class SCHEDULE:
+        """Class responsible for defining the configuration parameters for each scheduled job that will be persisted and consumed from AUTOMATA.
+        """
+        
+        INTERVENTOR_JOBS_FILE = 'jobs/interventor_jobs.pkl'
+        FCMANAGER_JOBS_FILE   = 'jobs/fcmanager_jobs.pkl'
+        
+        class QUEUE(Enum):
+            """
+            IMPORTANT: when defining a new queue, please create it with a prefix named after the corresponding module which it refers to. Follow the examples below already defined.
+            """
+            
+            INTERVENTOR_SEND_NEWS_TO_FCA = auto()
+            INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA = auto()
+            FCAMANAGER_RECEIVE_LABELED_NEWS_IN_XLSX = auto() #! test purposes only.
+        
+        """For each schedule type, the following parameters were defined:
+            - max_attempts: the maximum number of attempts before considering the job a failed job;
+            
+            - periodicity: when the scheduler will trigger the job and consume it based on its date of creation that is persisted in Job/Failed_Job tables;
+            
+            - payload_keys: the keys that will keep track of their corresponding information in JSON format.
+        """
+        SCHEDULE_PARAMS = {
+            
+            QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA: {
+                "max_attempts": 5,
+                "periodicity": 3, # in days.
+                "payload_keys": ("news", "alert_type"),
+            },
+            
+            QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA: {
+                "max_attempts": 5,
+                "periodicity": 1, # in days.
+                "payload_keys": ("title", "slug", "content"),
+            },
+            
+            #! test purposes only.
+            QUEUE.FCAMANAGER_RECEIVE_LABELED_NEWS_IN_XLSX: {
+                "max_attempts": 4,
+                "periodicity": 2, # in days.
+                "payload_keys": ("news", "label"),
+            }
+        }
