@@ -1,6 +1,5 @@
 from enum import Enum, auto
 from typing import Callable
-from src.interventor import utils
 from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
@@ -312,6 +311,7 @@ class Interventor(object):
         id_trusted_agency,_,_,_ = self._dao.get_data_from_agency('Boatos.org')
         
         for id_news in candidates_id:
+            
             try:
                 self._dao.persist_candidates_to_check(id_news, id_trusted_agency)
             
@@ -319,13 +319,28 @@ class Interventor(object):
                 error = e.args[0].replace('\n', ' ')
                 self._logger.error(f"News with id {id_news} and FCA's id {id_trusted_agency} already exists in table 'detectenv.checking_outcome', thus violating the unique constraint pair: {error}")
         
-        #! MONTAR PLANILHA AQUI!
-        for candidate_news in candidates_to_check:
-            ...
         
-        self._logger.info(utils.build_excel_sheet(candidates_to_check))
+        message = InterventorDAO.build_excel_sheet(candidates_to_check)
+        self._logger.info(message)
+        
+        quit()
+
+        # for candidate_news in candidates_to_check:
+        #     ...
         
         #! CRIAR ROTINA PARA ENVIO DA PLANILHA POR EMAIL.
+        
+        with InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA, \
+            assign_interventor_jobs_to_pickle_file) as job:
+            
+            
+            for fca in config.INTERVENTOR.FACT_CHECK_AGENCIES:
+                
+                fca_info = self._dao.get_data_from_agency('Boatos.org')
+                fca_email = fca_info[1]
+                
+                email = EmailAPI()
+        
             
             # self._social_media_job.create_job(self._dao, dict(zip(self._social_media_job.payload_keys, (candidate_news, SocialMediaAlertType.DETECTADO.name))))
             

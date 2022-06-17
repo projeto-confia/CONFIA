@@ -1,8 +1,10 @@
 import os, shutil
 import xlsxwriter
+import numpy as np
 import pandas as pd
-from jobs.job import Job
 from typing import List
+from pathlib import Path
+from jobs.job import Job
 from datetime import datetime
 from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
@@ -33,7 +35,6 @@ class InterventorDAO(metaclass=Singleton):
         self._excel_filepath_sent = os.path.join('src', 'data', 'acf', 'to_send', 'sent')
         self._excel_filepath_to_curator = os.path.join('src', 'data', 'acf', 'to_curator', 'confia.xlsx')
         self._curator = config.INTERVENTOR.CURATOR
-        self._workbook = None
     
     
     def select_news_to_be_verified(self,
@@ -196,30 +197,62 @@ class InterventorDAO(metaclass=Singleton):
             raise
         
     
-    def get_workbook(self):
-        try:
-            if not self._workbook:
-                path = self.excel_filepath_to_send if not self._curator else self._excel_filepath_to_curator
-                workbook = xlsxwriter.Workbook(path)
-                bold = workbook.add_format({'bold': True})
-                text_wrap = workbook.add_format({'text_wrap': True})
-                worksheet = workbook.add_worksheet('planilha1')
-                worksheet.set_column(1, 1, 100, text_wrap)
-                worksheet.set_column(2, 2, 20, text_wrap)
-                worksheet.set_column(3, 3, 100, text_wrap)
-                worksheet.write(0, 0, 'Id', bold)
-                worksheet.write(0, 1, 'Texto', bold)
-                worksheet.write(0, 2, 'Checagem', bold)
-                worksheet.write(0, 3, 'Link', bold)
-                self._workbook = workbook
-            return self._workbook
-        except:
-            raise
+    @staticmethod
+    def build_excel_sheet(candidates_to_check: list[tuple[int, str]]) -> None:
+        """Build an excel file containing the candidate news to be sent and checked by the FCAs.
+
+        Args:
+            candidates_to_check (list[tuple[int, str]): list of candidate news to be checked.
+        """
+        file_name = Path(f"{config.INTERVENTOR.PATH_NEWS_TO_SEND_AS_EXCEL_SHEET_TO_FCAs}", f"{datetime.strftime(datetime.now(), '%Y-%m-%d')}_noticias_candidatas_para_ACF.xlsx")
         
+        df_news = pd.DataFrame(candidates_to_check, columns=["identificador", "noticia_a_ser_checada"])
+        df_news["É Fake? (Sim/Não)"] = np.NaN
+        df_news["Link ou referência da ACF"] = np.NaN
         
-    def close_workbook(self):
-        self._workbook.close()
-        self._workbook = None
+        df_news.rename(columns={"identificador": "Identificador", "noticia_a_ser_checada": "Notícia a ser checada"}, inplace=True)
+        
+        sheet_name = "Noticias para Checagem"
+        
+        with pd.ExcelWriter(file_name, engine='xlsxwriter', mode='w') as writer:
+            df_news.to_excel(writer, sheet_name=sheet_name, startrow=2, index=False)
+
+            workbook = writer.book
+            worksheet = writer.sheets[sheet_name]
+            
+            # add the title to the excel.
+            worksheet.write(0,0, f"NOTÍCIAS PARA CHECAGEM - {datetime.strftime(datetime.now(), '%d/%m/%Y')}", \
+                workbook.add_format({'bold': True, 'font_size': 14, 'align': 'center'}))
+            
+            # format main header
+            merge_format = workbook.add_format({'bold': 1,'border': 1,'align': 'center','valign': 'vcenter', 'font_size': 14, 'fg_color': '#FDE9D9'})
+            
+            worksheet.merge_range('A1:D2', f"NOTÍCIAS PARA CHECAGEM - {datetime.strftime(datetime.now(), '%d/%m/%Y')}", merge_format)
+            
+            # formats the header of the excel.
+            header_format = workbook.add_format({'bold': True, 'font_size': 12, 'align': 'center', 'valign': 'vcenter', 'border': 1})
+            
+            for col_num, value in enumerate(df_news.columns.values):
+                worksheet.write(2, col_num, value, header_format)
+                
+            # add border to the table.
+            border_fmt = workbook.add_format({'bottom':1, 'top':1, 'left':1, 'right':1})
+            worksheet.conditional_format(xlsxwriter.utility.xl_range(0, 0, len(df_news)+2, len(df_news.columns)-1), {'type': 'no_errors', 'format': border_fmt})
+            
+            # center the values of the worksheet, except the second.
+            format = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+            format_news_col = workbook.add_format({'align': 'left', 'text_wrap': True, 'valign': 'vcenter'})
+            
+            # set column widths.
+            worksheet.set_column(0, 0, 16, format)
+            worksheet.set_column(1, 1, 125, format_news_col)
+            worksheet.set_column(2, 3, 30, format)
+            
+            # set row heights.
+            for row_num in range(3, len(candidates_to_check) + 3):
+                worksheet.set_row(row_num, 35)
+                
+        return f"Planilha de notícias para checagem gerada com sucesso em {file_name}."
         
         
     def persist_excel_in_db(self):
