@@ -1,5 +1,5 @@
 from src.config import Config as config
-import smtplib, ssl
+import smtplib, ssl, os.path
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -67,10 +67,7 @@ class EmailAPI(object):
                 encoders.encode_base64(part)
                 
                 # Add header as key/value pair to attachment part
-                part.add_header(
-                    "Content-Disposition",
-                    f"attachment; filename= {filename}",
-                )
+                part.add_header("Content-Disposition", "attachment", filename=os.path.basename(filename))
                 # Add attachment to message and convert message to string
                 message.attach(part)
         
