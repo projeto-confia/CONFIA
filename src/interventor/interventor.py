@@ -172,7 +172,7 @@ class InterventorManager(JobManager):
                 body = f"Prezado(a),\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem as notícias contidas nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
                 
                 email_manager = EmailAPI()
-                email_manager.send(to_whom=fca_email_address, text_subject=f"Remessa de {number_of_news_to_send} possíveis fake news", text_message=body, attachment_list=[xlsx_path])
+                email_manager.send(to_whom=fca_email_address, text_subject=f"Remessa de {number_of_news_to_send} possíveis Fake News", text_message=body, attachment_list=[xlsx_path])
                 
                 deleted_job = self.dao.delete_interventor_job(self.get_id_job)
                 message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully.\n\n"
