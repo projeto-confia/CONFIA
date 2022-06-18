@@ -24,7 +24,7 @@ class FCManager(JobManager):
         super().__init__(job, file_path)
     
 
-    def check_number_of_max_attempts(self) -> bool:
+    def exceeded_number_of_max_attempts(self) -> bool:
         pass
 
 

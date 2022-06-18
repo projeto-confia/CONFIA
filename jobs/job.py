@@ -77,7 +77,7 @@ class JobManager(abc.ABC):
     
     
     @abc.abstractmethod
-    def check_number_of_max_attempts(self) -> bool:
+    def exceeded_number_of_max_attempts(self) -> bool:
         """Checks whether the number of attempts has exceeded.
 
         Returns:

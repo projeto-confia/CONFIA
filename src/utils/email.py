@@ -15,15 +15,16 @@ class EmailAPI(object):
         self._sender_name = 'Projeto CONFIA'
         
         
-    def send(self, to_list, text_subject, text_message=None, attach_list=None, cc_list=None, bcc_list=None):
+    def send(self, to_whom : list[str], text_subject: str, text_message : str = None, \
+            attachment_list : list[str] = None, cc_list: list[str] = None, bcc_list: list[str] = None):
         """Sends an email using gmail account
 
         Args:
-            to_list (list): list of recipients
-            text_subject (str): text to be added to email subject field
-            text_message (str, optional): text to be added to email body. Defaults to None.
-            attach_list (list, optional): list of path to files to be attached. Defaults to None.
-            cc_list (list, optional): list of Carbon Copy recipients. Defaults to None.
+            to_whom (list): list of recipients;
+            text_subject (str): text to be added to email subject field;
+            text_message (str, optional): text to be added to email body. Defaults to None;
+            attachment_list (list, optional): list of path to files to be attached. Defaults to None;
+            cc_list (list, optional): list of Carbon Copy recipients. Defaults to None;
             bcc_list (list, optional): list of Blind Carbon Copy recipients. Defaults to None.
         """
         
@@ -37,10 +38,10 @@ class EmailAPI(object):
         # Create a multipart message and set headers
         message = MIMEMultipart()
         message["From"] = self._sender_name
-        message["To"] = ', '.join(to_list)
+        message["To"] = ', '.join(to_whom)
         message["Subject"] = subject
         
-        recipients = to_list
+        recipients = to_whom
         if cc_list:
             message["Cc"] = ', '.join(cc_list)
             recipients = recipients + cc_list
@@ -51,16 +52,20 @@ class EmailAPI(object):
         message.attach(MIMEText(body, "plain"))
         
         # attach files
-        if attach_list:
-            for filename in attach_list:
+        if attachment_list:
+            
+            for filename in attachment_list:
                 # Open file in binary mode
+                
                 with open(filename, "rb") as attachment:
                     # Add file as application/octet-stream
                     # Email client can usually download this automatically as attachment
                     part = MIMEBase("application", "octet-stream")
                     part.set_payload(attachment.read())
+                
                 # Encode file in ASCII characters to send by email    
                 encoders.encode_base64(part)
+                
                 # Add header as key/value pair to attachment part
                 part.add_header(
                     "Content-Disposition",
@@ -70,6 +75,10 @@ class EmailAPI(object):
                 message.attach(part)
         
         context = ssl.create_default_context()
+        
         with smtplib.SMTP_SSL(self._smtp_server, self._ssl_port, context=context) as server:
-            server.login(config.EMAIL.ACCOUNT, config.EMAIL.PASSWORD)
-            server.send_message(message, config.EMAIL.ACCOUNT, recipients)
+            try:
+                server.login(config.EMAIL.ACCOUNT, config.EMAIL.PASSWORD)
+                server.send_message(message, config.EMAIL.ACCOUNT, recipients)
+            except:
+                raise

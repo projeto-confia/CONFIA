@@ -5,6 +5,7 @@ from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
 from psycopg2.errors import UniqueViolation
+from smtplib import SMTPAuthenticationError
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
 import ast, logging, pickle, src.interventor.endpoints as endpoints
@@ -18,6 +19,11 @@ class SocialMediaAlertType(Enum):
     DETECTADO = auto()
     CONFIRMADO = auto()
     SIMILARIDADE = auto()
+    
+
+class ExceededNumberOfAttempts(Exception):
+    def __init__(self, message):
+        self.message = message
     
 
 def assign_interventor_jobs_to_pickle_file() -> None:
@@ -77,7 +83,7 @@ class InterventorManager(JobManager):
         self.dao = InterventorDAO()
 
     
-    def check_number_of_max_attempts(self, count: bool = True) -> bool:
+    def exceeded_number_of_max_attempts(self, count: bool = True) -> bool:
         
         if count:
             self.job.__dict__["attempts"] += 1
@@ -90,7 +96,7 @@ class InterventorManager(JobManager):
 
     def manage_failed_job(self) -> str:
         
-        has_exceeded = self.check_number_of_max_attempts()
+        has_exceeded = self.exceeded_number_of_max_attempts()
         attempts = self.job.__dict__["attempts"]
         max_attempts = self.job.__dict__["max_attempts"]
         
@@ -99,24 +105,13 @@ class InterventorManager(JobManager):
             message = f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
             
         else:
-            first_time: bool = False
-            try:
-                _ = self.dao.get_failed_interventor_job(self.get_id_job)
-            
-            except IndexError:
-                id_failed_job = self.dao.create_interventor_failed_job(self.job)
-                first_time = True
-            
-            if not first_time:
-                self.dao.update_number_of_attempts_failed_job(self.job)
-                message = f"Interventor's failed job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled."
-            
-            else:
-                message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to the Failed Jobs table with id {id_failed_job[0]}."
-                self.dao.delete_interventor_job(self.get_id_job)
+            id_failed_job = self.dao.create_interventor_failed_job(self.job)
+    
+            message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to the Failed Jobs table with id {id_failed_job[0]}."
+    
+            self.dao.delete_interventor_job(self.get_id_job)
 
         assign_interventor_jobs_to_pickle_file()
-        
         return message
     
 
@@ -128,13 +123,11 @@ class InterventorManager(JobManager):
                 return "AUTOMATA is set to do not send alerts to social media."
             
             try:
-                if not self.check_number_of_max_attempts(False):
+                if not self.exceeded_number_of_max_attempts(False):
                     deleted_job = self.dao.get_interventor_job(self.get_id_job)
                     payload = payload = ast.literal_eval(deleted_job[2])
-                
                 else:
-                    deleted_job = self.dao.get_failed_interventor_job(self.get_id_job)
-                    payload = payload = ast.literal_eval(deleted_job[3])
+                    raise ExceededNumberOfAttempts(f"The number of attempts of job {self.job.id_job} has been exceeded.")
                 
                 title = payload["title"]
                 content = payload["content"]
@@ -145,17 +138,13 @@ class InterventorManager(JobManager):
                 tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
                 message = self._twitter_api.tweet(tweet)
                 
-                if not self.check_number_of_max_attempts(False):
-                    deleted_job = self.dao.delete_interventor_job(self.get_id_job)
-                    message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
-                else:
-                    message = f"Job {deleted_job[2]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
-                    deleted_job = self.dao.delete_interventor_failed_job(self.get_id_job)
+                deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+                message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
                     
                 assign_interventor_jobs_to_pickle_file()
                 return message
             
-            except endpoints.InvalidResponseError as e:
+            except (endpoints.InvalidResponseError, ExceededNumberOfAttempts) as e:
                 self.job.error_message = e
                 raise Exception(e)
             
@@ -166,9 +155,40 @@ class InterventorManager(JobManager):
             
         
         elif config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA:
-            assign_interventor_jobs_to_pickle_file()
-            return f"Consuming job {config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA.name}, {self.job}"
-
+            
+            try:
+                if not self.exceeded_number_of_max_attempts(False):
+                    deleted_job = self.dao.get_interventor_job(self.get_id_job)
+                    payload = payload = ast.literal_eval(deleted_job[2])
+                else:
+                    raise ExceededNumberOfAttempts(f"The number of attempts of job {self.job.id_job} has been exceeded.")
+                
+                payload = ast.literal_eval(self.job.__dict__["payload"])
+                
+                number_of_news_to_send = payload["number_of_news_to_send"]
+                fca_email_address = payload["fca_email_address"]
+                xlsx_path = payload["xlsx_path"]
+                
+                body = f"Prezado(a),\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem as notícias contidas nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
+                
+                email_manager = EmailAPI()
+                email_manager.send(to_whom=fca_email_address, text_subject=f"Remessa de {number_of_news_to_send} possíveis fake news", text_message=body, attachment_list=[xlsx_path])
+                
+                deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+                message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully.\n\n"
+                    
+                assign_interventor_jobs_to_pickle_file()
+                return message
+        
+            except (SMTPAuthenticationError, ExceededNumberOfAttempts) as e:
+                self.job.error_message = e
+                raise Exception(e)
+            
+            except Exception as e:
+                error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
+                self.job.error_message = error
+                raise Exception(error)
+            
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
 class Interventor(object):
