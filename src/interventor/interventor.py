@@ -102,7 +102,7 @@ class InterventorManager(JobManager):
         
         if not has_exceeded:
             self.dao.update_number_of_attempts_job(self.job)
-            message = f"Interventor's job Nº {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
+            message = f"Interventor's job {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
             
         else:
             id_failed_job = self.dao.create_interventor_failed_job(self.job)
@@ -342,8 +342,6 @@ class Interventor(object):
         
         message, xlsx_path = InterventorDAO.build_excel_sheet(candidates_to_check)
         self._logger.info(message)
-    
-        #! CRIAR ROTINA PARA ENVIO DA PLANILHA POR EMAIL.
         
         with InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA, \
             assign_interventor_jobs_to_pickle_file) as job:
@@ -392,23 +390,6 @@ class Interventor(object):
             
                 except Exception as e:
                     self._logger.error(e)
-    
-    
-    def _create_alert_job(self, news, alert_type):
-        """Add alerts in social media tasks into jobs queue
-
-        Args:
-            news (list): list of news
-            alert_type (str): {'similar', 'detected', 'labeled'} type of alert.
-        """
-        
-        assert alert_type in ('similar', 'detected', 'labeled')
-        # TODO: build specific module in utils package to register jobs
-        pass
-    
-    
-    def _create_send_job(self, file_id):
-        pass
     
     
     def _process_curatorship(self):
