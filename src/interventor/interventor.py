@@ -11,9 +11,16 @@ from src.utils.text_preprocessing import TextPreprocessing
 import ast, logging, pickle, src.interventor.endpoints as endpoints
 
 #! TAREFAS A SEREM CONCLUÍDAS
-# def run(self):
-#     # Executar queue de envios para ACF
-#     # Executar queue de alertas na rede social
+    # 1. testar a funcionalide de tweets por similaridade;
+    
+    # 2. mover as planilhas enviadas por email para a pasta 'sent';
+    
+    # 3. verificar o motivo do campo 'error_message' na tabela 'failed_jobs' apresentar uma mensage estranha quando ocorre um erro de credenciais do Gmail;
+    
+    # 4. deixar de versionar as planilhas elaboradas para as ACFs por meio do .gitignore;
+    
+    # 5. montar um relatório do Schedule com periodicidade semanal dos jobs que falharam e que foram consumidos com sucesso.
+    
 
 class SocialMediaAlertType(Enum):
     DETECTADO = auto()
@@ -288,8 +295,8 @@ class Interventor(object):
         Returns:
             tuple: (list of similars, list of not similars)
         """
-        #! VERIFICAR ESSE CÓDIGO.
         
+        #! VERIFICAR ESSE CÓDIGO.
         similars, not_similars = list(), list()
         for i, (_, text_news) in enumerate(news):
             text_news_cleaned = self._text_preprocessor.text_cleaning(text_news)
@@ -345,7 +352,6 @@ class Interventor(object):
                     self._logger.error(e)
     
     
-    #! TESTAR ESSE CÓDIGO.
     def _process_candidates_to_check(self, candidates_to_check):
         self._logger.info('Processing news to be checked...')
         
@@ -374,6 +380,7 @@ class Interventor(object):
         message, xlsx_path = InterventorDAO.build_excel_sheet([candidate[:2] for candidate in candidates_to_check])
         self._logger.info(message)
         
+        # cria job para envio de email para as ACFs.
         with InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA, \
             assign_interventor_jobs_to_pickle_file) as job:
             
@@ -386,6 +393,7 @@ class Interventor(object):
                 self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")
     
         
+        # cria jobs de alertas para a rede social das notícias enviadas por email para as FCAs.
         for candidate_news in candidates_to_check:
             
             with InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA, \
