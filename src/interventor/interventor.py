@@ -119,76 +119,107 @@ class InterventorManager(JobManager):
         
         if config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA:
             
-            if not config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
-                return "AUTOMATA is set to do not send alerts to social media."
-            
-            try:
-                if not self.exceeded_number_of_max_attempts(False):
-                    deleted_job = self.dao.get_interventor_job(self.get_id_job)
-                    payload = payload = ast.literal_eval(deleted_job[2])
-                else:
-                    raise ExceededNumberOfAttempts(f"The number of attempts of job {self.job.id_job} has been exceeded.")
-                
-                title = payload["title"]
-                content = payload["content"]
-                
-                request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
-                slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
-                
-                tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
-                message = self._twitter_api.tweet(tweet)
-                
-                deleted_job = self.dao.delete_interventor_job(self.get_id_job)
-                message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
-                    
-                assign_interventor_jobs_to_pickle_file()
-                return message
-            
-            except (endpoints.InvalidResponseError, ExceededNumberOfAttempts) as e:
-                self.job.error_message = e
-                raise Exception(e)
-            
-            except Exception as e:
-                error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
-                self.job.error_message = error
-                raise Exception(error)
-            
+            return await self.__send_alerts_to_social_media()            
         
         elif config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA:
             
-            try:
-                if not self.exceeded_number_of_max_attempts(False):
-                    deleted_job = self.dao.get_interventor_job(self.get_id_job)
-                    payload = payload = ast.literal_eval(deleted_job[2])
-                else:
-                    raise ExceededNumberOfAttempts(f"The number of attempts of job {self.job.id_job} has been exceeded.")
-                
-                payload = ast.literal_eval(self.job.__dict__["payload"])
-                
-                number_of_news_to_send = payload["number_of_news_to_send"]
-                fca_email_address = payload["fca_email_address"]
-                xlsx_path = payload["xlsx_path"]
-                
-                body = f"Prezado(a),\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem as notícias contidas nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
-                
-                email_manager = EmailAPI()
-                email_manager.send(to_whom=[fca_email_address], text_subject=f"Remessa de {number_of_news_to_send} possíveis Fake News", text_message=body, attachment_list=[xlsx_path])
-                
-                deleted_job = self.dao.delete_interventor_job(self.get_id_job)
-                message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully.\n\n"
-                    
-                assign_interventor_jobs_to_pickle_file()
-                return message
+            return await self.__send_email_to_fca()
         
-            except (SMTPAuthenticationError, ExceededNumberOfAttempts) as e:
-                self.job.error_message = e
-                raise Exception(e)
+
+    async def __send_email_to_fca(self) -> str:
+        
+        """Auxiliary function to send an email to the FCA.
+
+        Raises:
+            ExceededNumberOfAttempts: when the number of attempts of the job has been exceeded.
+            SMTPAuthenticationError: when occurred an error when trying to authenticate with the SMTP server.
+            Exception: when an error occurred when trying to delete the job from the database.
+
+        Returns:
+            str: a message with the result of the execution of the job.
+        """
+        
+        try:
+            if not self.exceeded_number_of_max_attempts(False):
+                deleted_job = self.dao.get_interventor_job(self.get_id_job)
+                payload = payload = ast.literal_eval(deleted_job[2])
+            else:
+                raise ExceededNumberOfAttempts(f"The number of attempts of job {self.job.id_job} has been exceeded.")
             
-            except Exception as e:
-                error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
-                self.job.error_message = error
-                raise Exception(error)
+            payload = ast.literal_eval(self.job.__dict__["payload"])
             
+            number_of_news_to_send = payload["number_of_news_to_send"]
+            fca_email_address = payload["fca_email_address"]
+            xlsx_path = payload["xlsx_path"]
+            
+            body = f"Prezados(as),\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem as notícias contidas nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
+            
+            email_manager = EmailAPI()
+            email_manager.send(to_whom=[fca_email_address], text_subject=f"Remessa de {number_of_news_to_send} possíveis Fake News", text_message=body, attachment_list=[xlsx_path])
+            
+            deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+            message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully.\n\n"
+                
+            assign_interventor_jobs_to_pickle_file()
+            return message
+    
+        except (SMTPAuthenticationError, ExceededNumberOfAttempts) as e:
+            self.job.error_message = e
+            raise Exception(e)
+        
+        except Exception as e:
+            error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
+            self.job.error_message = error
+            raise Exception(error)
+        
+    
+    async def __send_alerts_to_social_media(self) -> str:
+        
+        """Auxiliary function to send alerts to social media.
+
+        Raises:
+            ExceededNumberOfAttempts: when the number of attempts of the job has been exceeded.
+            endpoint.InvalidResponseError: when the response from the endpoint is invalid (500).
+            Exception: when an error occurred when trying to delete the job from the database.
+
+        Returns:
+            str: a message with the result of the execution of the job.
+        """
+        
+        if not config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
+            return "AUTOMATA is set to do not send alerts to social media."
+            
+        try:
+            if not self.exceeded_number_of_max_attempts(False):
+                deleted_job = self.dao.get_interventor_job(self.get_id_job)
+                payload = payload = ast.literal_eval(deleted_job[2])
+            else:
+                raise ExceededNumberOfAttempts(f"The number of attempts of job {self.job.id_job} has been exceeded.")
+            
+            title = payload["title"]
+            content = payload["content"]
+            
+            request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
+            slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
+            
+            tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
+            message = self._twitter_api.tweet(tweet)
+            
+            deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+            message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}\n\n"
+                
+            assign_interventor_jobs_to_pickle_file()
+            return message
+        
+        except (endpoints.InvalidResponseError, ExceededNumberOfAttempts) as e:
+            self.job.error_message = e
+            raise Exception(e)
+        
+        except Exception as e:
+            error = f"An error occurred when trying to delete job Nº {self.get_id_job} from database: {e}"
+            self.job.error_message = error
+            raise Exception(error)
+
 
 # TODO: refactor to interface and concrete classes, one concrete for each FCA
 class Interventor(object):
@@ -340,7 +371,7 @@ class Interventor(object):
                 error = e.args[0].replace('\n', ' ')
                 self._logger.error(f"News with id {id_news} and FCA's id {id_trusted_agency} already exists in table 'detectenv.checking_outcome', thus violating the unique constraint pair: {error}")
         
-        message, xlsx_path = InterventorDAO.build_excel_sheet(candidates_to_check)
+        message, xlsx_path = InterventorDAO.build_excel_sheet([candidate[:2] for candidate in candidates_to_check])
         self._logger.info(message)
         
         with InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA, \
@@ -355,18 +386,24 @@ class Interventor(object):
                 self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")
     
         
-        #! CRIAR JOBS DE ENVIO DE ALERTA PARA O TWITTER.
-        # for candidate_news in candidates_to_check:
-        #     ...
-        
-        
-        # TODO: implement functions        
-        # file_id = self._build_excel(candidates_to_check)
-        # self._create_send_job(file_id)
-        # self._create_alert_job(candidates_to_check, alert_type='detected')
-        
-        
-        
+        for candidate_news in candidates_to_check:
+            
+            with InterventorJobFCA(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA, \
+            assign_interventor_jobs_to_pickle_file) as job_media:
+                
+                try:
+                    text_news_cleaned = self._dao.get_clean_text_news_from_id(candidate_news[0])
+                    title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
+                    payload = str(dict(zip(job_media[1].payload_keys, \
+                        (f"⚠️ {SocialMediaAlertType.DETECTADO.name} COMO POSSÍVEL FAKE NEWS - {title}", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
+                    
+                    id = job_media[1].create_job(self._dao, payload)
+                    self._logger.info(f"{job_media[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
+            
+                except Exception as e:
+                    self._logger.error(e)
+                            
+                
     def _process_labeled_curatorship(self, curated):
         
         news = [(c[0], c[3]) for c in curated]
