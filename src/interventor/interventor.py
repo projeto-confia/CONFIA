@@ -143,9 +143,6 @@ class InterventorManager(JobManager):
         Returns:
             str: a message with the result of the execution of the job.
         """
-        
-        if config.INTERVENTOR.CURATORSHIP:
-            return f"Email whose job has nº {self.get_id_job} will not be sent because the curatorship is activated."
             
         try:
             if not self.exceeded_number_of_max_attempts(False):
@@ -162,10 +159,14 @@ class InterventorManager(JobManager):
             
             id_agency, name_agency = self.dao.get_id_and_name_of_trusted_agency_by_its_email_address(fca_email_address)
             
+            subject = f"Remessa de {number_of_news_to_send} Possíveis Fake News" if number_of_news_to_send > 1 \
+                else f"Remessa de {number_of_news_to_send} Possível Fake News"
+            
             body = f"Prezados colaboradores da {name_agency},\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem a veracidade das notícias contidas nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
             
             email_manager = EmailAPI()
-            email_manager.send(to_whom=[fca_email_address], text_subject=f"Remessa de {number_of_news_to_send} possíveis Fake News", text_message=body, attachment_list=[xlsx_path])
+            
+            email_manager.send(to_whom=[fca_email_address], text_subject=subject, text_message=body, attachment_list=[xlsx_path])
             
             deleted_job = self.dao.delete_interventor_job(self.get_id_job)
             send_message = ""            
@@ -374,7 +375,6 @@ class Interventor(object):
         
             if curated:
                 self._process_labeled_curatorship(curated)
-                return
         
             if not candidates_to_check:
                 return
