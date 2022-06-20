@@ -79,7 +79,7 @@ class TwitterAPI(object):
                 {len(text_tweet)}")
             
         self._api.update_status(status=text_tweet)
-        return f"Tweet posted successfully in Twitter."
+        return f"tweet was just posted in Twitter."
         
         
     def fetch_stream(self, tags, stream_time, status_processor):

@@ -1,4 +1,3 @@
-import os, shutil
 import xlsxwriter
 import numpy as np
 import pandas as pd
@@ -6,6 +5,7 @@ from typing import List
 from pathlib import Path
 from jobs.job import Job
 from datetime import datetime
+import os, shutil, pathlib, pickle
 from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
 
@@ -34,7 +34,7 @@ class InterventorDAO(metaclass=Singleton):
         self.excel_filepath_to_send = os.path.join('src', 'data', 'acf', 'to_send', 'confia.xlsx')
         self._excel_filepath_sent = os.path.join('src', 'data', 'acf', 'to_send', 'sent')
         self._excel_filepath_to_curator = os.path.join('src', 'data', 'acf', 'to_curator', 'confia.xlsx')
-        self._curator = config.INTERVENTOR.CURATOR
+        self._curator = config.INTERVENTOR.CURATORSHIP
     
     
     def select_news_to_be_verified(self,
@@ -63,6 +63,7 @@ class InterventorDAO(metaclass=Singleton):
                         where n.datetime_publication > current_date - interval '" + str(window_size) + "' day \
                             and n.ground_truth_label is null \
                             and n.classification_outcome = True \
+                            and co.datetime_sent_for_checking is null \
                             and cur.is_news is null \
                             and n.prob_classification > " + str(prob_classif_threshold) + " \
                         group by n.id_news, n.text_news, n.prob_classification \
@@ -115,6 +116,33 @@ class InterventorDAO(metaclass=Singleton):
         except:
             raise
         
+    
+    def check_whether_there_are_fca_email_jobs_in_pkl(self):
+        
+        pkl_file = pathlib.Path('jobs/interventor_jobs.pkl')
+        
+        if pkl_file.exists():
+            
+            with open(pathlib.Path('jobs/interventor_jobs.pkl'), 'rb') as file:
+                interventor_jobs = pickle.load(file)
+                
+                for _, job_manager in interventor_jobs.items():
+                    if config.SCHEDULE.QUEUE[job_manager.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA:
+                        return True
+        
+        return False
+    
+        
+    def update_the_time_when_the_news_was_sent_to_fca(self, id_news: int, id_trusted_agency: int) -> None:
+        sql_string = "UPDATE detectenv.checking_outcome \
+                        SET datetime_sent_for_checking = %s \
+                        WHERE id_news = %s and id_trusted_agency = %s;"
+        try:
+            with DatabaseWrapper() as db:
+                db.execute(sql_string, (datetime.now(), id_news, id_trusted_agency, ))
+        except:
+            raise
+        
         
     def get_data_from_agency(self, agency_name):
         """Get Trusted Agency data
@@ -132,6 +160,18 @@ class InterventorDAO(metaclass=Singleton):
         try:
             with DatabaseWrapper() as db:
                 record = db.query(sql_string, (agency_name,))
+            return record[0]
+        except:
+            raise
+        
+        
+    def get_id_and_name_of_trusted_agency_by_its_email_address(self, email_address: str) -> int:
+        sql_string = "SELECT id_trusted_agency, name_agency \
+                        FROM detectenv.trusted_agency \
+                        WHERE email_agency = %s;"
+        try:
+            with DatabaseWrapper() as db:
+                record = db.query(sql_string, (email_address,))
             return record[0]
         except:
             raise
@@ -198,13 +238,13 @@ class InterventorDAO(metaclass=Singleton):
         
     
     @staticmethod
-    def build_excel_sheet(candidates_to_check: list[tuple[int, str]]) -> tuple[str, str]:
+    def build_excel_spreadsheet(candidates_to_check: list[tuple[int, str]]) -> tuple[str, str]:
         """Build an excel file containing the candidate news to be sent and checked by the FCAs.
 
         Args:
             candidates_to_check (list[tuple[int, str]): list of candidate news to be checked.
         """
-        file_name = Path(f"{config.INTERVENTOR.PATH_NEWS_TO_SEND_AS_EXCEL_SHEET_TO_FCAs}", f"{datetime.strftime(datetime.now(), '%Y-%m-%d')}_noticias_candidatas_para_ACF.xlsx")
+        file_name = Path(f"{config.INTERVENTOR.PATH_NEWS_TO_SEND_AS_EXCEL_SHEET_TO_FCAs}", f"{datetime.strftime(datetime.now(), '%Y-%m-%d_%H:%M:%S')}_noticias_candidatas_para_ACF.xlsx")
         
         df_news = pd.DataFrame(candidates_to_check, columns=["identificador", "noticia_a_ser_checada"])
         df_news["É Fake? (Sim/Não)"] = np.NaN
@@ -350,7 +390,19 @@ class InterventorDAO(metaclass=Singleton):
         
         except:
             raise
+        
     
+    def get_all_distinct_id_news_from_checking_outcome(self) -> list[int]:
+        try:
+            sql_str = "select distinct id_news from detectenv.checking_outcome;"
+            
+            with DatabaseWrapper() as db:
+                news_ids = db.query(sql_str, ())
+            
+            return news_ids
+        
+        except:
+            raise
     
     def get_interventor_job(self, id_job: int) -> tuple[str]:
         try:

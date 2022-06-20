@@ -78,6 +78,7 @@ class Schedule:
         
                 
 if __name__ == '__main__':
+    
     init_log(verbose=config.LOGGING.VERBOSE)
     Schedule._logger.info('Starting schedule...')
     asyncio.run(Schedule.run())
