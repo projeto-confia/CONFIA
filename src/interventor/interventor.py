@@ -162,7 +162,7 @@ class InterventorManager(JobManager):
             subject = f"Remessa de {number_of_news_to_send} Possíveis Fake News" if number_of_news_to_send > 1 \
                 else f"Remessa de {number_of_news_to_send} Possível Fake News"
             
-            body = f"Prezados colaboradores da {name_agency},\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem a veracidade das notícias contidas nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
+            body = f"Prezados colaboradores da {name_agency},\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícia(s) consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem a veracidade da(s) notícia(s) contida(s) nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
             
             email_manager = EmailAPI()
             
