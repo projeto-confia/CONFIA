@@ -8,7 +8,7 @@ from psycopg2.errors import UniqueViolation
 from smtplib import SMTPAuthenticationError
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
-import ast, logging, pickle, src.interventor.endpoints as endpoints
+import ast, logging, pickle, shutil, src.interventor.endpoints as endpoints
 
 #! TAREFAS A SEREM CONCLUÍDAS
     # 1. testar a funcionalide de tweets por similaridade;
@@ -17,9 +17,7 @@ import ast, logging, pickle, src.interventor.endpoints as endpoints
     
     # 3. verificar o motivo do campo 'error_message' na tabela 'failed_jobs' apresentar uma mensage estranha quando ocorre um erro de credenciais do Gmail;
     
-    # 4. deixar de versionar as planilhas elaboradas para as ACFs por meio do .gitignore;
-    
-    # 5. montar um relatório do Schedule com periodicidade semanal dos jobs que falharam e que foram consumidos com sucesso.
+    # 4. montar um relatório do Schedule com periodicidade semanal dos jobs que falharam e que foram consumidos com sucesso.
     
 
 class SocialMediaAlertType(Enum):
@@ -159,14 +157,17 @@ class InterventorManager(JobManager):
             fca_email_address = payload["fca_email_address"]
             xlsx_path = payload["xlsx_path"]
             
-            body = f"Prezados,\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem as notícias contidas nessa planilha e que a retornem assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
+            body = f"Prezados,\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem a veracidade das notícias contidas nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
             
             email_manager = EmailAPI()
             email_manager.send(to_whom=[fca_email_address], text_subject=f"Remessa de {number_of_news_to_send} possíveis Fake News", text_message=body, attachment_list=[xlsx_path])
             
             deleted_job = self.dao.delete_interventor_job(self.get_id_job)
-            message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully.\n\n"
-                
+            
+            # move spreadsheet to the folder 'sent'
+            shutil.move(xlsx_path, config.INTERVENTOR.PATH_NEWS_SENT_AS_EXCEL_SHEET_TO_FCAs)
+            message = f"Email referred to job {deleted_job[1]} Nº {self.get_id_job} has been sent successfully.\nSpreadsheet {xlsx_path} has been moved to the folder 'sent' for documentation purposes."
+            
             assign_interventor_jobs_to_pickle_file()
             return message
     
