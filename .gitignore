@@ -8,6 +8,7 @@ __pycache__/
 
 # File extensions
 *.pkl
+*.xlsx
 
 # Distribution / packaging
 .Python
