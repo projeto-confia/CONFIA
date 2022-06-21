@@ -11,13 +11,8 @@ from src.utils.text_preprocessing import TextPreprocessing
 import ast, logging, pickle, shutil, src.interventor.endpoints as endpoints
 
 #! TAREFAS A SEREM CONCLUÍDAS
-    # 1. verificar o fluxograma do módulo de intervenção e consertar o bug entre o agendamento dos jobs dos métodos '_process_candidates_to_check' e '_process_labeled_curatorship';
-
-    # 2. testar a funcionalide de tweets por similaridade;
     
-    # 3. verificar o motivo do campo 'error_message' na tabela 'failed_jobs' apresentar uma mensagem estranha quando ocorre um erro de credenciais do Gmail;
-    
-    # 4. montar um relatório do Schedule com periodicidade semanal dos jobs que falharam e que foram consumidos com sucesso.
+    # 1. colocar os campos 'id_news' e 'id_news_checked' da tabela 'similarity' como 'UNIQUE'.
     
 
 class SocialMediaAlertType(Enum):
@@ -283,7 +278,7 @@ class Interventor(object):
         classified_as_not_fake = [candidate for candidate in candidates if candidate[2] == False]
         
         if classified_as_not_fake:
-            self._logger.info("Checking the existence of similar news identified as 'fake' but classified as 'not fake' by AUTOMATA.")
+            self._logger.info("Checking the existence of similar news identified as 'fake' by FCAs but classified as 'not fake' by AUTOMATA.")
             self._persist_news(classified_as_not_fake)           
         
         if not classified_as_fake:
@@ -291,7 +286,7 @@ class Interventor(object):
             return
         
         if config.INTERVENTOR.CURATORSHIP:
-            self._persist_news_to_curatorship(classified_as_fake)
+            self._persist_news_to_curatorship(classified_as_fake + classified_as_not_fake)
             return
         
         self._persist_news(classified_as_fake)
@@ -308,6 +303,7 @@ class Interventor(object):
             candidates_to_check = [curation[:4] for curation in curations if not curation[4]]
             
             if similars:
+                similars = [similar[:1] + (None,) + similar[1:] for similar in similars]
                 self._process_similars(similars)
                 
             if candidates_to_check:
@@ -325,12 +321,14 @@ class Interventor(object):
         similars, candidates_to_check = self._split_similar_news(news)
         candidates_to_check = [c + (None,) for c in candidates_to_check]
         
-        try: # só pode haver um 'id_news' único na tabela 'curatorship'.
-            self._dao.persist_to_curatorship(similars + candidates_to_check)
-            
-        except UniqueViolation as e:
-            error = e.args[0].replace('\n', ' ')
-            self._logger.error(f"An error occurred when trying to persist novel news to curatorship: {error}")
+        for id_news, _, _, id_news_checked in similars + candidates_to_check:
+        
+            try: # só pode haver um 'id_news' único na tabela 'curatorship'.
+                self._dao.persist_to_curatorship(id_news, id_news_checked)
+                
+            except UniqueViolation as e:
+                error = e.args[0].replace('\n', ' ')
+                self._logger.error(f"An error occurred when trying to persist novel news to curatorship: {error}")
         
 
     def _persist_news(self, news):
@@ -351,7 +349,6 @@ class Interventor(object):
             self._process_candidates_to_check(candidates_to_check)
     
     
-    #! Testar esse código.
     def _process_similars(self, similars):
         
         self._logger.info('Processing similar news...')
@@ -370,7 +367,7 @@ class Interventor(object):
                     title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
                     
                     payload = str(dict(zip(job[1].payload_keys, \
-                        (f"❌ Notícia identificada como fake news por {SocialMediaAlertType.SIMILARIDADE.name} no site da agência {agency_name} - {title}...", "", f"Saiba mais em: {news_url}"))))
+                        (f"❌ NOTÍCIA IDENTIFICADA COMO FAKE NEWS POR {SocialMediaAlertType.SIMILARIDADE.name} NO SITE DA AGÊNCIA {agency_name} - {title}...", "", f"Saiba mais em: {news_url}"))))
                     
                     id = job[1].create_job(self._dao, payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
@@ -456,7 +453,6 @@ class Interventor(object):
             tuple: (list of similars, list of not similars)
         """
         
-        #! VERIFICAR ESSE CÓDIGO.
         similars, not_similars = list(), list()
         
         for i, (_, text_news, _) in enumerate(news):
@@ -489,7 +485,7 @@ class Interventor(object):
                     text_news_cleaned = self._dao.get_clean_text_news_from_id(news)
                     title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
                     payload = str(dict(zip(job[1].payload_keys, \
-                        (f"❗ {SocialMediaAlertType.CONFIRMADO.name} COMO FAKE NEWS - {title}...", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
+                        (f"❗ {SocialMediaAlertType.CONFIRMADO.name} COMO FAKE NEWS POR CURADORIA - {title}...", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
                     
                     id = job[1].create_job(self._dao, payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
