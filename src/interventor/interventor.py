@@ -162,8 +162,8 @@ class InterventorManager(JobManager):
             subject = f"Remessa de {number_of_news_to_send} Possíveis Fake News" if number_of_news_to_send > 1 \
                 else f"Remessa de {number_of_news_to_send} Possível Fake News"
             
-            body = f"Prezados colaboradores da {name_agency},\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem a veracidade das respectivas notícias contidas nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA." if number_of_news_to_send > 1 \
-                else f"Prezados colaboradores da {name_agency},\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícia considerada pelo AUTOMATA como uma possível fake news. Solicitamos, por gentileza, que averiguem a veracidade da respectiva notícia contida nessa planilha e que a retorne assim que possível com os devidos campos em branco preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
+            body = f"Prezados colaboradores da {name_agency},\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícias consideradas pelo AUTOMATA como possíveis fake news. Solicitamos, por gentileza, que averiguem a veracidade das respectivas notícias contidas nessa planilha, e que a retorne assim que possível com os campos em branco devidamente preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA." if number_of_news_to_send > 1 \
+                else f"Prezados colaboradores da {name_agency},\n\nsegue em anexo uma planilha contendo {number_of_news_to_send} notícia considerada pelo AUTOMATA como uma possível fake news. Solicitamos, por gentileza, que averiguem a veracidade da respectiva notícia contida nessa planilha, e que a retorne assim que possível com os campos em branco devidamente preenchidos.\n\nDesde já, agradecemos pela cooperação.\n\nAtenciosamente,\nEquipe CONFIA."
             
             email_manager = EmailAPI()
             
@@ -223,9 +223,11 @@ class InterventorManager(JobManager):
             
             title = payload["title"]
             content = payload["content"]
+            slug = payload["slug"]
             
-            request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
-            slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
+            if slug:
+                request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
+                slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
             
             tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
             message = self._twitter_api.tweet(tweet)
@@ -254,7 +256,6 @@ class Interventor(object):
         self._dao = InterventorDAO()
         self._twitter_api = TwitterAPI()
         self._text_preprocessor = TextPreprocessing()
-        
         self._all_fca_news = self._get_all_agency_news()
         self._logger = logging.getLogger(config.LOGGING.NAME)
         
@@ -277,15 +278,23 @@ class Interventor(object):
         candidates = self._dao.select_news_to_be_verified(window_size=config.INTERVENTOR.WINDOW_SIZE,
                                                           prob_classif_threshold=config.INTERVENTOR.PROB_CLASSIF_THRESHOLD,
                                                           num_records=config.INTERVENTOR.NUM_NEWS_TO_SELECT)
-        if not candidates:
+        
+        classified_as_fake     = [candidate for candidate in candidates if candidate[2] == True]
+        classified_as_not_fake = [candidate for candidate in candidates if candidate[2] == False]
+        
+        if classified_as_not_fake:
+            self._logger.info("Checking the existence of similar news identified as 'fake' but classified as 'not fake' by AUTOMATA.")
+            self._persist_news(classified_as_not_fake)           
+        
+        if not classified_as_fake:
             self._logger.info('No news to be verified.')
             return
         
         if config.INTERVENTOR.CURATORSHIP:
-            self._persist_news_to_curatorship(candidates)
+            self._persist_news_to_curatorship(classified_as_fake)
             return
         
-        self._persist_news(candidates)
+        self._persist_news(classified_as_fake)
         
     
     #! SEGUNDO MÉTODO A SER EXECUTADO NO MÉTODO RUN().
@@ -335,8 +344,11 @@ class Interventor(object):
         
         self._logger.info('Processing news...')
         similars, candidates_to_check = self._split_similar_news(news)
+        
         self._process_similars(similars)
-        self._process_candidates_to_check(candidates_to_check)
+        
+        if candidates_to_check:
+            self._process_candidates_to_check(candidates_to_check)
     
     
     #! Testar esse código.
@@ -347,15 +359,18 @@ class Interventor(object):
         
         for similar_news in similars:
             
+            id_news = similar_news[0]
+            news_url, agency_name = self._dao.get_agency_name_and_url_of_checked_news(similar_news[3])
+            
             with InterventorJobSocialMedia(config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA, \
                 lambda: assign_interventor_jobs_to_pickle_file()) as job:
                 
                 try:
-                    text_news_cleaned = self._dao.get_clean_text_news_from_id(similar_news)
+                    text_news_cleaned = self._dao.get_clean_text_news_from_id(id_news)
                     title = text_news_cleaned.upper() if len(text_news_cleaned) < 6 else " ".join(text_news_cleaned.split()[:6]).upper()
                     
                     payload = str(dict(zip(job[1].payload_keys, \
-                        (f"⚠️ ALERTA de {SocialMediaAlertType.SIMILARIDADE.name} - {title}...", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
+                        (f"❌ Notícia identificada como fake news por {SocialMediaAlertType.SIMILARIDADE.name} no site da agência {agency_name} - {title}...", "", f"Saiba mais em: {news_url}"))))
                     
                     id = job[1].create_job(self._dao, payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
@@ -444,7 +459,7 @@ class Interventor(object):
         #! VERIFICAR ESSE CÓDIGO.
         similars, not_similars = list(), list()
         
-        for i, (_, text_news) in enumerate(news):
+        for i, (_, text_news, _) in enumerate(news):
             text_news_cleaned = self._text_preprocessor.text_cleaning(text_news)
         
             for id_news_checked, _, _, publication_title_cleaned in self._all_fca_news:

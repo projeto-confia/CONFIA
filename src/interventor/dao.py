@@ -56,13 +56,27 @@ class InterventorDAO(metaclass=Singleton):
             list: list of news
         """
         
-        sql_string =   "select n.id_news, n.text_news \
+        #     sql_string =   "select n.id_news, n.text_news \
+        #                     from detectenv.news n inner join detectenv.post p on p.id_news = n.id_news \
+        #                                         left join detectenv.checking_outcome co on co.id_news = n.id_news \
+        #                                         left join detectenv.curatorship cur on cur.id_news = n.id_news \
+        #                     where n.datetime_publication > current_date - interval '" + str(window_size) + "' day \
+        #                         and n.ground_truth_label is null \
+        #                         and n.classification_outcome = True \
+        #                         and co.datetime_sent_for_checking is null \
+        #                         and cur.is_news is null \
+        #                         and n.prob_classification > " + str(prob_classif_threshold) + " \
+        #                     group by n.id_news, n.text_news, n.prob_classification \
+        #                     order by max(p.num_shares) desc, n.prob_classification desc \
+        #                     limit " + str(num_records) + ";"
+        
+        sql_string =   "select n.id_news, n.text_news, n.classification_outcome \
                         from detectenv.news n inner join detectenv.post p on p.id_news = n.id_news \
                                             left join detectenv.checking_outcome co on co.id_news = n.id_news \
                                             left join detectenv.curatorship cur on cur.id_news = n.id_news \
                         where n.datetime_publication > current_date - interval '" + str(window_size) + "' day \
                             and n.ground_truth_label is null \
-                            and n.classification_outcome = True \
+                            and n.classification_outcome is not null \
                             and co.datetime_sent_for_checking is null \
                             and cur.is_news is null \
                             and n.prob_classification > " + str(prob_classif_threshold) + " \
@@ -99,7 +113,7 @@ class InterventorDAO(metaclass=Singleton):
                         WHERE id_news = %s;"
         try:
             with DatabaseWrapper() as db:
-                for id_news, _, id_news_checked in similars:
+                for id_news, _, _, id_news_checked in similars:
                     db.execute(sql_string_1, (id_news, id_news_checked))
                     db.execute(sql_string_2, (id_news, ))
         except:
@@ -220,7 +234,22 @@ class InterventorDAO(metaclass=Singleton):
         try:
             with DatabaseWrapper() as db:
                 records = db.query(sql_string)
+            
             return records
+        
+        except:
+            raise
+        
+        
+    def get_agency_name_and_url_of_checked_news(self, id_checked_news: int) -> tuple[str]:
+        sql_string = "SELECT anc.publication_url, ta.name_agency \
+                        FROM detectenv.agency_news_checked anc, detectenv.trusted_agency ta \
+                        WHERE id_news_checked = %s and anc.id_trusted_agency = ta.id_trusted_agency;"
+        try:
+            with DatabaseWrapper() as db:
+                record = db.query(sql_string, (id_checked_news,))
+            return record[0]
+        
         except:
             raise
         

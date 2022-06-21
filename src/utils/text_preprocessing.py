@@ -20,9 +20,8 @@ class TextPreprocessing:
         self.__translator = Translator()
         self.__tokenizer = TweetTokenizer()
         self.__lemmatizer = WordNetLemmatizer()
-        self.__stopwords = nltk.corpus.stopwords.words('portuguese')
-        self._threshold = threshold
         self.__punctuation = '!"$%&\'()*+,-./:;<=>?[\]^_`{|}~'
+        self._threshold = threshold
 
     
     def __check_nltk_packages(self, install_nltk_packages):
@@ -32,7 +31,6 @@ class TextPreprocessing:
             nltk.download('wordnet')
             nltk.download('stopwords')
 
-    
     
     def text_cleaning(self, text):
         """remove hyperlinks, nomes de usuário precedidos pelo '@', pontuações e caracteres especiais."""
@@ -82,7 +80,7 @@ class TextPreprocessing:
 
     
     def check_duplications(self, news1_cleaned, news2_cleaned):
-        """Verifica se os textos em 'news1' e 'news2', após o processo de limpeza, têm seus conteúdo duplicados. Utiliza o algoritmo de Levenshtein.
+        """Verifica se os textos em 'news1' e 'news2', após o processo de limpeza, têm seus conteúdos duplicados. Utiliza o algoritmo de Levenshtein.
 
         Args:
             news1_cleaned (string): texto limpo da primeira mensagem.
@@ -107,7 +105,7 @@ class TextPreprocessing:
         title = title + "\n\n"
         allowed_length = config.TWITTER_SETTINGS.TWEET_MAX_CHARS
         
-        link_info = f"... Saiba mais em: {config.CONFIA_API.SITE_URL_HMG + slug}"
+        link_info = f"... Saiba mais em: {config.CONFIA_API.SITE_URL_HMG + slug}" if slug else ""
                 
         total_length_without_content = len(title) + len(link_info)
         remainder_chars_for_content = allowed_length - total_length_without_content
