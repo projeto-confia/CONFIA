@@ -73,11 +73,8 @@ class Schedule:
                     
                     message = job_manager.manage_failed_job()
                     Schedule._logger.info(message)                    
-        
-        #! TAREFA A SER CONCLUIDA:
-        
-        # 1. montar um relatório do Schedule com periodicidade semanal dos jobs que falharam e que foram consumidos com sucesso.
-        
+                    
+
 if __name__ == '__main__':
     
     init_log(verbose=config.LOGGING.VERBOSE)

@@ -9,10 +9,6 @@ from smtplib import SMTPAuthenticationError
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
 import ast, logging, pickle, shutil, src.interventor.endpoints as endpoints
-
-#! TAREFAS A SEREM CONCLUÍDAS
-    
-    # 1. colocar os campos 'id_news' e 'id_news_checked' da tabela 'similarity' como 'UNIQUE'.
     
 
 class SocialMediaAlertType(Enum):
@@ -128,7 +124,7 @@ class InterventorManager(JobManager):
         
     async def _send_email_to_fca(self) -> str:
         
-        """Auxiliary function to send an email to the FCA if the CURATOR flag is set to False.
+        """Auxiliary function to send an email to the FCA if the CURATORSHIP flag is set to False.
 
         Raises:
             ExceededNumberOfAttempts: when the number of attempts of the job has been exceeded.
@@ -286,7 +282,7 @@ class Interventor(object):
             return
         
         if config.INTERVENTOR.CURATORSHIP:
-            self._persist_news_to_curatorship(classified_as_fake + classified_as_not_fake)
+            self._persist_news_to_curatorship(classified_as_fake)
             return
         
         self._persist_news(classified_as_fake)
@@ -345,7 +341,7 @@ class Interventor(object):
         
         self._process_similars(similars)
         
-        if candidates_to_check:
+        if candidates_to_check and len(candidates_to_check) == 4:
             self._process_candidates_to_check(candidates_to_check)
     
     
