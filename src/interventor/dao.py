@@ -1,34 +1,17 @@
 import xlsxwriter
 import numpy as np
 import pandas as pd
-from typing import List, Optional
 from pathlib import Path
 from jobs.job import Job
 from datetime import datetime
+from typing import List, Optional
 import os, shutil, pathlib, pickle
 from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
-
-class Singleton(type):
-    """Creates a singleton object for the InterventorDAO class.
-
-    Returns:
-        InterventorDAO: the same singleton object if it has been already created. Otherwise, it creates a new one.
-    """
-    
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        
-        if cls not in cls._instances:
-            
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-            
-        return cls._instances[cls]
+from src.utils.singleton import SingletonMetaClass
 
 
-class InterventorDAO(metaclass=Singleton):
+class InterventorDAO(metaclass=SingletonMetaClass):
     
     def __init__(self):
         self.excel_filepath_to_send = os.path.join('src', 'data', 'acf', 'to_send', 'confia.xlsx')
@@ -55,20 +38,6 @@ class InterventorDAO(metaclass=Singleton):
         Returns:
             list: list of news
         """
-        
-        #     sql_string =   "select n.id_news, n.text_news \
-        #                     from detectenv.news n inner join detectenv.post p on p.id_news = n.id_news \
-        #                                         left join detectenv.checking_outcome co on co.id_news = n.id_news \
-        #                                         left join detectenv.curatorship cur on cur.id_news = n.id_news \
-        #                     where n.datetime_publication > current_date - interval '" + str(window_size) + "' day \
-        #                         and n.ground_truth_label is null \
-        #                         and n.classification_outcome = True \
-        #                         and co.datetime_sent_for_checking is null \
-        #                         and cur.is_news is null \
-        #                         and n.prob_classification > " + str(prob_classif_threshold) + " \
-        #                     group by n.id_news, n.text_news, n.prob_classification \
-        #                     order by max(p.num_shares) desc, n.prob_classification desc \
-        #                     limit " + str(num_records) + ";"
         
         sql_string =   "select n.id_news, n.text_news, n.classification_outcome \
                         from detectenv.news n inner join detectenv.post p on p.id_news = n.id_news \

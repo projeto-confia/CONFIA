@@ -1,4 +1,3 @@
-from distutils.log import error
 import pandas as pd
 import os, shutil, glob
 from typing import List
@@ -7,9 +6,10 @@ from jobs.job import Job
 from datetime import datetime
 from src.config import Config as config
 from src.orm.db_wrapper import DatabaseWrapper
+from src.utils.singleton import SingletonMetaClass
 
 
-class FactCheckManagerDAO(object):
+class FactCheckManagerDAO(metaclass=SingletonMetaClass):
     
     def __init__(self):
         self._received_xlsx_path = config.FCMANAGER.RECEIVED_XLSX_FILES_PATH
@@ -43,57 +43,26 @@ class FactCheckManagerDAO(object):
             return jobs            
         
         except:
-            raise    
-        
-        
-    def get_all_fcmanager_failed_jobs(self) -> List[Job]:
-        """Selects from Failed_Job table all the jobs regarding the FCAManager module.
-            
-        Returns:
-            A list containing all the jobs related to the FCAManager module.
-        """
-    
-        try:
-            sql_str = "select * from detectenv.failed_job where queue ~ '^FCAMANAGER\w{1,}$';"
-            jobs = []
-            
-            with DatabaseWrapper() as db:
-                results = db.query(sql_str)
-            
-            for result in results:
-                job = Job(config.SCHEDULE.QUEUE[result[2]])
-                job.id_failed_job = result[0]
-                job.id_job = result[1]
-                job.payload = result[3]
-                job.attempts = result[4]
-                job.created_at = result[5]
-                job.updated_at = result[6]
-                job.error_message = result[7]
-                
-                jobs.append(job)
-            
-            return jobs           
-        
-        except:
             raise
 
     
-    def create_fcmanager_job(self, job: Job):
+    def create_fcmanager_job(self, job: Job) -> dict:
         """Persists a novel job instance in the Job table.
 
         Args:
             job (Job): a Job object containing all the information regarding the novel job to be persisted.
             
         Returns:
-            id_job (Job): the identifier created for the new job.
+            dict: the dictionary representation of the job just created.
         """
         try:
             sql_str = "INSERT INTO detectenv.job (queue, payload) VALUES (%s, %s) RETURNING id_job;"
                         
             with DatabaseWrapper() as db:
                 db.execute(sql_str, (job.queue, job.payload,))
+                id = db.fetchone()
                 
-            return db.fetchone()
+            return id
         
         except:
             raise
@@ -133,14 +102,17 @@ class FactCheckManagerDAO(object):
         df['is_fake'] = df['is_fake'].str.strip().str.lower()
         
         # filter out only fake news from column 'is_fake'.
-        df = df[df['is_fake'] == 'sim']        
+        df = df[df['is_fake'] == 'sim']
         
+        # fill other blank fields with empty string.
+        df.fillna('', inplace=True)       
+
         df.set_index('id', inplace=True)        
         return df.to_dict(orient='index')
 
     
     def _check_existence_of_news_in_both_news_and_checking_outcome_tables(self, fake_news_ids: list[int]) -> set[int]:
-        """Check whether both tables 'news' and 'checking_outcome' have the ids in 'fake_news_ids'.add()
+        """Check whether both tables 'news' and 'checking_outcome' have the ids in 'fake_news_ids'.
 
         Args:
             fake_news_ids (list[int]): a list containing the ids of the news retrieved from the FCA's spreadsheet.
@@ -175,7 +147,13 @@ class FactCheckManagerDAO(object):
             news_ids_set = self._check_existence_of_news_in_both_news_and_checking_outcome_tables(fake_news_ids)
             
             if not news_ids_set:
-                raise IndexError(f"No id in the list {fake_news_ids} was found in both tables 'news' and 'checking_outcome'. Please look for any missing values in these tables.")
+                raise IndexError(f"No ids in the list {fake_news_ids} were not found in both tables 'news' and 'checking_outcome'. Please look for any missing values in these tables.")
+            
+            if news_ids_set != set(fake_news_ids):
+                diff_ids = set(fake_news_ids).difference(news_ids_set)
+                
+                raise IndexError(f"Only ids '{','.join([str(n) for n in news_ids_set])}' in the list were found in both tables 'news' and 'checking_outcome'. Please look for the missing ids '{','.join([str(d) for d in diff_ids])}' in these tables.")
+                
             
             # TODO: Information regarding the FCAs' ids are missing by default in 'checked_fake_news'. These data must be included when working with more FCAs later on.
             
@@ -202,9 +180,26 @@ class FactCheckManagerDAO(object):
         except:
             raise
         
+    
+    def get_clean_text_news_from_id(self, id_news: int) -> str:
+        """Returns the cleaned text of a news given its id.
+
+        Args:
+            id_news (int): the id of the news.
+
+        Returns:
+            str: the news' clean content.
+        """
+        try:
+            sql_str = "select text_news_cleaned from detectenv.news where id_news = %s;"
+            
+            with DatabaseWrapper() as db:
+                text_cleaned = db.query(sql_str, (id_news,))
+            
+            return text_cleaned[0][0]
         
-    def store_excel_file(self):
-        shutil.move(self._received_xlsx_path, os.path.join(self._processed_xlsx_path, '{}.xlsx'.format(datetime.now())))
+        except:
+            raise
         
         
     def register_log_alert(self, id_news):

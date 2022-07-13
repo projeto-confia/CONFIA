@@ -1,11 +1,22 @@
 import abc
 import datetime
 import pandas as pd
+from enum import Enum, auto
 from src.config import Config as config
 from typing import Any, Callable, Tuple
 
-class Job:
+class SocialMediaAlertType(Enum):
+    DETECTADO = auto()
+    CONFIRMADO = auto()
+    SIMILARIDADE = auto()
 
+
+class ExceededNumberOfAttempts(Exception):
+    def __init__(self, message):
+        self.message = message
+
+
+class Job:
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
         """Abstract base class representation for creating specific concrete classes to persist different jobs in the database.
 

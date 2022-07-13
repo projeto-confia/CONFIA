@@ -139,8 +139,8 @@ class Config(object):
             """
             
             INTERVENTOR_SEND_NEWS_TO_FCA = auto()
+            FCAMANAGER_SEND_ALERT_TO_SOCIAL_MEDIA = auto()
             INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA = auto()
-            FCAMANAGER_RECEIVED_LABELED_NEWS_IN_XLSX = auto()
         
         """For each schedule type, the following parameters were defined:
             - max_attempts: the maximum number of attempts before considering the job a failed job;
@@ -163,9 +163,9 @@ class Config(object):
                 "payload_keys": ("title", "slug", "content"),
             },
             
-            QUEUE.FCAMANAGER_RECEIVED_LABELED_NEWS_IN_XLSX: {
-                "max_attempts": 4,
+            QUEUE.FCAMANAGER_SEND_ALERT_TO_SOCIAL_MEDIA: {
+                "max_attempts": 5,
                 "periodicity_in_minutes": 0,
-                "payload_keys": ("news", "label"),
+                "payload_keys": ("title", "content", "link", "fc_agency"),
             }
         }

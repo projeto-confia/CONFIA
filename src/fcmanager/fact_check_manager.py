@@ -1,24 +1,46 @@
 import logging, pickle
-from jobs.job import Job, JobManager
+from pathlib import Path
+import shutil
+from typing import Callable
+
+import numpy as np
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
 from src.fcmanager.dao import FactCheckManagerDAO
+from src.utils.text_preprocessing import TextPreprocessing
+from jobs.job import Job, JobManager, ExceededNumberOfAttempts, SocialMediaAlertType
 
-class FCAReceiveLabeledNewsJob(Job):
-    
-    def __init__(self, schedule_type: config.SCHEDULE.QUEUE) -> None:
-        super().__init__(schedule_type)
+# TODO: Try to make a generic 'assigning method' afterwards to be used from all modules through dependency injection.
+def assign_fcamanager_jobs_to_pickle_file() -> None:
         
-    
-    def create_job(self, dao) -> None:
+        dao = FactCheckManagerDAO()
+        path = config.SCHEDULE.FCMANAGER_JOBS_FILE
+        
+        job_managers = {job.id_job: FactCheckJobManager(job, path) for job in dao.get_all_fcmanager_jobs()}
+        
         try:
-            dao.create_fcmanager_job(self)
+            with open(path, 'wb') as file:
+                pickle.dump(job_managers, file)
         
         except Exception as e:
-            return f"Um erro ocorreu ao persistir o job '{self.queue}' do módulo Interventor: {e}"
+            raise Exception(f"An error occurred when trying to save the jobs in {path}:\n{e}")
+            
 
+class FactCheckingJobSocialMedia(Job):
+    
+    def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
+        super().__init__(schedule_type, fn_update_pickle_file)
+        
+        
+    def create_job(self, dao, payload) -> str:
+        try:
+            self.payload = payload
+            return str(dao.create_fcmanager_job(self)[0])
+        
+        except Exception as e:
+            raise Exception(f"Um erro ocorreu ao persistir o job '{self.queue}' do módulo FactCheckManager: {e}")
 
-class FCManager(JobManager):
+class FactCheckJobManager(JobManager):
     
     def __init__(self, job: Job, file_path: str) -> None:
         super().__init__(job, file_path)
@@ -43,7 +65,8 @@ class FactCheckManager(object):
     def __init__(self):
         self._twitter_api = TwitterAPI()
         self._dao = FactCheckManagerDAO()
-        self._assign_fcamanager_jobs_to_scheduler()
+        
+        assign_fcamanager_jobs_to_pickle_file()
         
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._logger.info('FactCheckManager initialized.')
@@ -53,7 +76,7 @@ class FactCheckManager(object):
         self.process_agency_feed()
     
     
-    def process_agency_feed(self):
+    def process_agency_feed(self) -> None:
         
         if not (sheets := self._dao.has_excel_files()):
             self._logger.info('No excel files from FCAs to process.')
@@ -80,41 +103,39 @@ class FactCheckManager(object):
                 for id_news, v in dict_checked_fake_news.items():
                     
                     if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
-                        text_news, link = v.values()
-                        self._post_alert(text_news, 'Boatos.org', link)
                         
+                        _, _, link = v.values()
+                        
+                        text_news = self._dao.get_clean_text_news_from_id(id_news).upper()
+                        content   = text_news
+                        fc_agency = "Boatos.org" # TODO: Hard-coded snippet. It must comprise other agencies in the future.
+                        title     = f'❗ {SocialMediaAlertType.CONFIRMADO.name} COMO FAKE NEWS PELA {fc_agency.upper()}'
+                        
+                        with FactCheckingJobSocialMedia(config.SCHEDULE.QUEUE.FCAMANAGER_SEND_ALERT_TO_SOCIAL_MEDIA, \
+                            lambda: assign_fcamanager_jobs_to_pickle_file()) as job:
+                            
+                            try:
+                                payload = str(dict(zip(job[1].payload_keys, (title, content, link, fc_agency))))
+                                id = job[1].create_job(self._dao, payload)
+                                self._logger.info(f"{job[0]} {config.SCHEDULE.FCMANAGER_JOBS_FILE}: job {id} persisted successfully.")
+                        
+                            except Exception as e:
+                                self._logger.error(e)
+                    
                     self._logger.info('Registering log alert...')
-                    self._dao.register_log_alert(id_news)  # log even if not published on social media network
-            
+                    self._dao.register_log_alert(id_news)  # log even if not published on social media network.
             else:
                 self._logger.info('No news labeled as fake by the FCAs.')
                 
-            self._logger.info('Storing excel file...')
-            self._dao.store_excel_file()
-
-
-    def _assign_fcamanager_jobs_to_scheduler(self) -> None:
-        
-        path = config.SCHEDULE.FCMANAGER_JOBS_FILE
-        
-        job_managers = {job.id_job: FCManager(job, path) for job in self._dao.get_all_fcmanager_jobs()}
-        failed_job_managers = {job.id_job: FCManager(job, path) for job in self._dao.get_all_fcmanager_failed_jobs()}
-        
-        job_managers.update(failed_job_managers)
-        
-        try:
-            with open(path, 'wb') as file:
-                pickle.dump(job_managers, file)
-        
-        except Exception as e:
-            self._logger.error(f"An error occurred when trying to save the jobs in {path}:\n{e}")
+            shutil.move(sheet, Path(Path(sheet).parent.absolute(), "processed", Path(sheet).name))
+            self._logger.info(f"Excel file {sheet} has been moved to folder 'processed'.")
     
     
-    def _post_alert(self, text_news, checker, url=None):
-        self._logger.info('Posting alert on social media...')
-        header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
+    # def _post_alert(self, text_news, checker, url=None):
+    #     self._logger.info('Posting alert on social media...')
+    #     header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
 
-        # TODO: define strategy to fit tweet text according twitter limit rule of 280 characters
+    #     # TODO: define strategy to fit tweet text according twitter limit rule of 280 characters
         
-        text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url if url else '')
-        self._twitter_api.tweet(text_tweet)
+    #     text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url if url else '')
+    #     self._twitter_api.tweet(text_tweet)

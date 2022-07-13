@@ -1,6 +1,5 @@
 from enum import Enum, auto
 from typing import Callable
-from jobs.job import Job, JobManager
 from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
@@ -9,24 +8,14 @@ from smtplib import SMTPAuthenticationError
 from src.interventor.dao import InterventorDAO
 from src.utils.text_preprocessing import TextPreprocessing
 import ast, logging, pickle, shutil, src.interventor.endpoints as endpoints
-    
-
-class SocialMediaAlertType(Enum):
-    DETECTADO = auto()
-    CONFIRMADO = auto()
-    SIMILARIDADE = auto()
-    
-
-class ExceededNumberOfAttempts(Exception):
-    def __init__(self, message):
-        self.message = message
-    
+from jobs.job import Job, JobManager, ExceededNumberOfAttempts, SocialMediaAlertType
+        
 
 def assign_interventor_jobs_to_pickle_file() -> None:
     """Helper function for keeping the Interventor module's pickle file up-to-date after insertions and deletions in the Job table."""
     
-    path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
     dao = InterventorDAO()
+    path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
     
     job_managers = {job.id_job: InterventorManager(job, path) for job in dao.get_all_interventor_jobs()}
     
