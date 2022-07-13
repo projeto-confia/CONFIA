@@ -1,3 +1,4 @@
+from distutils.log import error
 import pandas as pd
 import os, shutil, glob
 from typing import List
@@ -138,34 +139,66 @@ class FactCheckManagerDAO(object):
         return df.to_dict(orient='index')
 
     
-    
-    def update_checked_news_in_db(self, checked_fakenews):
+    def _check_existence_of_news_in_both_news_and_checking_outcome_tables(self, fake_news_ids: list[int]) -> set[int]:
+        """Check whether both tables 'news' and 'checking_outcome' have the ids in 'fake_news_ids'.add()
 
-        # TODO: if some id record doesn't exist in the database table, register occurrence in the log
+        Args:
+            fake_news_ids (list[int]): a list containing the ids of the news retrieved from the FCA's spreadsheet.
+
+        Returns:
+            set[int]: a set containing the news' ids which are present in both tables.
+        """
+        
+        fake_news_ids_set = set(fake_news_ids)
+        
+        sql_str =  "SELECT DISTINCT * FROM ( \
+                        SELECT DISTINCT n.id_news as news_id, co.id_news as fca_id_news \
+                        FROM detectenv.news n, detectenv.checking_outcome co \
+                        WHERE n.id_news in %s AND co.id_news in %s \
+                    ) tbl WHERE tbl.news_id = tbl.fca_id_news;"
+
+        with DatabaseWrapper() as db:    
+            result = db.query(sql_str, (fake_news_ids, fake_news_ids,))
+        
+        if not result:
+            return set()
+        
+        db_news_ids_set = {r[0] for r in result}
+        return fake_news_ids_set.intersection(db_news_ids_set)
+        
+    
+    def update_checked_news_in_db(self, checked_fake_news):
         
         try:
             dt = datetime.now()
-            fakenews_ids = tuple(checked_fakenews.keys())
+            fake_news_ids = tuple(checked_fake_news.keys())
+            news_ids_set = self._check_existence_of_news_in_both_news_and_checking_outcome_tables(fake_news_ids)
             
-            # TODO: adds id_trusted_agency in WHERE clause
+            if not news_ids_set:
+                raise IndexError(f"No id in the list {fake_news_ids} was found in both tables 'news' and 'checking_outcome'. Please look for any missing values in these tables.")
+            
+            # TODO: Information regarding the FCAs' ids are missing by default in 'checked_fake_news'. These data must be included when working with more FCAs later on.
+            
             sql_string_1 = "UPDATE detectenv.checking_outcome \
                             SET datetime_outcome = %s, \
                             is_fake = %s, \
                             trusted_agency_link = %s \
-                            WHERE id_news = %s;"
+                            WHERE id_news = %s and id_trusted_agency = %s;"
 
-            # TODO: in the future, add rule to decide between outcomes from many agencies
+            # TODO: in the future, add rule to decide between outcomes from many agencies.
+            
             sql_string_2 = "UPDATE detectenv.news \
                             SET ground_truth_label = true \
                             WHERE id_news IN %s;"
                             
             with DatabaseWrapper() as db:
-                for id_news, v in checked_fakenews.items():
-                    _, link = v.values()
-                    args = (dt, True, link, id_news)
+                for id_news, v in checked_fake_news.items():
+                    link = list(v.values())[-1]
+                    args = (dt, True, link, id_news, 1) #! '1' here means 'Boatos.org' since it's the only FCA we're worked during the development of the prototype.
+                    
                     db.execute(sql_string_1, args)
                     
-                db.execute(sql_string_2, (fakenews_ids,))
+                db.execute(sql_string_2, (fake_news_ids,))
         except:
             raise
         

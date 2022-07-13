@@ -59,24 +59,35 @@ class FactCheckManager(object):
             self._logger.info('No excel files from FCAs to process.')
             return
         
-        self._logger.info('Processing feed from agency...')
+        self._logger.info('Processing feed from FCAs...')
         
-        # iterate over each .xlsx file within the 'Received' folder.
+        # iterate over each .xlsx file within the 'received' folder.
         for sheet in sheets:
         
-            checked_fakenews = self._dao.process_fake_news_from_xlsx(sheet)
-            
-            if checked_fakenews:
-                self._logger.info('Updating data...')
-                self._dao.update_checked_news_in_db(checked_fakenews)
-                for id_news, v in checked_fakenews.items():
+            dict_checked_fake_news = self._dao.process_fake_news_from_xlsx(sheet)
+                        
+            if dict_checked_fake_news:
+                self._logger.info('Updating news that were stated as fake by the FCAs...')
+                
+                try:
+                    self._dao.update_checked_news_in_db(dict_checked_fake_news)
+                
+                except IndexError as e:
+                    self._logger.error(f"An error occurred during the news' updating process: {str(e)}")
+                    return
+                
+                # TODO: emitir alerta no Twitter.
+                for id_news, v in dict_checked_fake_news.items():
+                    
                     if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
                         text_news, link = v.values()
                         self._post_alert(text_news, 'Boatos.org', link)
+                        
                     self._logger.info('Registering log alert...')
                     self._dao.register_log_alert(id_news)  # log even if not published on social media network
+            
             else:
-                self._logger.info('No labeled fake news.')
+                self._logger.info('No news labeled as fake by the FCAs.')
                 
             self._logger.info('Storing excel file...')
             self._dao.store_excel_file()

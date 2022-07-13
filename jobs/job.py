@@ -43,6 +43,7 @@ class Job:
         except:
             raise
             
+    # TODO: create a 'UNIQUE' constraint in the database script 'script_01_schema.sql' comprising the columns 'queue' and 'payload' of table 'job' and 'failed_job'.
     @abc.abstractmethod
     def create_job(self, dao, payload: dict) -> None:
         """Persists the job on its corresponding queue in the database.
