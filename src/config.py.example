@@ -1,7 +1,7 @@
 # system configuration parameters
-
-from dataclasses import dataclass
+import os
 from enum import Enum, auto
+from dataclasses import dataclass
 
 class Config(object):
     
@@ -84,6 +84,8 @@ class Config(object):
     @dataclass(frozen=True)
     class FCMANAGER(object):
         SOCIAL_MEDIA_ALERT_ACTIVATE = False
+        RECEIVED_XLSX_FILES_PATH = os.path.join('src', 'data', 'excel_sheets_fca', 'received')
+        RECEIVED_PROCESSED_XLSX_FILES = os.path.join('src', 'data', 'excel_sheets_fca', 'received', 'processed')
 
 
     # e-mail account
@@ -138,7 +140,7 @@ class Config(object):
             
             INTERVENTOR_SEND_NEWS_TO_FCA = auto()
             INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA = auto()
-            FCAMANAGER_RECEIVE_LABELED_NEWS_IN_XLSX = auto()
+            FCAMANAGER_RECEIVED_LABELED_NEWS_IN_XLSX = auto()
         
         """For each schedule type, the following parameters were defined:
             - max_attempts: the maximum number of attempts before considering the job a failed job;
@@ -161,7 +163,7 @@ class Config(object):
                 "payload_keys": ("title", "slug", "content"),
             },
             
-            QUEUE.FCAMANAGER_RECEIVE_LABELED_NEWS_IN_XLSX: {
+            QUEUE.FCAMANAGER_RECEIVED_LABELED_NEWS_IN_XLSX: {
                 "max_attempts": 4,
                 "periodicity_in_minutes": 0,
                 "payload_keys": ("news", "label"),

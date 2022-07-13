@@ -41,10 +41,11 @@ class FCManager(JobManager):
 class FactCheckManager(object):
     
     def __init__(self):
-        self._logger = logging.getLogger(config.LOGGING.NAME)
-        self._dao = FactCheckManagerDAO()
         self._twitter_api = TwitterAPI()
+        self._dao = FactCheckManagerDAO()
         self._assign_fcamanager_jobs_to_scheduler()
+        
+        self._logger = logging.getLogger(config.LOGGING.NAME)
         self._logger.info('FactCheckManager initialized.')
         
         
@@ -54,27 +55,31 @@ class FactCheckManager(object):
     
     def process_agency_feed(self):
         
-        if not self._dao.has_excel_file():
-            self._logger.info('No excel file to process.')
+        if not (sheets := self._dao.has_excel_files()):
+            self._logger.info('No excel files from FCAs to process.')
             return
         
         self._logger.info('Processing feed from agency...')
-        checked_fakenews = self._dao.get_checked_fakenews_from_excel()
         
-        if checked_fakenews:
-            self._logger.info('Updating data...')
-            self._dao.update_checked_news_in_db(checked_fakenews)
-            for id_news, v in checked_fakenews.items():
-                if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
-                    text_news, link = v.values()
-                    self._post_alert(text_news, 'Boatos.org', link)
-                self._logger.info('Registering log alert...')
-                self._dao.register_log_alert(id_news)  # log even if not published on social media network
-        else:
-            self._logger.info('No labeled fake news.')
+        # iterate over each .xlsx file within the 'Received' folder.
+        for sheet in sheets:
+        
+            checked_fakenews = self._dao.process_fake_news_from_xlsx(sheet)
             
-        self._logger.info('Storing excel file...')
-        self._dao.store_excel_file()
+            if checked_fakenews:
+                self._logger.info('Updating data...')
+                self._dao.update_checked_news_in_db(checked_fakenews)
+                for id_news, v in checked_fakenews.items():
+                    if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
+                        text_news, link = v.values()
+                        self._post_alert(text_news, 'Boatos.org', link)
+                    self._logger.info('Registering log alert...')
+                    self._dao.register_log_alert(id_news)  # log even if not published on social media network
+            else:
+                self._logger.info('No labeled fake news.')
+                
+            self._logger.info('Storing excel file...')
+            self._dao.store_excel_file()
 
 
     def _assign_fcamanager_jobs_to_scheduler(self) -> None:

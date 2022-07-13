@@ -1,6 +1,7 @@
-import os, shutil
 import pandas as pd
+import os, shutil, glob
 from typing import List
+from pathlib import Path
 from jobs.job import Job
 from datetime import datetime
 from src.config import Config as config
@@ -10,8 +11,8 @@ from src.orm.db_wrapper import DatabaseWrapper
 class FactCheckManagerDAO(object):
     
     def __init__(self):
-        self.excel_filepath_received = os.path.join('src', 'data', 'acf', 'received', 'confia.xlsx')
-        self._excel_filepath_processed = os.path.join('src', 'data', 'acf', 'received', 'processed')
+        self._received_xlsx_path = config.FCMANAGER.RECEIVED_XLSX_FILES_PATH
+        self._processed_xlsx_path = config.FCMANAGER.RECEIVED_PROCESSED_XLSX_FILES
         
     
     def get_all_fcmanager_jobs(self) -> List[Job]:
@@ -97,33 +98,45 @@ class FactCheckManagerDAO(object):
             raise
     
     
-    def has_excel_file(self):
-        return os.path.exists(self.excel_filepath_received)
+    def has_excel_files(self) -> list[str]:
+        """Check whether there are spreadsheets (.xlsx) files which came from the FCAs, and returns their names into a list.
+
+        Returns:
+            list[str]: a list of strings with the full path (including the .xlsx files). Returns '[]' if the directory is empty.
+        """
+        return glob.glob(os.path.join(self._received_xlsx_path, '*.xlsx'))
     
     
-    def get_checked_fakenews_from_excel(self):
-        # load excel file content with pandas
-        df = pd.read_excel(self.excel_filepath_received, 
-                           dtype={'Id': int, 'Texto': str, 'Checagem': str, 'Link': str},
-                           na_filter = False)
+    def process_fake_news_from_xlsx(self, sheet: str) -> dict[int, dict]:
+        """Loads the spreadsheet corresponding to the 'sheet' path, and processes its content.
+
+        Args:
+            sheet (str): a full path (including the name of the .xlsx file) to be processed.
+
+        Returns:
+            dict[int, dict]: the loaded and preprocessed dataframe with the content of the corresponding spreadsheet in dictionary format, where the keys are the ids and the values are the news' content itself.
+        """
         
-        # remove accidental blank spaces
-        df['Checagem'] = df['Checagem'].apply(str.strip)
-        df['Link'] = df['Link'].apply(str.strip)
+        # loads the excel file into a dataframe.
+        df = pd.read_excel(sheet, header=2, 
+                           dtype={'Identificador': int, 'Notícia a ser checada': str, 'É Fake? (Sim/Não)': str, 'Link ou referência da ACF': str})
         
-        # filter only checked records
-        df = df[df['Checagem'].notnull()]
+        # rename the columns to facilitate the remaning processing.
+        df.rename(columns={"Identificador": "id", "Notícia a ser checada": "news", "É Fake? (Sim/Não)": "is_fake", "Link ou referência da ACF": 'link_fca'}, inplace=True)
         
-        # assure value "fake"
-        df['Checagem'] = df['Checagem'].str.lower()
+        # filter out the rows where 'is_fake' is blank.
+        df = df[df['is_fake'].notnull()]
         
-        # filter only fake records, drop column 'Checagem'
-        df = df[df['Checagem'] == 'fake']
-        df.drop(columns=['Checagem'], inplace=True)
+        # remove accidental blank spaces from 'is_fake' and 'link_fca' contents.
+        df['link_fca'] = df['link_fca'].str.strip()
+        df['is_fake'] = df['is_fake'].str.strip().str.lower()
         
-        # return dict
-        df.set_index('Id', inplace=True)
+        # filter out only fake news from column 'is_fake'.
+        df = df[df['is_fake'] == 'sim']        
+        
+        df.set_index('id', inplace=True)        
         return df.to_dict(orient='index')
+
     
     
     def update_checked_news_in_db(self, checked_fakenews):
@@ -158,7 +171,7 @@ class FactCheckManagerDAO(object):
         
         
     def store_excel_file(self):
-        shutil.move(self.excel_filepath_received, os.path.join(self._excel_filepath_processed, '{}.xlsx'.format(datetime.now())))
+        shutil.move(self._received_xlsx_path, os.path.join(self._processed_xlsx_path, '{}.xlsx'.format(datetime.now())))
         
         
     def register_log_alert(self, id_news):
