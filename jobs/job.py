@@ -87,14 +87,21 @@ class JobManager(abc.ABC):
     def get_id_job(self) -> int:
         return self.job.id_job
     
-    
+    # TODO: Make this method concrete by implementing it directly here. The implementation is commented below.
     @abc.abstractmethod
-    def exceeded_number_of_max_attempts(self) -> bool:
+    def exceeded_number_of_max_attempts(self, count: bool = True) -> bool:
         """Checks whether the number of attempts has exceeded.
 
         Returns:
             bool: returns True if the number of attempts has maxed out the limit of the queue; False otherwise.
         """
+        # if count:
+        #     self.job.__dict__["attempts"] += 1
+            
+        # current_attempts = self.job.__dict__["attempts"]
+        # max_attempts = self.job.__dict__["max_attempts"]
+        
+        # return True if current_attempts > max_attempts else False
         ...
 
     @abc.abstractmethod

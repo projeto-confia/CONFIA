@@ -46,6 +46,7 @@ class FactCheckManagerDAO(metaclass=SingletonMetaClass):
             raise
 
     
+    # TODO: duplicated code. It must be centered later into a particular module.
     def create_fcmanager_job(self, job: Job) -> dict:
         """Persists a novel job instance in the Job table.
 
@@ -63,6 +64,70 @@ class FactCheckManagerDAO(metaclass=SingletonMetaClass):
                 id = db.fetchone()
                 
             return id
+        
+        except:
+            raise
+        
+    # TODO: duplicated code. It must be centered later into a particular module.
+    def update_number_of_attempts_job(self, job: Job) -> None:
+        """Increments the number of attempts of a particular job after trying to execute it without success. The field 'updated_at' is also updated with the current time when the attempt actually occurred.
+        
+        Args:
+            job (Job): the job that is being updated.
+        """
+        
+        try:
+            sql_str = "UPDATE detectenv.job SET attempts = %s, updated_at = %s WHERE id_job = %s;"
+            
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (job.attempts, datetime.now(), job.id_job,))
+        
+        except:
+            raise
+        
+    
+    # TODO: duplicated code. It must be centered later into a particular module.
+    def create_fcmanager_failed_job(self, job: Job) -> tuple[int]:
+        """Persists a novel job instance in the Job table.
+
+        Args:
+            job (Job): a Job object containing all the information regarding the novel job to be persisted.
+            
+        Returns:
+            id_failed_job (Job): the identifier created for the new failed job.
+        """
+        try:
+            sql_str = "INSERT INTO detectenv.failed_job (id_job, queue, payload, attempts, created_at, error_message) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_failed_job;"
+                        
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (job.id_job, job.queue, job.payload, job.attempts, datetime.now(), str(job.error_message.args,)))
+                id = db.fetchone()
+        
+            return id
+        
+        except:
+            raise
+        
+    
+    # TODO: duplicated code. It must be centered later into a particular module.
+    def delete_fcmanager_job(self, id_job: int) -> tuple:
+        """Deletes a job from the Job table and returns its information.
+
+        Args:
+            id_job (int): the id of the job to be deleted from Job table.
+            
+        Returns:
+            a tuple containing all the attributes regarding the deleted job.
+        """
+        
+        sql_str = "DELETE FROM detectenv.job WHERE id_job = %s RETURNING *;"
+        
+        try:
+            with DatabaseWrapper() as db:
+                db.execute(sql_str, (id_job,))
+                job = db.fetchone()
+                
+            return job
         
         except:
             raise

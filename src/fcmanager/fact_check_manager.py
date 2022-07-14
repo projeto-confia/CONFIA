@@ -44,14 +44,38 @@ class FactCheckJobManager(JobManager):
     
     def __init__(self, job: Job, file_path: str) -> None:
         super().__init__(job, file_path)
+        self.dao = FactCheckManagerDAO()
     
 
-    def exceeded_number_of_max_attempts(self) -> bool:
-        pass
+    def exceeded_number_of_max_attempts(self, count: bool = True) -> bool:
+        
+        if count:
+            self.job.__dict__["attempts"] += 1
+            
+        current_attempts = self.job.__dict__["attempts"]
+        max_attempts = self.job.__dict__["max_attempts"]
+        
+        return True if current_attempts > max_attempts else False
 
 
+    #! COMEÇAR DAQUI. UTILIZAR OS MÓDULOS 'INTERVENTOR.PY' E 'INTERVENTOR.DAO.PY'.
     def manage_failed_job(self) -> None:
-        pass
+        
+        has_exceeded = self.exceeded_number_of_max_attempts()
+        attempts = self.job.__dict__["attempts"]
+        max_attempts = self.job.__dict__["max_attempts"]
+        
+        if not has_exceeded:
+            self.dao.update_number_of_attempts_job(self.job)
+            message = f"FactCheckManager's job {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
+            
+        else:
+            id_failed_job = self.dao.create_fcmanager_failed_job(self.job)
+            message = f"FactCheckManager's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to table 'failed_jobs' with id {id_failed_job[0]}."
+            self.dao.delete_fcmanager_job(self.get_id_job)
+
+        assign_fcamanager_jobs_to_pickle_file()
+        return message
 
 
     def run_manager(self) -> bool:
@@ -99,7 +123,6 @@ class FactCheckManager(object):
                     self._logger.error(f"An error occurred during the news' updating process: {str(e)}")
                     return
                 
-                # TODO: emitir alerta no Twitter.
                 for id_news, v in dict_checked_fake_news.items():
                     
                     if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
@@ -129,13 +152,3 @@ class FactCheckManager(object):
                 
             shutil.move(sheet, Path(Path(sheet).parent.absolute(), "processed", Path(sheet).name))
             self._logger.info(f"Excel file {sheet} has been moved to folder 'processed'.")
-    
-    
-    # def _post_alert(self, text_news, checker, url=None):
-    #     self._logger.info('Posting alert on social media...')
-    #     header = 'ALERTA: a seguinte notícia foi confirmada como fakenews pela agência {}'.format(checker)
-
-    #     # TODO: define strategy to fit tweet text according twitter limit rule of 280 characters
-        
-    #     text_tweet = header + '\n\n' + text_news + '\n\n' + '{}'.format(url if url else '')
-    #     self._twitter_api.tweet(text_tweet)

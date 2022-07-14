@@ -533,6 +533,7 @@ class InterventorDAO(metaclass=SingletonMetaClass):
             raise
     
     
+    # TODO: duplicated code. It must be centered later into a particular module.
     def create_interventor_job(self, job: Job) -> None:
         """Persists a novel job instance in the Job table.
 
@@ -554,7 +555,7 @@ class InterventorDAO(metaclass=SingletonMetaClass):
         except:
             raise
         
-        
+    # TODO: duplicated code. It must be centered later into a particular module. 
     def create_interventor_failed_job(self, job: Job) -> tuple[int]:
         """Persists a novel job instance in the Job table.
 
@@ -577,6 +578,7 @@ class InterventorDAO(metaclass=SingletonMetaClass):
             raise
         
     
+    # TODO: duplicated code. It must be centered later into a particular module.
     def update_number_of_attempts_job(self, job: Job) -> None:
         """Increments the number of attempts of a particular job after trying to execute it without success. The field 'updated_at' is also updated with the current time when the attempt actually occurred.
         
@@ -593,6 +595,7 @@ class InterventorDAO(metaclass=SingletonMetaClass):
         except:
             raise
         
+    
     def update_number_of_attempts_failed_job(self, failed_job: Job) -> None:
         """Increments the number of attempts of a particular failed job after trying to execute it without success. The field 'updated_at' is also updated with the current time when the attempt actually occurred.
         
@@ -610,6 +613,7 @@ class InterventorDAO(metaclass=SingletonMetaClass):
             raise
     
     
+    # TODO: duplicated code. It must be centered later into a particular module.
     def delete_interventor_job(self, id_job: int) -> tuple:
         """Deletes a job from the Job table and returns its information.
 
