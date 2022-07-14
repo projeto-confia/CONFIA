@@ -1,5 +1,5 @@
-from enum import Enum, auto
 from typing import Callable
+from jobs import dao as dao_jobs
 from src.utils.email import EmailAPI
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
@@ -14,10 +14,9 @@ from jobs.job import Job, JobManager, ExceededNumberOfAttempts, SocialMediaAlert
 def assign_interventor_jobs_to_pickle_file() -> None:
     """Helper function for keeping the Interventor module's pickle file up-to-date after insertions and deletions in the Job table."""
     
-    dao = InterventorDAO()
     path = config.SCHEDULE.INTERVENTOR_JOBS_FILE
     
-    job_managers = {job.id_job: InterventorManager(job, path) for job in dao.get_all_interventor_jobs()}
+    job_managers = {job.id_job: InterventorManager(job, path) for job in dao_jobs.get_all_interventor_jobs()}
     
     try:
         with open(path, 'wb') as file:
@@ -27,38 +26,35 @@ def assign_interventor_jobs_to_pickle_file() -> None:
         raise Exception(f"An error occurred when trying to save the jobs in {path}:\n{e}")
     
 
-
 class InterventorJobFCA(Job):
     
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
         super().__init__(schedule_type, fn_update_pickle_file)
         
     
-    def create_job(self, dao, payload) -> str:
+    def create_job(self, payload) -> str:
         try:
             self.payload = payload
-            return str(dao.create_interventor_job(self)[0])
+            return str(dao_jobs.create_job(self)[0])
         
         except Exception as e:
             return f"An error has occurred when persisting the job '{self.queue}' from Interventor's module: {e}"
         
         
-
 class InterventorJobSocialMedia(Job):
     
     def __init__(self, schedule_type: config.SCHEDULE.QUEUE, fn_update_pickle_file: Callable[[], None] = None) -> None:
         super().__init__(schedule_type, fn_update_pickle_file)
         
     
-    def create_job(self, dao, payload) -> str:
+    def create_job(self, payload) -> str:
         try:
             self.payload = payload
-            return str(dao.create_interventor_job(self)[0])
+            return str(dao_jobs.create_job(self)[0])
         
         except Exception as e:
             return f"An error has occurred when persisting the job '{self.queue}' from Interventor's module: {e}"
         
-
 
 class InterventorManager(JobManager):
     
@@ -67,18 +63,6 @@ class InterventorManager(JobManager):
         self._twitter_api = TwitterAPI()
         self.dao = InterventorDAO()
 
-    
-    def exceeded_number_of_max_attempts(self, count: bool = True) -> bool:
-        
-        if count:
-            self.job.__dict__["attempts"] += 1
-            
-        current_attempts = self.job.__dict__["attempts"]
-        max_attempts = self.job.__dict__["max_attempts"]
-        
-        return True if current_attempts > max_attempts else False
-            
-
     def manage_failed_job(self) -> str:
         
         has_exceeded = self.exceeded_number_of_max_attempts()
@@ -86,15 +70,13 @@ class InterventorManager(JobManager):
         max_attempts = self.job.__dict__["max_attempts"]
         
         if not has_exceeded:
-            self.dao.update_number_of_attempts_job(self.job)
+            dao_jobs.update_number_of_attempts_job(self.job)
             message = f"Interventor's job {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
             
         else:
-            id_failed_job = self.dao.create_interventor_failed_job(self.job)
-    
-            message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to the Failed Jobs table with id {id_failed_job[0]}."
-    
-            self.dao.delete_interventor_job(self.get_id_job)
+            id_failed_job = dao_jobs.create_failed_job(self.job)
+            message = f"Interventor's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to the table 'failed_job' with id {id_failed_job[0]}."
+            dao_jobs.delete_job(self.get_id_job)
 
         assign_interventor_jobs_to_pickle_file()
         return message
@@ -126,8 +108,9 @@ class InterventorManager(JobManager):
             
         try:
             if not self.exceeded_number_of_max_attempts(False):
-                deleted_job = self.dao.get_interventor_job(self.get_id_job)
+                deleted_job = dao_jobs.get_job(self.get_id_job)
                 payload = payload = ast.literal_eval(deleted_job[2])
+                
             else:
                 raise ExceededNumberOfAttempts(f"The number of attempts of job {self.job.id_job} has been exceeded.")
             
@@ -149,16 +132,17 @@ class InterventorManager(JobManager):
             
             email_manager.send(to_whom=[fca_email_address], text_subject=subject, text_message=body, attachment_list=[xlsx_path])
             
-            deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+            deleted_job = dao_jobs.delete_job(self.get_id_job)
             send_message = ""            
             
             for id_news in self.dao.get_all_distinct_id_news_from_checking_outcome():
-                self.dao.update_the_time_when_the_news_was_sent_to_fca(id_news[0], id_agency)
+                self.dao.update_time_when_the_news_was_sent_to_fca(id_news[0], id_agency)
             
             assign_interventor_jobs_to_pickle_file()
             
             # move a planilha da pasta 'to_send' para a pasta 'sent' se não houver mais jobs de envio de emails para as ACFs.
             if not self.dao.check_whether_there_are_fca_email_jobs_in_pkl():
+                
                 shutil.move(xlsx_path, config.INTERVENTOR.PATH_NEWS_SENT_AS_EXCEL_SHEET_TO_FCAs)
                 send_message = f"\nSpreadsheet {xlsx_path} has been moved to the folder 'sent' for documentation purposes."
                 message = f"Email referred to job {deleted_job[1]} Nº {self.get_id_job} has been sent successfully.{send_message}"
@@ -196,7 +180,7 @@ class InterventorManager(JobManager):
             
         try:
             if not self.exceeded_number_of_max_attempts(False):
-                deleted_job = self.dao.get_interventor_job(self.get_id_job)
+                deleted_job = dao_jobs.get_job(self.get_id_job)
                 payload = payload = ast.literal_eval(deleted_job[2])
             else:
                 raise ExceededNumberOfAttempts(f"The number of attempts of job {self.job.id_job} has been exceeded.")
@@ -212,7 +196,7 @@ class InterventorManager(JobManager):
             tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
             message = self._twitter_api.tweet(tweet)
             
-            deleted_job = self.dao.delete_interventor_job(self.get_id_job)
+            deleted_job = dao_jobs.delete_job(self.get_id_job)
             message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}"
                 
             assign_interventor_jobs_to_pickle_file()
@@ -354,7 +338,7 @@ class Interventor(object):
                     payload = str(dict(zip(job[1].payload_keys, \
                         (f"❌ NOTÍCIA IDENTIFICADA COMO FAKE NEWS POR {SocialMediaAlertType.SIMILARIDADE.name} NO SITE DA AGÊNCIA {agency_name} - {title}...", "", f"Saiba mais em: {news_url}"))))
                     
-                    id = job[1].create_job(self._dao, payload)
+                    id = job[1].create_job(payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
             
                 except Exception as e:
@@ -406,7 +390,7 @@ class Interventor(object):
                     payload = str(dict(zip(job_media[1].payload_keys, \
                         (f"⚠️ {SocialMediaAlertType.DETECTADO.name} COMO POSSÍVEL FAKE NEWS - {title}...", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
                     
-                    id = job_media[1].create_job(self._dao, payload)
+                    id = job_media[1].create_job(payload)
                     self._logger.info(f"{job_media[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
             
                 except Exception as e:
@@ -421,7 +405,7 @@ class Interventor(object):
                 fca_info = self._dao.get_data_from_agency(fca)
                 payload = str(dict(zip(job[1].payload_keys, [fca_info[1], xlsx_path, len(candidates_id)])))
                 
-                id = job[1].create_job(self._dao, payload)
+                id = job[1].create_job(payload)
                 self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")
         
         
@@ -472,7 +456,7 @@ class Interventor(object):
                     payload = str(dict(zip(job[1].payload_keys, \
                         (f"❗ {SocialMediaAlertType.CONFIRMADO.name} COMO FAKE NEWS POR CURADORIA - {title}...", TextPreprocessing.slugify(title.lower()), text_news_cleaned))))
                     
-                    id = job[1].create_job(self._dao, payload)
+                    id = job[1].create_job(payload)
                     self._logger.info(f"{job[0]} {config.SCHEDULE.INTERVENTOR_JOBS_FILE}: job {id} persisted successfully.")            
             
                 except Exception as e:

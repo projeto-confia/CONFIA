@@ -54,18 +54,16 @@ class Job:
         except:
             raise
             
-    # TODO: create a 'UNIQUE' constraint in the database script 'script_01_schema.sql' comprising the columns 'queue' and 'payload' of table 'job' and 'failed_job'.
+            
     @abc.abstractmethod
-    def create_job(self, dao, payload: dict) -> None:
+    def create_job(self, payload: dict) -> None:
         """Persists the job on its corresponding queue in the database.
         
         Args:
-            dao: a DAO instance related to the respective module;
             payload: the payload content that will be stored as JSON format.
         """
         ...
         
-
 class JobManager(abc.ABC):
     
     def __init__(self, job: Job, file_path: str) -> None:
@@ -87,22 +85,21 @@ class JobManager(abc.ABC):
     def get_id_job(self) -> int:
         return self.job.id_job
     
-    # TODO: Make this method concrete by implementing it directly here. The implementation is commented below.
-    @abc.abstractmethod
+    
     def exceeded_number_of_max_attempts(self, count: bool = True) -> bool:
         """Checks whether the number of attempts has exceeded.
 
         Returns:
             bool: returns True if the number of attempts has maxed out the limit of the queue; False otherwise.
         """
-        # if count:
-        #     self.job.__dict__["attempts"] += 1
+        if count:
+            self.job.__dict__["attempts"] += 1
             
-        # current_attempts = self.job.__dict__["attempts"]
-        # max_attempts = self.job.__dict__["max_attempts"]
+        current_attempts = self.job.__dict__["attempts"]
+        max_attempts = self.job.__dict__["max_attempts"]
         
-        # return True if current_attempts > max_attempts else False
-        ...
+        return True if current_attempts > max_attempts else False
+    
 
     @abc.abstractmethod
     def manage_failed_job(self) -> str:

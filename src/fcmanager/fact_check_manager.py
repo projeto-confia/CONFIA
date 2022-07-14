@@ -1,9 +1,8 @@
+import shutil
 import logging, pickle
 from pathlib import Path
-import shutil
 from typing import Callable
-
-import numpy as np
+from jobs import dao as dao_jobs
 from src.config import Config as config
 from src.apis.twitter import TwitterAPI
 from src.fcmanager.dao import FactCheckManagerDAO
@@ -13,10 +12,9 @@ from jobs.job import Job, JobManager, ExceededNumberOfAttempts, SocialMediaAlert
 # TODO: Try to make a generic 'assigning method' afterwards to be used from all modules through dependency injection.
 def assign_fcamanager_jobs_to_pickle_file() -> None:
         
-        dao = FactCheckManagerDAO()
         path = config.SCHEDULE.FCMANAGER_JOBS_FILE
         
-        job_managers = {job.id_job: FactCheckJobManager(job, path) for job in dao.get_all_fcmanager_jobs()}
+        job_managers = {job.id_job: FactCheckJobManager(job, path) for job in dao_jobs.get_all_fcmanager_jobs()}
         
         try:
             with open(path, 'wb') as file:
@@ -32,10 +30,10 @@ class FactCheckingJobSocialMedia(Job):
         super().__init__(schedule_type, fn_update_pickle_file)
         
         
-    def create_job(self, dao, payload) -> str:
+    def create_job(self, payload) -> str:
         try:
             self.payload = payload
-            return str(dao.create_fcmanager_job(self)[0])
+            return str(dao_jobs.create_job(self)[0])
         
         except Exception as e:
             raise Exception(f"Um erro ocorreu ao persistir o job '{self.queue}' do módulo FactCheckManager: {e}")
@@ -45,17 +43,6 @@ class FactCheckJobManager(JobManager):
     def __init__(self, job: Job, file_path: str) -> None:
         super().__init__(job, file_path)
         self.dao = FactCheckManagerDAO()
-    
-
-    def exceeded_number_of_max_attempts(self, count: bool = True) -> bool:
-        
-        if count:
-            self.job.__dict__["attempts"] += 1
-            
-        current_attempts = self.job.__dict__["attempts"]
-        max_attempts = self.job.__dict__["max_attempts"]
-        
-        return True if current_attempts > max_attempts else False
 
 
     #! COMEÇAR DAQUI. UTILIZAR OS MÓDULOS 'INTERVENTOR.PY' E 'INTERVENTOR.DAO.PY'.
@@ -66,13 +53,13 @@ class FactCheckJobManager(JobManager):
         max_attempts = self.job.__dict__["max_attempts"]
         
         if not has_exceeded:
-            self.dao.update_number_of_attempts_job(self.job)
+            dao_jobs.update_number_of_attempts_job(self.job)
             message = f"FactCheckManager's job {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
             
         else:
-            id_failed_job = self.dao.create_fcmanager_failed_job(self.job)
+            id_failed_job = dao_jobs.create_failed_job(self.job)
             message = f"FactCheckManager's job Nº {self.get_id_job} maxed out the number of attempts and it was moved to table 'failed_jobs' with id {id_failed_job[0]}."
-            self.dao.delete_fcmanager_job(self.get_id_job)
+            dao_jobs.delete_job(self.get_id_job)
 
         assign_fcamanager_jobs_to_pickle_file()
         return message
@@ -81,7 +68,6 @@ class FactCheckJobManager(JobManager):
     def run_manager(self) -> bool:
         print(f'Executing FCManager job {self}')
     
-
 
 # TODO: refactor to interface and concrete classes, one concrete for each ACF
 class FactCheckManager(object):
@@ -125,12 +111,10 @@ class FactCheckManager(object):
                 
                 for id_news, v in dict_checked_fake_news.items():
                     
-                    if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
-                        
+                    if config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:                        
                         _, _, link = v.values()
                         
-                        text_news = self._dao.get_clean_text_news_from_id(id_news).upper()
-                        content   = text_news
+                        content   = self._dao.get_clean_text_news_from_id(id_news).upper()
                         fc_agency = "Boatos.org" # TODO: Hard-coded snippet. It must comprise other agencies in the future.
                         title     = f'❗ {SocialMediaAlertType.CONFIRMADO.name} COMO FAKE NEWS PELA {fc_agency.upper()}'
                         
@@ -139,7 +123,7 @@ class FactCheckManager(object):
                             
                             try:
                                 payload = str(dict(zip(job[1].payload_keys, (title, content, link, fc_agency))))
-                                id = job[1].create_job(self._dao, payload)
+                                id = job[1].create_job(payload)
                                 self._logger.info(f"{job[0]} {config.SCHEDULE.FCMANAGER_JOBS_FILE}: job {id} persisted successfully.")
                         
                             except Exception as e:
