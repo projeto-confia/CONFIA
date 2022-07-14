@@ -233,7 +233,11 @@ def create_failed_job(job: Job) -> tuple[int]:
         sql_str = "INSERT INTO detectenv.failed_job (id_job, queue, payload, attempts, created_at, error_message) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_failed_job;"
                     
         with DatabaseWrapper() as db:
-            db.execute(sql_str, (job.id_job, job.queue, job.payload, job.attempts, datetime.now(), str(job.error_message.args,)))
+            try:
+                db.execute(sql_str, (job.id_job, job.queue, job.payload, job.attempts, datetime.now(), str(job.error_message.args,)))
+            except AttributeError:
+                db.execute(sql_str, (job.id_job, job.queue, job.payload, job.attempts, datetime.now(), str(job.error_message,)))
+            
             id = db.fetchone()
     
         return id

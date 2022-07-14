@@ -106,7 +106,7 @@ class Config(object):
 
     @dataclass(frozen=True)
     class TWITTER_SETTINGS:
-        TWEET_MAX_CHARS = 280
+        TWEET_MAX_CHARS = 260
         USERNAME = "@ProjetoConfia"
 
         
