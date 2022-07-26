@@ -65,7 +65,7 @@ class Config(object):
     # detector
     @dataclass(frozen=True)
     class DETECTOR(object):
-        TRAIN_ICS = False
+        TRAIN_ICS = True
 
 
     # interventor
@@ -73,11 +73,11 @@ class Config(object):
     class INTERVENTOR(object):
         PATH_NEWS_TO_SEND_AS_EXCEL_SHEET_TO_FCAs = "src/data/excel_sheets_fca/to_send"
         PATH_NEWS_SENT_AS_EXCEL_SHEET_TO_FCAs = "src/data/excel_sheets_fca/sent"
-        FACT_CHECK_AGENCIES = ['Boatos.org', 'Example.org']
-        SOCIAL_MEDIA_ALERT_ACTIVATE = True
+        FACT_CHECK_AGENCIES = ['Boatos.org']
+        SOCIAL_MEDIA_ALERT_ACTIVATE = False
         PROB_CLASSIF_THRESHOLD = 0.9
         NUM_NEWS_TO_SELECT = 4
-        CURATORSHIP = False
+        CURATORSHIP = True
         WINDOW_SIZE = 7
 
 
@@ -107,7 +107,7 @@ class Config(object):
     @dataclass(frozen=True)
     class TWITTER_SETTINGS:
         TWEET_MAX_CHARS = 260
-        USERNAME = "@ProjetoConfia"
+        USERNAME = "@TwitterUsername"
 
         
     # text preprocessor
