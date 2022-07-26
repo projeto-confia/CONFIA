@@ -63,6 +63,8 @@ class EngineManager(object):
         try:
             filenames = os.listdir(os.path.join('src', 'data'))
             for filename in filenames:
+                if os.path.isdir(os.path.join('src', 'data', filename)):
+                    continue
                 if filename == '.gitkeep':
                     continue
                 filepath = os.path.join('src', 'data', filename)
