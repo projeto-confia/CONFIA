@@ -8,6 +8,9 @@ Esta aplicação depende da componente [database](https://github.com/projeto-con
 A aplicação AUTOMATA foi desenvolvida e homologada para ser instalada e executada nos seguintes sistemas operacionais:
 * Ubuntu 20.04 LTS
 
+## Versão do Python suportada
+* Python 3.9.7+
+
 ## Instalação da aplicação AUTOMATA
 Abra um terminal e execute os seguintes comandos para a instalação e configuração da aplicação AUTOMATA:
 
