@@ -23,7 +23,7 @@ Instale o [venv](https://docs.python.org/3/library/venv.html):
 
 Crie o ambiente virtual para o AUTOMATA:
 ```
-    python3 -m venv .venv
+    python -m venv .venv
 ```
 
 Ative o ambiente virtual
