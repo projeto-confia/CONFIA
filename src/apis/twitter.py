@@ -4,6 +4,11 @@ import time
 from src.config import Config as config
 from src.monitor.interfaces import TwitterStatusProcessorInterface
 
+class TweetMaxCharsExceededError(Exception):
+    
+    def __init__(self, message: object) -> None:
+        super().__init__(self, message)
+
 
 class TwitterStreamListener(tweepy.StreamListener):
     
@@ -22,16 +27,15 @@ class TwitterAPI(object):
         self._logger = logging.getLogger(config.LOGGING.NAME)
         self._api = None
         self._connect()
-        self._logger.info("Twitter API initialized")
 
         
     def _connect(self):
         if not self._api:
             try:
-                auth = tweepy.OAuthHandler(config.TWITTER_CREDENTIAL.CONSUMER_KEY, 
-                                           config.TWITTER_CREDENTIAL.CONSUMER_SECRET)
-                auth.set_access_token(config.TWITTER_CREDENTIAL.ACCESS_TOKEN, 
-                                      config.TWITTER_CREDENTIAL.ACCESS_TOKEN_SECRET)
+                auth = tweepy.OAuthHandler(config.TWITTER_CREDENTIALS.CONSUMER_KEY, 
+                                           config.TWITTER_CREDENTIALS.CONSUMER_SECRET)
+                auth.set_access_token(config.TWITTER_CREDENTIALS.ACCESS_TOKEN, 
+                                      config.TWITTER_CREDENTIALS.ACCESS_TOKEN_SECRET)
                 self._api = tweepy.API(auth)
             except:
                 self._logger.error('Unable to connect to Twitter API.')
@@ -69,7 +73,13 @@ class TwitterAPI(object):
         
         
     def tweet(self, text_tweet):
-        self._api.update_status(text_tweet)
+        
+        if len(text_tweet) > config.TWITTER_SETTINGS.TWEET_MAX_CHARS:
+            raise TweetMaxCharsExceededError(f"Text exceeded the {config.TWITTER_SETTINGS.TWEET_MAX_CHARS} characters allowed by Twitter per tweet: \
+                {len(text_tweet)}")
+            
+        self._api.update_status(status=text_tweet)
+        return f"tweet was just posted in Twitter."
         
         
     def fetch_stream(self, tags, stream_time, status_processor):

@@ -1,3 +1,4 @@
+import asyncio, datetime
 from typing import Dict
 from jobs.job import JobManager
 import logging, pickle, pathlib
@@ -10,7 +11,7 @@ def init_log(verbose=False):
     logger.setLevel(logging.INFO)
 
     file_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler(config.LOGGING.FILE_PATH)
+    file_handler = logging.FileHandler(config.LOGGING.SCHEDULER_FILE_PATH)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(file_format)
     logger.addHandler(file_handler)
@@ -25,8 +26,8 @@ def init_log(verbose=False):
 
 class Schedule:
     
-    _failed_jobs: int = 0
-    _subscribed_jobs: Dict[int, JobManager] = {}
+    _subscribed_jobs_dict: Dict[int, JobManager] = {}
+    _subscribed_failed_jobs_dict: Dict[int, JobManager] = {}
     _logger = logging.getLogger(__name__)
             
             
@@ -36,34 +37,48 @@ class Schedule:
         for jobs in pathlib.Path('jobs/').glob('*.pkl'):
             with open(jobs, 'rb') as file:
                 jobs_dict = pickle.load(file)
-                Schedule._subscribed_jobs.update(jobs_dict)
+                Schedule._subscribed_jobs_dict.update(jobs_dict)
 
     
     @staticmethod
-    def run():
+    async def run():
         
         Schedule.load_all_jobs()
         
-        if not len(Schedule._subscribed_jobs):
+        if not len(Schedule._subscribed_jobs_dict):
             Schedule._logger.info("There aren't scheduled jobs to be executed.")
             
         else:
-            for id, job_manager in Schedule._subscribed_jobs.items():
+            for id, job_manager in Schedule._subscribed_jobs_dict.items():
                 
                 Schedule._logger.info(f"Running job {job_manager}...")
                 
-                if not job_manager.run_manager():
-                    job_manager.manage_failed_job()
-                    Schedule._failed_jobs += 1
+                try:
+                    last_update = job_manager.job.__dict__["updated_at"]
+                    job_periodicity = job_manager.job.__dict__["periodicity_in_minutes"]
                     
-                else:
-                    del Schedule._subscribed_jobs[id]
-        
-        # Schedule._logger.info("--- Message to failed jobs to be completed... ---")
-        Schedule._failed_jobs = 0
+                    allowed_period_to_consume_job = last_update + datetime.timedelta(minutes=job_periodicity)
+                    
+                    if datetime.datetime.now() < allowed_period_to_consume_job:
+                        Schedule._logger.warning\
+                            (f"Job {job_manager} is scheduled to run only in {datetime.datetime.strftime(allowed_period_to_consume_job, '%d/%m/%Y %H:%M:%S')}")
+                        
+                        continue    
+                    
+                    message = await job_manager.run_manager()
+                    Schedule._logger.info(message)
                 
+                except Exception as e:
+                    Schedule._logger.error(e)
+                    Schedule._subscribed_failed_jobs_dict[id] = job_manager
+                    
+                    message = job_manager.manage_failed_job()
+                    Schedule._logger.info(message)                    
+                    
+
 if __name__ == '__main__':
+    
     init_log(verbose=config.LOGGING.VERBOSE)
     EngineManager().run()
     Schedule._logger.info('Starting schedule...')
-    Schedule.run()
+    asyncio.run(Schedule.run())

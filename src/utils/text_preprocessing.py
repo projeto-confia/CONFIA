@@ -1,15 +1,14 @@
-from googletrans import Translator
-from nltk.tokenize import TweetTokenizer
-from nltk.corpus import stopwords
-from nltk.tag import pos_tag
-from nltk.stem.wordnet import WordNetLemmatizer
+import validators
+from functools import total_ordering
+from math import remainder
 from fuzzywuzzy import fuzz
-import emoji
-import nltk
-import re
-import string
-import re
+from nltk.tag import pos_tag
+from nltk.corpus import stopwords
+from googletrans import Translator
+import emoji, nltk, re, string, slugify
 from src.config import Config as config
+from nltk.tokenize import TweetTokenizer
+from nltk.stem.wordnet import WordNetLemmatizer
 
 class TextPreprocessing:
 
@@ -22,9 +21,8 @@ class TextPreprocessing:
         self.__translator = Translator()
         self.__tokenizer = TweetTokenizer()
         self.__lemmatizer = WordNetLemmatizer()
-        self.__stopwords = nltk.corpus.stopwords.words('portuguese')
-        self._threshold = threshold
         self.__punctuation = '!"$%&\'()*+,-./:;<=>?[\]^_`{|}~'
+        self._threshold = threshold
 
     
     def __check_nltk_packages(self, install_nltk_packages):
@@ -83,7 +81,7 @@ class TextPreprocessing:
 
     
     def check_duplications(self, news1_cleaned, news2_cleaned):
-        """Verifica se os textos em 'news1' e 'news2', após o processo de limpeza, têm seus conteúdo duplicados. Utiliza o algoritmo de Levenshtein.
+        """Verifica se os textos em 'news1' e 'news2', após o processo de limpeza, têm seus conteúdos duplicados. Utiliza o algoritmo de Levenshtein.
 
         Args:
             news1_cleaned (string): texto limpo da primeira mensagem.
@@ -96,3 +94,41 @@ class TextPreprocessing:
         
         value = fuzz.token_sort_ratio(news1_cleaned, news2_cleaned)
         return value >= self._threshold, value
+    
+    
+    @staticmethod
+    def slugify(text: str) -> str:
+        return slugify.slugify(text.lower())
+    
+    
+    @staticmethod
+    def prepare_tweet_for_posting(title: str, content: str, slug_or_url: str) -> str:
+        """Prepares and formats the text according to the maximum number of characters required by Twitter.
+
+        Args:
+            title (str): the title of the tweet;
+            
+            content (str): the main content;
+            
+            slug_or_link (str): the slug or the url to form up a link to the page with more information about the news.
+
+        Returns:
+            str: the processed tweet.
+        """
+        
+        title = title + "\n\n"
+        allowed_length = config.TWITTER_SETTINGS.TWEET_MAX_CHARS
+        
+        if validators.slug(slug_or_url):
+            link_info = f"... Saiba mais em: {config.CONFIA_API.SITE_URL_HMG + slug_or_url}" if slug_or_url else ""
+        else:
+            if not re.match(r"http(s?)://", slug_or_url):
+                slug_or_url = "http://" + slug_or_url
+            
+            link_info = f"... Saiba mais em: {slug_or_url}" if validators.url(slug_or_url) else ""
+                
+        total_length_without_content = len(title) + len(link_info)
+        remainder_chars_for_content = allowed_length - total_length_without_content
+        
+        return title + content[:remainder_chars_for_content] + link_info \
+            if remainder_chars_for_content > len(title) else title + link_info

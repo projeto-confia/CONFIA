@@ -8,6 +8,7 @@ __pycache__/
 
 # File extensions
 *.pkl
+*.xlsx
 
 # Distribution / packaging
 .Python
@@ -145,14 +146,15 @@ cython_debug/
 __pycache__
 
 # dados
-data/
+
 !data/.gitkeep
-!data/acf/.gitkeep
-!data/acf/received/.gitkeep
-!data/acf/received/processed/.gitkeep
-!data/acf/to_send/.gitkeep
-!data/acf/to_send/sent/.gitkeep
-!data/acf/to_curator/.gitkeep
+!data/excel_sheets_fca/.gitkeep
+!data/excel_sheets_fca/received/.gitkeep
+!data/excel_sheets_fca/received/processed/.gitkeep
+!data/excel_sheets_fca/to_send/.gitkeep
+!data/excel_sheets_fca/to_send/sent/.gitkeep
+!data/excel_sheets_fca/to_curator/.gitkeep
+
 
 # vscode stuff
 .vscode

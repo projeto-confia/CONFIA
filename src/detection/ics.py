@@ -136,7 +136,7 @@ def _compute_reputations(smoothing, qtd_F, qtd_V, row_account):
     tuple_account = (1, #TODO: alterar isso quando trabalharmos com mais redes sociais.
             row_account["id_owner"],
             row_account["screen_name"],
-            str(row_account["date_creation"]),
+            str(row_account["date_creation"]) if row_account["date_creation"] != None else row_account["date_creation"],
             row_account["blue_badge"],
             probAlphaN, # 5
             probBetaN, # 6
