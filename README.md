@@ -8,6 +8,9 @@ Esta aplicação depende da componente [database](https://github.com/projeto-con
 A aplicação AUTOMATA foi desenvolvida e homologada para ser instalada e executada nos seguintes sistemas operacionais:
 * Ubuntu 20.04 LTS
 
+## Versão do Python suportada
+* Python 3.9.7+
+
 ## Instalação da aplicação AUTOMATA
 Abra um terminal e execute os seguintes comandos para a instalação e configuração da aplicação AUTOMATA:
 
@@ -23,7 +26,7 @@ Instale o [venv](https://docs.python.org/3/library/venv.html):
 
 Crie o ambiente virtual para o AUTOMATA:
 ```
-    python3 -m venv .venv
+    python -m venv .venv
 ```
 
 Ative o ambiente virtual
@@ -72,13 +75,22 @@ No final do arquivo, adicione a linha:
 Salve e feche o arquivo `/etc/crontab`.
 
 ## Inicialização do AUTOMATA
-Para inicializar o AUTOMATA certifique-se que o ambiente virtual está ativado e, em seguida, execute no terminal:
-```
-    python3 -m src
-```
+Uma vez que todos os passos acima foram executados (principalmente a configuração do Módulo _Schedule_), o AUTOMATA será automaticamente inicializado em até 1 minuto. A `engine` que controla o fluxo de processamento do AUTOMATA se encarrega automaticamente de:
+* Inicializar o AUTOMATA em caso de reinício do Sistema Operacional.
+* Reinicar o AUTOMATA em caso de mudança do _status_ para _ERROR_.
+* Reinicar o AUTOMATA em caso de alteração dos parâmetros de configuração via interface do Painel Administrativo.
 
-## Desativar o ambiente virtual
+
+## Desativação do AUTOMATA
+Abra o arquivo `/etc/crontab`, comente a linha abaixo e salve o arquivo:
+```
+* * * * * root flock -n /var/lock/automata.schedule.lock ${AUTOMATA_PATH}/schedule.sh 2>> ${AUTOMATA_PATH}/logs/schedule.log
+```
 No terminal, execute:
 ```
-    deactivate
+ps -ef | grep "python -m src"
+```
+Identifique o `PID` do processo `./.venv/bin/python -m src`. Empregue o PID identificado no comando abaixo para encerrar o AUTOMATA:
+```
+kill <PID>
 ```

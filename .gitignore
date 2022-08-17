@@ -158,3 +158,9 @@ __pycache__
 
 # vscode stuff
 .vscode
+
+# log stuff
+logs/*.out
+
+# engine status
+src/engine/status

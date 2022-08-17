@@ -3,6 +3,7 @@ from typing import Dict
 from jobs.job import JobManager
 import logging, pickle, pathlib
 from src.config import Config as config
+from src.engine.engine import EngineManager
 
 
 def init_log(verbose=False):
@@ -73,4 +74,5 @@ class Schedule:
 if __name__ == '__main__':
     
     init_log(verbose=config.LOGGING.VERBOSE)
-    asyncio.run(Schedule.run())
+    EngineManager().run()
+    Schedule._logger.info('Starting schedule...')
