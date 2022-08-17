@@ -1,5 +1,5 @@
+import requests, json
 from typing import Tuple
-import asyncio, requests, json
 from src.config import Config as config
 
 class InvalidResponseError(Exception):
@@ -8,17 +8,14 @@ class InvalidResponseError(Exception):
         super().__init__(message)
 
 
-async def get_fake_news_from_confia_portal() -> list[dict]:
+def get_fake_news_from_confia_portal() -> list[dict]:
     """Endpoint: 'Obter notificações de fake news'
 
     Returns:
         list[dict]: a list in JSON format containing all the fake news available in both CMS and project's site.
     """
-    
-    loop = asyncio.get_event_loop()
-    request = loop.run_in_executor(None, requests.get, f"{config.CONFIA_API.CMS_URL}fake-news-notifications")
-    
-    response = await request
+        
+    response = requests.get(f"{config.CONFIA_API.CMS_URL}fake-news-notifications")
     
     if response.status_code != 200:
         raise InvalidResponseError(f"Get request denied: response status code: {response.status_code}")
@@ -26,7 +23,7 @@ async def get_fake_news_from_confia_portal() -> list[dict]:
     return response
 
 
-async def post_new_fake_news_in_confia_portal(payload: list[dict]) -> list[dict]:
+def post_new_fake_news_in_confia_portal(payload: list[dict]) -> list[dict]:
     """Endpoint: 'Inserir notificação de fake news'. 
     
     Args: a payload containing the following structure:
@@ -38,10 +35,7 @@ async def post_new_fake_news_in_confia_portal(payload: list[dict]) -> list[dict]
         list[dict]: a list in JSON format containing the new id assigned to the posted news.
     """
     
-    loop = asyncio.get_event_loop()
-    request = loop.run_in_executor(None, lambda: requests.post(f"{config.CONFIA_API.CMS_URL}fake-news-notifications", data=payload))
-    
-    response = await request
+    response = requests.post(f"{config.CONFIA_API.CMS_URL}fake-news-notifications", data=payload)
     
     if response.status_code != 200:
         raise InvalidResponseError(f"Post request denied: response status code: {response.status_code}")
@@ -49,7 +43,7 @@ async def post_new_fake_news_in_confia_portal(payload: list[dict]) -> list[dict]
     return response
 
 
-async def update_fake_news_in_confia_portal(payload: list[dict]) -> Tuple[int, str]:
+def update_fake_news_in_confia_portal(payload: list[dict]) -> Tuple[int, str]:
     """Endpoint: 'Atualizar página de notificação de fake news.'
 
     Args:
@@ -63,10 +57,7 @@ async def update_fake_news_in_confia_portal(payload: list[dict]) -> Tuple[int, s
     
     payload = str({"fake_news_notifications": [payload]}).replace('\'', '\"').encode('utf-8')
     
-    loop = asyncio.get_event_loop()
-    request = loop.run_in_executor(None, lambda: requests.put(f"{config.CONFIA_API.CMS_URL}fake-news-notification-list", data=payload))
-    
-    response = await request
+    response = requests.put(f"{config.CONFIA_API.CMS_URL}fake-news-notification-list", data=payload)
     
     if response.status_code != 200:
         raise InvalidResponseError(f"Put request denied: response status code: {response.status_code}")

@@ -80,18 +80,18 @@ class InterventorManager(JobManager):
         return message
     
 
-    async def run_manager(self) -> str:
+    def run_manager(self) -> str:
         
         if config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_ALERT_TO_SOCIAL_MEDIA:
             
-            return await self._send_alerts_to_social_media()
+            return self._send_alerts_to_social_media()
         
         elif config.SCHEDULE.QUEUE[self.job.queue] == config.SCHEDULE.QUEUE.INTERVENTOR_SEND_NEWS_TO_FCA:
             
-            return await self._send_email_to_fca()
+            return self._send_email_to_fca()
         
         
-    async def _send_email_to_fca(self) -> str:
+    def _send_email_to_fca(self) -> str:
         
         """Auxiliary function to send an email to the FCA if the CURATORSHIP flag is set to False.
 
@@ -151,7 +151,7 @@ class InterventorManager(JobManager):
             raise Exception(error)
         
         
-    async def _send_alerts_to_social_media(self) -> str:
+    def _send_alerts_to_social_media(self) -> str:
         
         """Auxiliary function to send alerts to social media.
 
@@ -179,8 +179,8 @@ class InterventorManager(JobManager):
             slug = payload["slug"]
             
             if slug:
-                request_payload = await endpoints.post_new_fake_news_in_confia_portal(payload)
-                slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
+                request_payload = endpoints.post_new_fake_news_in_confia_portal(payload)
+                slug  = endpoints.update_fake_news_in_confia_portal(request_payload.text)
             
             tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
             _ = self._twitter_api.tweet(tweet)

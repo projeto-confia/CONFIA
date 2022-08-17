@@ -12,7 +12,7 @@ class InterventorFacade(object):
         self._logger = logging.getLogger(config.LOGGING.NAME)
 
 
-    async def run(self):
+    def run(self):
         
         try:
             self._logger.info('Running Interventor...')

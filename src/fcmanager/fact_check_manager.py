@@ -64,11 +64,11 @@ class FactCheckJobManager(JobManager):
         return message
 
 
-    async def run_manager(self) -> str:
-        return await self._fca_send_alert_to_social_media()
+    def run_manager(self) -> str:
+        return self._fca_send_alert_to_social_media()
         
         
-    async def _fca_send_alert_to_social_media(self) -> str:
+    def _fca_send_alert_to_social_media(self) -> str:
         
         """Auxiliary function to send alerts to social media.
 
