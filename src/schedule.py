@@ -58,11 +58,10 @@ class Schedule:
                     if datetime.datetime.now() < allowed_period_to_consume_job:                        
                         continue    
                     
-                    message = await job_manager.run_manager()
-                    Schedule._logger.info(message)
+                    await job_manager.run_manager()
+                    
                 
-                except Exception as e:
-                    Schedule._logger.error(e)
+                except Exception:
                     Schedule._subscribed_failed_jobs_dict[id] = job_manager
                     
                     message = job_manager.manage_failed_job()
@@ -74,5 +73,5 @@ class Schedule:
 if __name__ == '__main__':
     
     init_log(verbose=config.LOGGING.VERBOSE)
-    EngineManager().run()
-    Schedule._logger.info('Starting schedule...')
+    # EngineManager().run()
+    asyncio.run(Schedule.run())

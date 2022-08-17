@@ -130,8 +130,7 @@ class InterventorManager(JobManager):
             
             email_manager.send(to_whom=[fca_email_address], text_subject=subject, text_message=body, attachment_list=[xlsx_path])
             
-            deleted_job = dao_jobs.delete_job(self.get_id_job)
-            send_message = ""            
+            deleted_job = dao_jobs.delete_job(self.get_id_job) 
             
             for id_news in self.dao.get_all_distinct_id_news_from_checking_outcome():
                 self.dao.update_time_when_the_news_was_sent_to_fca(id_news[0], id_agency)
@@ -140,16 +139,8 @@ class InterventorManager(JobManager):
             
             # move a planilha da pasta 'to_send' para a pasta 'sent' se não houver mais jobs de envio de emails para as ACFs.
             if not self.dao.check_whether_there_are_fca_email_jobs_in_pkl():
-                
                 shutil.move(xlsx_path, config.INTERVENTOR.PATH_NEWS_SENT_AS_EXCEL_SHEET_TO_FCAs)
-                send_message = f"\nSpreadsheet {xlsx_path} has been moved to the folder 'sent' for documentation purposes."
-                message = f"Email referred to job {deleted_job[1]} Nº {self.get_id_job} has been sent successfully.{send_message}"
-            
-            else:
-                message = f"Email referred to job {deleted_job[1]} Nº {self.get_id_job} has been sent successfully."
                 
-            return message
-    
         except (SMTPAuthenticationError, ExceededNumberOfAttempts) as e:
             self.job.error_message = e
             raise Exception(e)
@@ -174,7 +165,7 @@ class InterventorManager(JobManager):
         """
         
         if not config.INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE:
-            return "AUTOMATA is set to do not send alerts to social media."
+            return "AUTOMATA is not set to send alerts to social media. Check out if the flag 'INTERVENTOR.SOCIAL_MEDIA_ALERT_ACTIVATE' is enabled by accessing the Control Panel."
             
         try:
             if not self.exceeded_number_of_max_attempts(False):
@@ -192,13 +183,11 @@ class InterventorManager(JobManager):
                 slug  = await endpoints.update_fake_news_in_confia_portal(request_payload.text)
             
             tweet = TextPreprocessing.prepare_tweet_for_posting(title, content, slug)
-            message = self._twitter_api.tweet(tweet)
+            _ = self._twitter_api.tweet(tweet)
             
             deleted_job = dao_jobs.delete_job(self.get_id_job)
-            message = f"Job {deleted_job[1]} Nº {self.get_id_job} has been executed successfully: {message}"
                 
             assign_interventor_jobs_to_pickle_file()
-            return message
         
         except (endpoints.InvalidResponseError, ExceededNumberOfAttempts) as e:
             self.job.error_message = e
@@ -312,7 +301,7 @@ class Interventor(object):
         
         self._process_similars(similars)
         
-        if candidates_to_check and len(candidates_to_check) == 4:
+        if candidates_to_check:
             self._process_candidates_to_check(candidates_to_check)
     
     

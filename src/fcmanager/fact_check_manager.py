@@ -81,7 +81,7 @@ class FactCheckJobManager(JobManager):
         """
         
         if not config.FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE:
-            return "AUTOMATA is set to do not send alerts to social media."
+            return "AUTOMATA is not set to send alerts to social media. Check out if the flag 'FCMANAGER.SOCIAL_MEDIA_ALERT_ACTIVATE' is enabled by accessing the Control Panel."
             
         try:
             if not self.exceeded_number_of_max_attempts(False):
