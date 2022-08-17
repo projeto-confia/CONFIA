@@ -66,12 +66,10 @@ class InterventorManager(JobManager):
     def manage_failed_job(self) -> str:
         
         has_exceeded = self.exceeded_number_of_max_attempts()
-        attempts = self.job.__dict__["attempts"]
-        max_attempts = self.job.__dict__["max_attempts"]
+        message = ""
         
         if not has_exceeded:
             dao_jobs.update_number_of_attempts_job(self.job)
-            message = f"Interventor's job {self.get_id_job} has failed. A novel execution attempt was already scheduled ({attempts}/{max_attempts})."
             
         else:
             id_failed_job = dao_jobs.create_failed_job(self.job)

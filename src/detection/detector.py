@@ -33,11 +33,8 @@ class Detector:
                         self._dao.update_news_labels(id_news, bool(predicted_prob_label[0]), None, predicted_prob_label[1])
                         news.add(id_news)
                 
-                if len(news):
-                    self._logger.info("The following news were updated:")
-                    self._logger.info(f"{sorted(news)}.")
-                
-                else: self._logger.info("No news were updated.")
+                self._logger.info(f"{len(news)} news were updated.") if len(news) else self._logger.info("No news were updated.")
+                    
         
         except Exception as e:
             self._logger.error(f"An error occurred during the news' updating process: {e.args}")

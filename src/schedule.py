@@ -44,13 +44,9 @@ class Schedule:
         
         Schedule.load_all_jobs()
         
-        if not len(Schedule._subscribed_jobs_dict):
-            Schedule._logger.info("There aren't scheduled jobs to be executed.")
+        if len(Schedule._subscribed_jobs_dict):
             
-        else:
             for id, job_manager in Schedule._subscribed_jobs_dict.items():
-                
-                Schedule._logger.info(f"Running job {job_manager}...")
                 
                 try:
                     last_update = job_manager.job.__dict__["updated_at"]
@@ -58,10 +54,7 @@ class Schedule:
                     
                     allowed_period_to_consume_job = last_update + datetime.timedelta(minutes=job_periodicity)
                     
-                    if datetime.datetime.now() < allowed_period_to_consume_job:
-                        Schedule._logger.warning\
-                            (f"Job {job_manager} is scheduled to run only in {datetime.datetime.strftime(allowed_period_to_consume_job, '%d/%m/%Y %H:%M:%S')}")
-                        
+                    if datetime.datetime.now() < allowed_period_to_consume_job:                        
                         continue    
                     
                     message = await job_manager.run_manager()
@@ -72,11 +65,12 @@ class Schedule:
                     Schedule._subscribed_failed_jobs_dict[id] = job_manager
                     
                     message = job_manager.manage_failed_job()
-                    Schedule._logger.info(message)                    
+                    
+                    if len(message):
+                        Schedule._logger.info(message)                    
                     
 
 if __name__ == '__main__':
     
     init_log(verbose=config.LOGGING.VERBOSE)
-    Schedule._logger.info('Starting schedule...')
     asyncio.run(Schedule.run())

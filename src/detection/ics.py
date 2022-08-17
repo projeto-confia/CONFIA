@@ -25,7 +25,6 @@ class ICS:
                     ou (-1, -1) se nenhum usuário reputado a compartilhou ou a notícia ainda não foi enviada para checagem ou curadoria.
         """
         
-        #TODO: testar esta funcionalidade.
         # verifica se a notícia já foi enviada para a curadoria ou alguma agência de checagem.
         if id_news not in self._list_of_news_sent_to_curatorship_or_fact_checking_agencies:
             
