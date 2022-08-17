@@ -74,3 +74,4 @@ if __name__ == '__main__':
     
     init_log(verbose=config.LOGGING.VERBOSE)
     EngineManager().run()
+    Schedule.run()
