@@ -41,7 +41,7 @@ class Schedule:
 
     
     @staticmethod
-    async def run():
+    def run():
         
         Schedule.load_all_jobs()
         
@@ -58,7 +58,7 @@ class Schedule:
                     if datetime.datetime.now() < allowed_period_to_consume_job:                        
                         continue    
                     
-                    await job_manager.run_manager()
+                    _ = job_manager.run_manager()
                     
                 
                 except Exception:
@@ -73,5 +73,4 @@ class Schedule:
 if __name__ == '__main__':
     
     init_log(verbose=config.LOGGING.VERBOSE)
-    # EngineManager().run()
-    asyncio.run(Schedule.run())
+    EngineManager().run()
