@@ -1,4 +1,3 @@
-# import traceback
 import logging
 from src.detection.ics import ICS
 from src.detection.dao import DAO
@@ -46,7 +45,7 @@ class Detector:
             self._ics.fit()
         
         except Exception as e:
-            self._logger.error(f"An error occurred during the reputation process of social media accounts: {e.args}")
+            raise(f"An error occurred during the reputation process of social media accounts: {e.args}")
 
     def predict(self, id_news):
         return self._ics.predict(id_news)

@@ -136,6 +136,7 @@ class DAO:
 
         return self.query_to_dataframe(query, id_social_media_account)
     
+    
     def get_ids_of_news_sent_to_curatorship_or_fact_checking_agencies(self):
         """
         Retorna os id's das notícias enviadas para as agências de checagem e curadoria.
@@ -145,6 +146,7 @@ class DAO:
         """
         df_id_news = self.query_to_dataframe("select id_news from detectenv.checking_outcome union select id_news from detectenv.curatorship")
         return sorted(df_id_news["id_news"])
+        
 
     def get_labeled_news(self):
         """
@@ -154,7 +156,8 @@ class DAO:
             dataframe: o dataframe contendo todas as notícias rotuladas.
         """
         return self.query_to_dataframe("SELECT * FROM detectenv.news WHERE ground_truth_label IS NOT NULL;")
-            
+    
+    
     def query_to_dataframe(self, query, *params):
         """
         Executa uma query to tipo 'select' e retorna a consulta em formato Pandas Dataframe.

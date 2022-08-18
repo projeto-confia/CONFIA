@@ -1,26 +1,23 @@
 import psycopg2
+import numpy as np
+from tenacity import *
+from src.config import Config as config
 from psycopg2.extras import execute_values
 from psycopg2.extensions import register_adapter, AsIs
-from src.config import Config as config
-import numpy as np
-import pandas as pd
-
 
 class DatabaseWrapper:
 
+    @retry(stop=stop_after_attempt(15), wait=wait_random(min=1, max=10))
     def __init__(self):
-        try:
-            self._conn = psycopg2.connect(user=config.DATABASE.USER,
-                                          password=config.DATABASE.PASSWORD,
-                                          host=config.DATABASE.HOST,
-                                          port=config.DATABASE.PORT,
-                                          database=config.DATABASE.NAME)
+        self._conn = psycopg2.connect(user=config.DATABASE.USER,
+                                        password=config.DATABASE.PASSWORD,
+                                        host=config.DATABASE.HOST,
+                                        port=config.DATABASE.PORT,
+                                        database=config.DATABASE.NAME)
 
-            self._csr = self._conn.cursor()
-            self._register_adapters()
+        self._csr = self._conn.cursor()
+        self._register_adapters()
 
-        except (Exception, psycopg2.Error) as error :
-            print ("Error while connecting to PostgreSQL", error)
 
     def __enter__(self):
         return self

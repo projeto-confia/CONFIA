@@ -64,6 +64,7 @@ class ICS:
         else:
             return (-1, -1) # a notícia já foi enviada para a checagem ou curadoria.
 
+
     def fit(self):
         """
         Atualiza as probabilidades das contas de usuário que compartilharam notícias reputadas.
