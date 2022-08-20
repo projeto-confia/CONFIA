@@ -7,7 +7,7 @@ from psycopg2.extensions import register_adapter, AsIs
 
 class DatabaseWrapper:
 
-    @retry(stop=stop_after_attempt(15), wait=wait_random(min=1, max=10))
+    @retry(reraise=True, stop=stop_after_attempt(15), wait=wait_random(min=5, max=10))
     def __init__(self):
         self._conn = psycopg2.connect(user=config.DATABASE.USER,
                                         password=config.DATABASE.PASSWORD,

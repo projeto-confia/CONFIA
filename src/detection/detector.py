@@ -6,7 +6,8 @@ from src.config import Config as config
 class Detector:
 
     def __init__(self):
-        self._dao = DAO()
+        
+        self._dao = DAO()        
         self._ics = ICS(laplace_smoothing=0.01, omega=0.5)
         self._logger = logging.getLogger(config.LOGGING.NAME)
 

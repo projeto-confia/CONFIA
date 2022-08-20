@@ -235,7 +235,10 @@ class Interventor(object):
         
         if classified_as_not_fake:
             self._logger.info("Checking the existence of similar news identified as 'fake' by FCAs but classified as 'not fake' by AUTOMATA.")
-            self._persist_news(classified_as_not_fake)           
+            similars, _ = self._split_similar_news(classified_as_not_fake)
+        
+            if similars:
+                self._process_similars(similars)
         
         if not classified_as_fake:
             self._logger.info('No news to be verified.')
@@ -299,7 +302,8 @@ class Interventor(object):
         self._logger.info('Processing news...')
         similars, candidates_to_check = self._split_similar_news(news)
         
-        self._process_similars(similars)
+        if similars:
+            self._process_similars(similars)
         
         if candidates_to_check:
             self._process_candidates_to_check(candidates_to_check)
