@@ -47,6 +47,8 @@ class InterventorDAO(metaclass=SingletonMetaClass):
                             and n.ground_truth_label is null \
                             and n.classification_outcome is not null \
                             and co.datetime_sent_for_checking is null \
+                            and co.id_news is null \
+                            and cur.id_news is null \
                             and cur.is_news is null \
                             and n.prob_classification > " + str(prob_classif_threshold) + " \
                         group by n.id_news, n.text_news, n.prob_classification \
