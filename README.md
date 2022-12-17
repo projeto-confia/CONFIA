@@ -94,3 +94,24 @@ Identifique o `PID` do processo `./.venv/bin/python -m src`. Empregue o PID iden
 ```
 kill <PID>
 ```
+
+## Menção Bibliográfica
+
+Caso cite o AUTOMATA em alguma produção científica, pedimos por gentileza que referencie o seguinte artigo:
+
+```bibtex
+@inproceedings{webmedia_estendido,
+ author = {Augusto Fonseca and Carlos Moreira and Gabriel Machado and Paulo Freire and Ronaldo Goldschmidt},
+ title = {AUTOMATA: Um Ambiente para Combate Automático de Fake News em Redes Sociais Virtuais},
+ booktitle = {Anais Estendidos do XXVIII Simpósio Brasileiro de Sistemas Multimídia e Web},
+ location = {Curitiba},
+ year = {2022},
+ keywords = {},
+ issn = {2596-1683},
+ pages = {79--82},
+ publisher = {SBC},
+ address = {Porto Alegre, RS, Brasil},
+ doi = {10.5753/webmedia_estendido.2022.226555},
+ url = {https://sol.sbc.org.br/index.php/webmedia_estendido/article/view/21989}}
+
+```
