@@ -100,7 +100,7 @@ kill <PID>
 Caso cite o AUTOMATA em alguma produção científica, pedimos por gentileza que referencie o seguinte artigo:
 
 ```bibtex
-@inproceedings{webmedia_estendido,
+@inproceedings{automata_webmedia_2022,
  author = {Augusto Fonseca and Carlos Moreira and Gabriel Machado and Paulo Freire and Ronaldo Goldschmidt},
  title = {AUTOMATA: Um Ambiente para Combate Automático de Fake News em Redes Sociais Virtuais},
  booktitle = {Anais Estendidos do XXVIII Simpósio Brasileiro de Sistemas Multimídia e Web},
