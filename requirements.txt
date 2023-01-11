@@ -190,7 +190,7 @@ traitlets==5.1.1
 tweepy==3.10.0
 typed-ast==1.4.3
 typing-extensions==3.10.0.2
-urllib3==1.26.4
+urllib3==1.26.5
 validators==0.20.0
 virtualenv==20.7.2
 wcwidth==0.2.5
